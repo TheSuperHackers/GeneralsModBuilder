@@ -1,0 +1,40 @@
+{
+    "tools": {
+        "version": 1,
+        "list": [
+            {
+                "name": "crunch",
+                "files": [
+                    {
+                        "url": "https://github.com/TheSuperHackers/GeneralsTools/blob/main/Tools/crunch/v1.04/crunch_x64.exe",
+                        "target": "../.Tools/crunch_x64.exe",
+                        "md5": "0eb41e20af4be0204febf893e6c2b84c",
+                        "runnable": true
+                    }
+                ]
+            },
+            {
+                "name": "gametextcompiler",
+                "files": [
+                    {
+                        "url": "https://github.com/TheSuperHackers/GeneralsTools/blob/main/Tools/gametextcompiler/v1.0/gametextcompiler.exe",
+                        "target": "../.Tools/gametextcompiler.exe",
+                        "md5": "d56dde78d0e486ad1bfedcb707e76da8",
+                        "runnable": true
+                    }
+                ]
+            },
+            {
+                "name": "generalsbigcreator",
+                "files": [
+                    {
+                        "url": "https://github.com/TheSuperHackers/GeneralsTools/blob/main/Tools/generalsbigcreator/v1.3/generalsbigcreator.exe",
+                        "target": "../.Tools/generalsbigcreator.exe",
+                        "md5": "dc1e1be41accf5082ff3dd4319ffe70f",
+                        "runnable": true
+                    }
+                ]
+            }
+        ]
+    }
+}

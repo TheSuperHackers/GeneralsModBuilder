@@ -1,0 +1,95 @@
+{
+    "bundles": {
+        "version": 1,
+        "list": [
+            {
+                "name": "SampleINI",
+                "big": true,
+                "files": [
+                    {
+                        "parent": "../GameFilesEdited",
+                        "sourceList": [
+                            "Data/INI/*.ini",
+                            "Data/English/*.ini"
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "SampleLanguages",
+                "big": true,
+                "files": [
+                    {
+                        "parent": "../GameFilesEdited",
+                        "source": "Data/generals.str",
+                        "target": "Data/English/generals.csf",
+                        "language": "English"
+                    },
+                    {
+                        "parent": "../GameFilesEdited",
+                        "source": "Data/generals.str",
+                        "target": "Data/Spanish/generals.csf",
+                        "language": "Spanish"
+                    }
+                ]
+            },
+            {
+                "name": "SampleTexturesTGA",
+                "big": true,
+                "files": [
+                    {
+                        "parent": "../GameFilesEdited",
+                        "source": "Art/TextureWithAlpha.psd",
+                        "target": "Art/TextureWithAlpha.tga"
+                    },
+                    {
+                        "parent": "../GameFilesEdited",
+                        "source": "Art/TextureWithoutAlpha.psd",
+                        "target": "Art/TextureWithoutAlpha.tga"
+                    }
+                ]
+            },
+            {
+                "name": "SampleTexturesDDS2x",
+                "big": true,
+                "files": [
+                    {
+                        "rescale": 2,
+                        "parent": "../GameFilesEdited",
+                        "sourceTargetList": [
+                            [
+                                "Art/*.psd",
+                                "Art/*.dds"
+                            ]
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "SampleWindow",
+                "big": true,
+                "files": [
+                    {
+                        "parent": "../GameFilesEdited",
+                        "sourceList": [
+                            "Window/*.wnd"
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "Misc",
+                "big": false,
+                "files": [
+                    {
+                        "parent": "../GameFilesEdited",
+                        "sourceList": [
+                            "Install_Final.bmp",
+                            "launcher.bmp"
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}
