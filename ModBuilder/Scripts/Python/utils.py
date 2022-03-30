@@ -1,6 +1,7 @@
-import os.path
+import os
 import winreg
 import json
+import hashlib
 from os.path import join as joinpath
 from os.path import normpath as normpath
 from typing import Any
@@ -10,15 +11,18 @@ class JsonFile:
     path: str
     data: dict
 
-    def __init__(self, path):
+    def __init__(self, path: str):
         self.path = normpath(path)
         self.data = self.__ReadJson(self.path)
+        RelAssert(isinstance(self.path, str), "JsonFile.path has incorrect type")
+        RelAssert(isinstance(self.data, dict), "JsonFile.data has incorrect type")
 
-    def __ReadJson(self, path: str) -> Any: # Raises exception on failure
-        print("Read", path)
-        file = open(path, "r")
-        jsonText = file.read()
-        jsonData = json.loads(jsonText)
+    def __ReadJson(self, path: str) -> dict:
+        print("Read Json", path)
+        jsonData = dict()
+        with open(path, "rb") as rfile:
+            jsonText = rfile.read()
+            jsonData = json.loads(jsonText)
         return jsonData
 
     def __PrintJson(self, path) -> None:
@@ -37,8 +41,12 @@ def GetKeyValueFromRegistry(pathStr: str, keyStr: str) -> str:
         return None
 
 
-def MakeFileDir(file: str) -> str:
+def GetFileDir(file: str) -> str:
     return os.path.dirname(os.path.realpath(file))
+
+
+def MakeDirsForFile(file: str) -> None:
+    os.makedirs(GetFileDir(file), exist_ok=True)
 
 
 def GetSecondIfValid(first: Any, second: Any) -> Any:
@@ -65,3 +73,12 @@ def NormalizePaths(paths: list[str]) -> list[str]:
 def RelAssert(condition: bool, message: str = "") -> None:
     if not condition:
         raise Exception(message)
+
+
+def GetFileMd5(path) -> str:
+    print("Get md5", path)
+    md5 = hashlib.md5()
+    with open(path, "rb") as rfile:
+        for chunk in iter(lambda: rfile.read(4096), b""):
+            md5.update(chunk)
+    return md5.hexdigest()

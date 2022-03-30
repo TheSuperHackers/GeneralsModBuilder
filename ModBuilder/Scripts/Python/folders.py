@@ -39,7 +39,7 @@ def MakeFoldersFromJsons(jsonFiles: list[JsonFile]) -> Folders:
     folders.tmpReleaseUnpackedDir = None
 
     for jsonFile in jsonFiles:
-        jsonDir: str = utils.MakeFileDir(jsonFile.path)
+        jsonDir: str = utils.GetFileDir(jsonFile.path)
         jFolders: dict = jsonFile.data.get("folders")
 
         if jFolders:

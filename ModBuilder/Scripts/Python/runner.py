@@ -46,7 +46,7 @@ def MakeRunnerFromJsons(jsonFiles: list[JsonFile]) -> Runner:
     runner.gameExeFile = None
 
     for jsonFile in jsonFiles:
-        jsonDir: str = utils.MakeFileDir(jsonFile.path)
+        jsonDir: str = utils.GetFileDir(jsonFile.path)
         jRunner: dict = jsonFile.data.get("runner")
 
         if jRunner:

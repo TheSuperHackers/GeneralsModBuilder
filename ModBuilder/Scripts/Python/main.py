@@ -43,7 +43,7 @@ def Main(args=None):
 
     __PrintArgs(args)
 
-    thisDir = utils.MakeFileDir(__file__)
+    thisDir = utils.GetFileDir(__file__)
     jsonFilePaths: list[str] = []
 
     jsonFilePaths.append(joinpath(thisDir, "..", "DefaultFolders.json"))

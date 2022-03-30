@@ -52,7 +52,7 @@ def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> list[Bundle]:
     bundle: Bundle
 
     for jsonFile in jsonFiles:
-        jsonDir: str = utils.MakeFileDir(jsonFile.path)
+        jsonDir: str = utils.GetFileDir(jsonFile.path)
         jBundles: dict = jsonFile.data.get("bundles")
         jBundle: dict
         jFile: dict
