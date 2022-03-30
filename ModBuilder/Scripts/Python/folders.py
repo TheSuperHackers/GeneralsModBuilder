@@ -1,8 +1,10 @@
 import utils
 from os.path import join as joinpath
 from utils import JsonFile
+from dataclasses import dataclass
 
 
+@dataclass(init=False)
 class Folders:
     releaseUnpackedDir: str
     releaseDir: str
@@ -49,4 +51,5 @@ def MakeFoldersFromJsons(jsonFiles: list[JsonFile]) -> Folders:
 
     folders.Validate()
     folders.Normalize()
+    print("Created", folders)
     return folders

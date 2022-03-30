@@ -1,6 +1,9 @@
 import utils
 from utils import JsonFile
+from dataclasses import dataclass
 
+
+@dataclass(init=False)
 class ToolFile:
     url: str
     target: str
@@ -20,6 +23,7 @@ class ToolFile:
         utils.RelAssert(isinstance(self.runnable, bool), "Tool.runnable has incorrect type")
 
 
+@dataclass(init=False)
 class Tool:
     name: str
     files: list[ToolFile]
@@ -75,5 +79,6 @@ def MakeToolsFromJsons(jsonFiles: list[JsonFile]) -> dict[Tool]:
 
     for tool in tools.values():
         tool.Normalize()
+        print("Created", tool)
 
     return tools

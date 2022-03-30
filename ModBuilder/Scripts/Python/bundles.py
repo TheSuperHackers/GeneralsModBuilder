@@ -1,8 +1,10 @@
 import utils
 from os.path import join as joinpath
 from utils import JsonFile
+from dataclasses import dataclass
 
 
+@dataclass(init=False)
 class BundleFile:
     absSourceFile: str
     relTargetFile: str
@@ -20,9 +22,10 @@ class BundleFile:
         utils.RelAssert(isinstance(self.absSourceFile, str), "source has incorrect type")
         utils.RelAssert(isinstance(self.relTargetFile, str), "target has incorrect type")
         utils.RelAssert(isinstance(self.language, str), "language has incorrect type")
-        utils.RelAssert(isinstance(self.rescale, float) or isinstance(self.rescale, int), "rescale has incorrect type")
+        utils.RelAssert(isinstance(self.rescale, float), "rescale has incorrect type")
 
 
+@dataclass(init=False)
 class Bundle:
     name: str
     isBig: bool = True
@@ -74,6 +77,8 @@ def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> list[Bundle]:
                     parent = utils.JoinPathIfValid(jsonDir, jsonDir, jFile.get("parent"))
                     language = jFile.get("language")
                     rescale = jFile.get("rescale")
+                    if type(rescale) is int:
+                        rescale = float(rescale)
 
                     source = jFile.get("source")
                     if source:
@@ -109,5 +114,6 @@ def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> list[Bundle]:
     for bundle in bundles:
         bundle.Validate()
         bundle.Normalize()
+        print("Created", bundle)
 
     return bundles

@@ -2,16 +2,18 @@ import utils
 import re
 from os.path import join as joinpath
 from utils import JsonFile
+from dataclasses import dataclass, field
 
 
+@dataclass(init=False)
 class Runner:
     gameRootDir: str
     gameExeFile: str
     gameExeArgs: str = ""
-    gameFilesToDisable: list[str] = []
+    gameFilesToDisable: list[str] = field(default_factory=list)
 
     def __init__(self):
-        pass
+        self.gameFilesToDisable = []
 
     def Normalize(self) -> None:
         self.gameRootDir = utils.NormalizePath(self.gameRootDir)
@@ -61,4 +63,5 @@ def MakeRunnerFromJsons(jsonFiles: list[JsonFile]) -> Runner:
 
     runner.Validate()
     runner.Normalize()
+    print("Created", runner)
     return runner
