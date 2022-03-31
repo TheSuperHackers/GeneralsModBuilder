@@ -1,8 +1,6 @@
 import os
 import glob
 import utils
-from os.path import join as joinpath
-from os.path import normpath as normpath
 from bundles import Bundle
 from bundles import BundleFile
 from folders import Folders
@@ -60,7 +58,7 @@ class Builder:
         return files
 
     def __NormalizePath(self, path: str) -> str:
-        return os.path.normpath(path)
+        return os.path.os.path.normpath(path)
 
     def __NormalizePathsInBundleFiles(self, files: list[BundleFile]) -> list[BundleFile]:
         for i in range(len(files)):
@@ -100,4 +98,4 @@ class Builder:
         if os.path.isabs(filePath):
             return filePath
         else:
-            return joinpath(self.folders.gameFilesDir, filePath)
+            return os.path.join(self.folders.gameFilesDir, filePath)

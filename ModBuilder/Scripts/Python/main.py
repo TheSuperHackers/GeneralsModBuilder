@@ -6,8 +6,7 @@ import folders
 import runner
 import tools
 import utils
-from os.path import join as joinpath
-from os.path import normpath as normpath
+import os.path
 from builder import Builder
 from utils import JsonFile
 
@@ -46,9 +45,9 @@ def Main(args=None):
     thisDir = utils.GetFileDir(__file__)
     jsonFilePaths: list[str] = []
 
-    jsonFilePaths.append(joinpath(thisDir, "..", "DefaultFolders.json"))
-    jsonFilePaths.append(joinpath(thisDir, "..", "DefaultRunner.json"))
-    jsonFilePaths.append(joinpath(thisDir, "..", "DefaultTools.json"))
+    jsonFilePaths.append(os.path.join(thisDir, "..", "DefaultFolders.json"))
+    jsonFilePaths.append(os.path.join(thisDir, "..", "DefaultRunner.json"))
+    jsonFilePaths.append(os.path.join(thisDir, "..", "DefaultTools.json"))
 
     if args.json:
         jsonFilePaths.extend(args.json)

@@ -1,5 +1,5 @@
 import utils
-from os.path import join as joinpath
+import os.path
 from utils import JsonFile
 from dataclasses import dataclass
 
@@ -83,7 +83,7 @@ def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> list[Bundle]:
                     source = jFile.get("source")
                     if source:
                         bundleFile = BundleFile()
-                        bundleFile.absSourceFile = joinpath(parent, source)
+                        bundleFile.absSourceFile = os.path.join(parent, source)
                         bundleFile.relTargetFile = utils.GetSecondIfValid(source, jFile.get("target"))
                         bundleFile.language = utils.GetSecondIfValid(bundleFile.language, language)
                         bundleFile.rescale = utils.GetSecondIfValid(bundleFile.rescale, rescale)
@@ -93,7 +93,7 @@ def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> list[Bundle]:
                     if sourceList:
                         for item in sourceList:
                             bundleFile = BundleFile()
-                            bundleFile.absSourceFile = joinpath(parent, item)
+                            bundleFile.absSourceFile = os.path.join(parent, item)
                             bundleFile.relTargetFile = item
                             bundleFile.language = utils.GetSecondIfValid(bundleFile.language, language)
                             bundleFile.rescale = utils.GetSecondIfValid(bundleFile.rescale, rescale)
@@ -103,7 +103,7 @@ def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> list[Bundle]:
                     if sourceTargetList:
                         for item in sourceTargetList:
                             bundleFile = BundleFile()
-                            bundleFile.absSourceFile = joinpath(parent, item[0])
+                            bundleFile.absSourceFile = os.path.join(parent, item[0])
                             bundleFile.relTargetFile = item[1]
                             bundleFile.language = utils.GetSecondIfValid(bundleFile.language, language)
                             bundleFile.rescale = utils.GetSecondIfValid(bundleFile.rescale, rescale)

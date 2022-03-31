@@ -1,6 +1,6 @@
+import os.path
 import utils
 import re
-from os.path import join as joinpath
 from utils import JsonFile
 from dataclasses import dataclass, field
 
@@ -55,7 +55,7 @@ def MakeRunnerFromJsons(jsonFiles: list[JsonFile]) -> Runner:
                 if gameRootDir.startswith("REGISTRY:"):
                     runner.gameRootDir = __ParseAndGetFromRegistry(gameRootDir)
                 else:
-                    runner.gameRootDir = joinpath(jsonDir, gameRootDir)
+                    runner.gameRootDir = os.path.join(jsonDir, gameRootDir)
 
             runner.gameExeFile = utils.GetSecondIfValid(runner.gameExeFile, jRunner.get("gameExeFile"))
             runner.gameExeArgs = utils.GetSecondIfValid(runner.gameExeArgs, jRunner.get("gameExeArgs"))

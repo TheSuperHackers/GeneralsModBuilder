@@ -1,5 +1,4 @@
 import utils
-from os.path import join as joinpath
 from utils import JsonFile
 from dataclasses import dataclass
 

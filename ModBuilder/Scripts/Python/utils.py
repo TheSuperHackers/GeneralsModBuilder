@@ -2,8 +2,6 @@ import os
 import winreg
 import json
 import hashlib
-from os.path import join as joinpath
-from os.path import normpath as normpath
 from typing import Any
 
 
@@ -12,7 +10,7 @@ class JsonFile:
     data: dict
 
     def __init__(self, path: str):
-        self.path = normpath(path)
+        self.path = os.path.normpath(path)
         self.data = self.__ReadJson(self.path)
         RelAssert(isinstance(self.path, str), "JsonFile.path has incorrect type")
         RelAssert(isinstance(self.data, dict), "JsonFile.data has incorrect type")
@@ -57,16 +55,16 @@ def JoinPathIfValid(default: Any, *paths: str) -> Any:
     for path in paths:
         if not path or not isinstance(path, str):
             return default
-    return joinpath(*paths)
+    return os.path.join(*paths)
 
 
 def NormalizePath(path: str) -> str:
-    return normpath(path)
+    return os.path.normpath(path)
 
 
 def NormalizePaths(paths: list[str]) -> list[str]:
     for i in range(len(paths)):
-        paths[i] = normpath(paths[i])
+        paths[i] = os.path.normpath(paths[i])
     return paths
 
 
