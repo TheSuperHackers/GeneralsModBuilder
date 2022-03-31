@@ -1,9 +1,9 @@
 import sys
 import argparse
-import bundles
-import folders
-import runner
-import tools
+import data.bundles
+import data.folders
+import data.runner
+import data.tools
 import utils
 import os.path
 from builder import Builder
@@ -22,21 +22,21 @@ def __CreateJsonFiles(jsonFilePaths: list[str]) -> list[JsonFile]:
 def __StartBuild(jsonFilePaths: list[str]) -> None:
     jsonFiles = __CreateJsonFiles(jsonFilePaths)
 
-    foldersObj = folders.MakeFoldersFromJsons(jsonFiles)
-    runnerObj = runner.MakeRunnerFromJsons(jsonFiles)
-    bundlesObj = bundles.MakeBundlesFromJsons(jsonFiles)
-    toolsObj = tools.MakeToolsFromJsons(jsonFiles)
+    folders = data.folders.MakeFoldersFromJsons(jsonFiles)
+    runner = data.runner.MakeRunnerFromJsons(jsonFiles)
+    bundles = data.bundles.MakeBundlesFromJsons(jsonFiles)
+    tools = data.tools.MakeToolsFromJsons(jsonFiles)
 
-    pprint(foldersObj)
-    pprint(runnerObj)
-    pprint(bundlesObj)
-    pprint(toolsObj)
+    pprint(folders)
+    pprint(runner)
+    pprint(bundles)
+    pprint(tools)
 
     builder = Builder()
-    builder.SetFolders(foldersObj)
-    builder.SetRunner(runnerObj)
-    builder.SetBundles(bundlesObj)
-    builder.SetTools(toolsObj)
+    builder.SetFolders(folders)
+    builder.SetRunner(runner)
+    builder.SetBundles(bundles)
+    builder.SetTools(tools)
 
 
 def Main(args=None):
