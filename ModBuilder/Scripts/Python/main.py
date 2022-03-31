@@ -1,6 +1,5 @@
 import sys
 import argparse
-import builder
 import bundles
 import folders
 import runner
@@ -9,6 +8,7 @@ import utils
 import os.path
 from builder import Builder
 from utils import JsonFile
+from pprint import pprint
 
 
 def __CreateJsonFiles(jsonFilePaths: list[str]) -> list[JsonFile]:
@@ -22,25 +22,31 @@ def __CreateJsonFiles(jsonFilePaths: list[str]) -> list[JsonFile]:
 def __StartBuild(jsonFilePaths: list[str]) -> None:
     jsonFiles = __CreateJsonFiles(jsonFilePaths)
 
+    foldersObj = folders.MakeFoldersFromJsons(jsonFiles)
+    runnerObj = runner.MakeRunnerFromJsons(jsonFiles)
+    bundlesObj = bundles.MakeBundlesFromJsons(jsonFiles)
+    toolsObj = tools.MakeToolsFromJsons(jsonFiles)
+
+    pprint(foldersObj)
+    pprint(runnerObj)
+    pprint(bundlesObj)
+    pprint(toolsObj)
+
     builder = Builder()
-    builder.SetFolders(folders.MakeFoldersFromJsons(jsonFiles))
-    builder.SetRunner(runner.MakeRunnerFromJsons(jsonFiles))
-    builder.SetBundles(bundles.MakeBundlesFromJsons(jsonFiles))
-    builder.SetTools(tools.MakeToolsFromJsons(jsonFiles))
-
-
-def __PrintArgs(args):
-    for arg in vars(args):
-        print("Arg:", arg, getattr(args, arg))
+    builder.SetFolders(foldersObj)
+    builder.SetRunner(runnerObj)
+    builder.SetBundles(bundlesObj)
+    builder.SetTools(toolsObj)
 
 
 def Main(args=None):
+    utils.RelAssert(sys.version_info >= (3,10), f"Python version must be 3.10 or higher")
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--json', type=str, action="append", help='Path to any json configuration file. Multiples can be specified.')
 
     args, unknownargs = parser.parse_known_args(args=args)
-
-    __PrintArgs(args)
+    pprint(args)
 
     thisDir = utils.GetFileDir(__file__)
     jsonFilePaths: list[str] = []
@@ -57,6 +63,4 @@ def Main(args=None):
 
 if __name__ == "__main__":
     print(sys.version_info)
-    utils.RelAssert(sys.version_info >= (3,10), f"Python version must be 3.10 or higher")
-
     Main()

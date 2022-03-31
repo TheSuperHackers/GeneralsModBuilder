@@ -19,10 +19,12 @@ class BundleFile:
         self.relTargetFile = utils.NormalizePath(self.relTargetFile)
 
     def Validate(self) -> None:
-        utils.RelAssert(isinstance(self.absSourceFile, str), "source has incorrect type")
-        utils.RelAssert(isinstance(self.relTargetFile, str), "target has incorrect type")
-        utils.RelAssert(isinstance(self.language, str), "language has incorrect type")
-        utils.RelAssert(isinstance(self.rescale, float), "rescale has incorrect type")
+        utils.RelAssert(isinstance(self.absSourceFile, str), "BundleFile.absSourceFile has incorrect type")
+        utils.RelAssert(isinstance(self.relTargetFile, str), "BundleFile.relTargetFile has incorrect type")
+        utils.RelAssert(isinstance(self.language, str), "BundleFile.language has incorrect type")
+        utils.RelAssert(isinstance(self.rescale, float), "BundleFile.rescale has incorrect type")
+        utils.RelAssert(os.path.isabs(self.absSourceFile), "BundleFile.absSourceFile is not an absolute path")
+        utils.RelAssert(not os.path.isabs(self.relTargetFile), "BundleFile.absSourceFile is not a relative path")
 
 
 @dataclass(init=False)
@@ -39,11 +41,11 @@ class Bundle:
             file.Normalize()
 
     def Validate(self) -> None:
-        utils.RelAssert(isinstance(self.name, str), "name has incorrect type")
-        utils.RelAssert(isinstance(self.isBig, bool), "big has incorrect type")
-        utils.RelAssert(isinstance(self.files, list), "files has incorrect type")
+        utils.RelAssert(isinstance(self.name, str), "Bundle.name has incorrect type")
+        utils.RelAssert(isinstance(self.isBig, bool), "Bundle.isBig has incorrect type")
+        utils.RelAssert(isinstance(self.files, list), "Bundle.files has incorrect type")
         for file in self.files:
-            utils.RelAssert(isinstance(file, BundleFile), "files has incorrect type")
+            utils.RelAssert(isinstance(file, BundleFile), "Bundle.files has incorrect type")
             file.Validate()
 
 
@@ -114,6 +116,5 @@ def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> list[Bundle]:
     for bundle in bundles:
         bundle.Validate()
         bundle.Normalize()
-        print("Created", bundle)
 
     return bundles

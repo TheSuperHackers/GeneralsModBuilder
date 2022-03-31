@@ -63,5 +63,4 @@ def MakeRunnerFromJsons(jsonFiles: list[JsonFile]) -> Runner:
 
     runner.Validate()
     runner.Normalize()
-    print("Created", runner)
     return runner

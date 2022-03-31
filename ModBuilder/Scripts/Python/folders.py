@@ -50,5 +50,4 @@ def MakeFoldersFromJsons(jsonFiles: list[JsonFile]) -> Folders:
 
     folders.Validate()
     folders.Normalize()
-    print("Created", folders)
     return folders

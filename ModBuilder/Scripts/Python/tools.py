@@ -135,7 +135,6 @@ def MakeToolsFromJsons(jsonFiles: list[JsonFile]) -> dict[Tool]:
         tool.Normalize()
         tool.Install()
         tool.ValidateInstall()
-        print("Created", tool)
 
     return tools
 
