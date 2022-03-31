@@ -8,9 +8,15 @@
                 "files": [
                     {
                         "parent": "../GameFilesEdited",
-                        "sourceList": [
-                            "Data/INI/*.ini",
-                            "Data/English/*.ini"
+                        "sourceTargetList": [
+                            [
+                                "Data/INI/*.ini",
+                                "Data/INI/"
+                            ],
+                            [
+                                "Data/English/*.ini",
+                                "Data/English/*.*"
+                            ]
                         ]
                     }
                 ]

@@ -1,5 +1,7 @@
+import copy
 import utils
 import os.path
+import glob
 from utils import JsonFile
 from dataclasses import dataclass
 
@@ -26,6 +28,14 @@ class BundleFile:
         utils.RelAssert(os.path.isabs(self.absSourceFile), "BundleFile.absSourceFile is not an absolute path")
         utils.RelAssert(not os.path.isabs(self.relTargetFile), "BundleFile.absSourceFile is not a relative path")
 
+    def GetSourceExt(self) -> str:
+        path, ext = os.path.splitext(self.absSourceFile)
+        return ext
+
+    def GetTargetExt(self) -> str:
+        path, ext = os.path.splitext(self.relTargetFile)
+        return ext
+
 
 @dataclass(init=False)
 class Bundle:
@@ -47,6 +57,44 @@ class Bundle:
         for file in self.files:
             utils.RelAssert(isinstance(file, BundleFile), "Bundle.files has incorrect type")
             file.Validate()
+
+    def ResolveWildcards(self) -> None:
+        newFiles: list[BundleFile] = []
+        file: BundleFile
+
+        for file in self.files:
+            if not os.path.isfile(file.absSourceFile):
+                globFiles = glob.glob(file.absSourceFile)
+                utils.RelAssert(bool(globFiles), f"Bundle file '{file.absSourceFile}' matches nothing")
+                for globFile in globFiles:
+                    utils.RelAssert(os.path.isfile(globFile), f"Bundle file '{globFile}' is not a file")
+                    newFile: BundleFile = copy.copy(file)
+                    newFile.absSourceFile = globFile
+                    newFiles.append(newFile)
+            else:
+                newFiles.append(file)
+
+        for file in newFiles:
+            file.relTargetFile = Bundle.__ResolveTargetWildcard(file.absSourceFile, file.relTargetFile)
+
+        self.files = newFiles
+        return newFiles
+
+    @staticmethod
+    def __ResolveTargetWildcard(source: str, target: str) -> str:
+        if utils.IsPathSyntax(target):
+            sourcePath, sourceFile = os.path.split(source)
+            newTarget = os.path.join(target, sourceFile)
+            return newTarget
+        else:
+            sourcePath, sourceFile = os.path.split(source)
+            targetPath, targetFile = os.path.split(target)
+            sourceName, sourceExtn = os.path.splitext(sourceFile)
+            targetName, targetExtn = os.path.splitext(targetFile)
+            newName = sourceName if targetName == "*" else targetName
+            newExtn = sourceExtn if targetExtn == ".*" else targetExtn
+            newTarget = os.path.join(targetPath, newName + newExtn)
+            return newTarget
 
 
 def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> list[Bundle]:
@@ -115,6 +163,7 @@ def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> list[Bundle]:
    
     for bundle in bundles:
         bundle.Validate()
+        bundle.ResolveWildcards()
         bundle.Normalize()
 
     return bundles

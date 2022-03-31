@@ -80,3 +80,9 @@ def GetFileMd5(path) -> str:
         for chunk in iter(lambda: rfile.read(4096), b""):
             md5.update(chunk)
     return md5.hexdigest()
+
+
+def IsPathSyntax(s: str) -> bool:
+    if s and isinstance(s, str) and (s.endswith("/") or s.endswith("\\")):
+        return True
+    return False
