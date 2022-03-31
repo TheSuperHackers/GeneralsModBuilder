@@ -31,12 +31,10 @@ class BundleFile:
         utils.RelAssert(not os.path.isabs(self.relTargetFile), "BundleFile.absSourceFile is not a relative path")
 
     def GetSourceExt(self) -> str:
-        path, ext = os.path.splitext(self.absSourceFile)
-        return ext
+        return utils.GetFileExt(self.absSourceFile)
 
     def GetTargetExt(self) -> str:
-        path, ext = os.path.splitext(self.relTargetFile)
-        return ext
+        return utils.GetFileExt(self.relTargetFile)
 
 
 @dataclass(init=False)

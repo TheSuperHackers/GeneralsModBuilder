@@ -43,6 +43,11 @@ def GetFileDir(file: str) -> str:
     return os.path.dirname(os.path.realpath(file))
 
 
+def GetFileExt(file: str) -> str:
+    path, ext = os.path.splitext(file)
+    return ext
+
+
 def MakeDirsForFile(file: str) -> None:
     os.makedirs(GetFileDir(file), exist_ok=True)
 
