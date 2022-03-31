@@ -20,7 +20,7 @@ class Runner:
         self.gameExeFile = utils.NormalizePath(self.gameExeFile)
         self.gameFilesToDisable = utils.NormalizePaths(self.gameFilesToDisable)
 
-    def Validate(self) -> None:
+    def VerifyTypes(self) -> None:
         utils.RelAssert(isinstance(self.gameRootDir, str), "Runner.gameRootDir has incorrect type")
         utils.RelAssert(isinstance(self.gameExeFile, str), "Runner.gameExeFile has incorrect type")
         utils.RelAssert(isinstance(self.gameExeArgs, str), "Runner.gameExeArgs has incorrect type")
@@ -61,6 +61,6 @@ def MakeRunnerFromJsons(jsonFiles: list[JsonFile]) -> Runner:
             runner.gameExeArgs = utils.GetSecondIfValid(runner.gameExeArgs, jRunner.get("gameExeArgs"))
             runner.gameFilesToDisable = utils.GetSecondIfValid(runner.gameFilesToDisable, jRunner.get("gameFilesToDisable"))
 
-    runner.Validate()
+    runner.VerifyTypes()
     runner.Normalize()
     return runner

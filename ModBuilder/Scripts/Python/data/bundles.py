@@ -20,11 +20,13 @@ class BundleFile:
         self.absSourceFile = utils.NormalizePath(self.absSourceFile)
         self.relTargetFile = utils.NormalizePath(self.relTargetFile)
 
-    def Validate(self) -> None:
+    def VerifyTypes(self) -> None:
         utils.RelAssert(isinstance(self.absSourceFile, str), "BundleFile.absSourceFile has incorrect type")
         utils.RelAssert(isinstance(self.relTargetFile, str), "BundleFile.relTargetFile has incorrect type")
         utils.RelAssert(isinstance(self.language, str), "BundleFile.language has incorrect type")
         utils.RelAssert(isinstance(self.rescale, float), "BundleFile.rescale has incorrect type")
+        
+    def VerifyValues(self) -> None:
         utils.RelAssert(os.path.isabs(self.absSourceFile), "BundleFile.absSourceFile is not an absolute path")
         utils.RelAssert(not os.path.isabs(self.relTargetFile), "BundleFile.absSourceFile is not a relative path")
 
@@ -50,13 +52,17 @@ class Bundle:
         for file in self.files:
             file.Normalize()
 
-    def Validate(self) -> None:
+    def VerifyTypes(self) -> None:
         utils.RelAssert(isinstance(self.name, str), "Bundle.name has incorrect type")
         utils.RelAssert(isinstance(self.isBig, bool), "Bundle.isBig has incorrect type")
         utils.RelAssert(isinstance(self.files, list), "Bundle.files has incorrect type")
         for file in self.files:
             utils.RelAssert(isinstance(file, BundleFile), "Bundle.files has incorrect type")
-            file.Validate()
+            file.VerifyTypes()
+
+    def VerifyValues(self) -> None:
+        for file in self.files:
+            file.VerifyValues()
 
     def ResolveWildcards(self) -> None:
         newFiles: list[BundleFile] = []
@@ -162,8 +168,9 @@ def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> list[Bundle]:
             bundles.append(bundle)
    
     for bundle in bundles:
-        bundle.Validate()
+        bundle.VerifyTypes()
         bundle.ResolveWildcards()
         bundle.Normalize()
+        bundle.VerifyValues()
 
     return bundles

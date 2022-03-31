@@ -21,7 +21,7 @@ class Folders:
         self.tmpBigDir = utils.NormalizePath(self.tmpBigDir)
         self.tmpReleaseUnpackedDir = utils.NormalizePath(self.tmpReleaseUnpackedDir)
 
-    def Validate(self) -> None:
+    def VerifyTypes(self) -> None:
         utils.RelAssert(isinstance(self.releaseUnpackedDir, str), "Folders.releaseUnpackedDir has incorrect type")
         utils.RelAssert(isinstance(self.releaseDir, str), "Folders.releaseDir has incorrect type")
         utils.RelAssert(isinstance(self.tmpBigUnpackedDir, str), "Folders.tmpBigUnpackedDir has incorrect type")
@@ -48,6 +48,6 @@ def MakeFoldersFromJsons(jsonFiles: list[JsonFile]) -> Folders:
             folders.tmpBigDir = utils.JoinPathIfValid(folders.tmpBigDir, jsonDir, jFolders.get("tmpBigDir"))
             folders.tmpReleaseUnpackedDir = utils.JoinPathIfValid(folders.tmpReleaseUnpackedDir, jsonDir, jFolders.get("tmpReleaseUnpackedDir"))
 
-    folders.Validate()
+    folders.VerifyTypes()
     folders.Normalize()
     return folders

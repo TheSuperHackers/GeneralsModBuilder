@@ -20,13 +20,13 @@ class ToolFile:
     def Normalize(self) -> None:
         self.target = utils.NormalizePath(self.target)
 
-    def Validate(self) -> None:
+    def VerifyTypes(self) -> None:
         utils.RelAssert(isinstance(self.url, str), "Tool.url has incorrect type")
         utils.RelAssert(isinstance(self.md5, str), "Tool.md5 has incorrect type")
         utils.RelAssert(isinstance(self.target, str), "Tool.target has incorrect type")
         utils.RelAssert(isinstance(self.runnable, bool), "Tool.runnable has incorrect type")
 
-    def ValidateInstall(self) -> None:
+    def VerifyInstall(self) -> None:
         utils.RelAssert(os.path.isfile(self.target), f"Tool.target file '{self.target}' does not exist")
         if self.md5:
             actualMd5 = utils.GetFileMd5(self.target)
@@ -63,16 +63,16 @@ class Tool:
         for file in self.files:
             file.Normalize()
 
-    def Validate(self) -> None:
+    def Verify(self) -> None:
         utils.RelAssert(isinstance(self.name, str), "Tool.name has incorrect type")
         utils.RelAssert(isinstance(self.files, list), "Tool.files has incorrect type")
         for file in self.files:
-            file.Validate()
+            file.VerifyTypes()
         utils.RelAssert(self.GetExecutable() != None, "Tool.files contains no runnable file")
 
-    def ValidateInstall(self) -> None:
+    def VerifyInstall(self) -> None:
         for file in self.files:
-            file.ValidateInstall()
+            file.VerifyInstall()
 
     def GetExecutable(self) -> str:
         file: ToolFile
@@ -131,10 +131,10 @@ def MakeToolsFromJsons(jsonFiles: list[JsonFile]) -> dict[Tool]:
             tools[tool.name] = tool
 
     for tool in tools.values():
-        tool.Validate()
+        tool.Verify()
         tool.Normalize()
         tool.Install()
-        tool.ValidateInstall()
+        tool.VerifyInstall()
 
     return tools
 
