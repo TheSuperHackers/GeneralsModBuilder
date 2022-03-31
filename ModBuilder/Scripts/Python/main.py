@@ -6,7 +6,7 @@ import data.runner
 import data.tools
 import utils
 import os.path
-from builder import Builder
+from build.engine import Engine
 from utils import JsonFile
 from pprint import pprint
 
@@ -32,11 +32,9 @@ def __StartBuild(jsonFilePaths: list[str]) -> None:
     pprint(bundles)
     pprint(tools)
 
-    builder = Builder()
-    builder.SetFolders(folders)
-    builder.SetRunner(runner)
-    builder.SetBundles(bundles)
-    builder.SetTools(tools)
+    engine = Engine(folders=folders, runner=runner, bundles=bundles, tools=tools)
+    engine.VerifyTypes()
+    engine.VerifyValues()
 
 
 def Main(args=None):
