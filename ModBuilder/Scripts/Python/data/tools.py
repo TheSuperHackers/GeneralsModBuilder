@@ -95,6 +95,28 @@ class Tool:
         return success
 
 
+def __MakeToolFileFromDict(jFile: dict, jsonDir: str) -> ToolFile:
+    toolFile = ToolFile()
+    toolFile.url = jFile.get("url")
+    toolFile.target = utils.JoinPathIfValid(None, jsonDir, jFile.get("target"))
+    toolFile.md5 = utils.GetSecondIfValid(toolFile.md5, jFile.get("md5"))
+    toolFile.runnable = utils.GetSecondIfValid(toolFile.runnable, jFile.get("runnable"))
+    return toolFile
+
+
+def __MakeToolFromDict(jTool: dict, jsonDir: str) -> Tool:
+    tool = Tool()
+    tool.name = jTool.get("name")
+    tool.files = list()
+    jFiles: dict = jTool.get("files")
+    if jFiles:
+        jFile: dict
+        for jFile in jFiles:
+            toolFile = __MakeToolFileFromDict(jFile, jsonDir)
+            tool.files.append(toolFile)
+    return tool
+
+
 def MakeToolsFromJsons(jsonFiles: list[JsonFile]) -> dict[Tool]:
     tools = dict()
     tool: Tool
@@ -102,33 +124,13 @@ def MakeToolsFromJsons(jsonFiles: list[JsonFile]) -> dict[Tool]:
     for jsonFile in jsonFiles:
         jsonDir: str = utils.GetFileDir(jsonFile.path)
         jTools: dict = jsonFile.data.get("tools")
-        jTool: dict
-        jFile: dict
-
-        if not jTools:
-            continue
-
-        jList: dict = jTools.get("list")
-
-        if not jList:
-            continue
-
-        for jTool in jList:
-            tool = Tool()
-            tool.name = jTool.get("name")
-            tool.files = []
-            jFiles: dict = jTool.get("files")
-
-            if jFiles:
-                for jFile in jFiles:
-                    toolFile = ToolFile()
-                    toolFile.url = jFile.get("url")
-                    toolFile.target = utils.JoinPathIfValid(None, jsonDir, jFile.get("target"))
-                    toolFile.md5 = utils.GetSecondIfValid(toolFile.md5, jFile.get("md5"))
-                    toolFile.runnable = utils.GetSecondIfValid(toolFile.runnable, jFile.get("runnable"))
-                    tool.files.append(toolFile)
-
-            tools[tool.name] = tool
+        if jTools:
+            jList: dict = jTools.get("list")
+            if jList:
+                jTool: dict
+                for jTool in jList:
+                    tool = __MakeToolFromDict(jTool, jsonDir)
+                    tools[tool.name] = tool
 
     for tool in tools.values():
         tool.Verify()
