@@ -16,29 +16,23 @@ class BundleFile:
     def __init__(self):
         pass
 
-    def Normalize(self) -> None:
-        self.absSourceFile = utils.NormalizePath(self.absSourceFile)
-        self.relTargetFile = utils.NormalizePath(self.relTargetFile)
-
     def VerifyTypes(self) -> None:
         utils.RelAssert(isinstance(self.absSourceFile, str), "BundleFile.absSourceFile has incorrect type")
         utils.RelAssert(isinstance(self.relTargetFile, str), "BundleFile.relTargetFile has incorrect type")
         utils.RelAssert(isinstance(self.language, str), "BundleFile.language has incorrect type")
         utils.RelAssert(isinstance(self.rescale, float), "BundleFile.rescale has incorrect type")
-        
+
     def VerifyValues(self) -> None:
         utils.RelAssert(os.path.isabs(self.absSourceFile), "BundleFile.absSourceFile is not an absolute path")
         utils.RelAssert(not os.path.isabs(self.relTargetFile), "BundleFile.absSourceFile is not a relative path")
 
-    def GetSourceExt(self) -> str:
-        return utils.GetFileExt(self.absSourceFile)
-
-    def GetTargetExt(self) -> str:
-        return utils.GetFileExt(self.relTargetFile)
+    def Normalize(self) -> None:
+        self.absSourceFile = utils.NormalizePath(self.absSourceFile)
+        self.relTargetFile = utils.NormalizePath(self.relTargetFile)
 
 
 @dataclass(init=False)
-class Bundle:
+class BundleItem:
     name: str
     isBig: bool = True
     files: list[BundleFile]
@@ -46,21 +40,22 @@ class Bundle:
     def __init__(self):
         pass
 
-    def Normalize(self) -> None:
-        for file in self.files:
-            file.Normalize()
 
     def VerifyTypes(self) -> None:
-        utils.RelAssert(isinstance(self.name, str), "Bundle.name has incorrect type")
-        utils.RelAssert(isinstance(self.isBig, bool), "Bundle.isBig has incorrect type")
-        utils.RelAssert(isinstance(self.files, list), "Bundle.files has incorrect type")
+        utils.RelAssert(isinstance(self.name, str), "BundleItem.name has incorrect type")
+        utils.RelAssert(isinstance(self.isBig, bool), "BundleItem.isBig has incorrect type")
+        utils.RelAssert(isinstance(self.files, list), "BundleItem.files has incorrect type")
         for file in self.files:
-            utils.RelAssert(isinstance(file, BundleFile), "Bundle.files has incorrect type")
+            utils.RelAssert(isinstance(file, BundleFile), "BundleItem.files has incorrect type")
             file.VerifyTypes()
 
     def VerifyValues(self) -> None:
         for file in self.files:
             file.VerifyValues()
+
+    def Normalize(self) -> None:
+        for file in self.files:
+            file.Normalize()
 
     def ResolveWildcards(self) -> None:
         newFiles: list[BundleFile] = []
@@ -69,9 +64,9 @@ class Bundle:
         for file in self.files:
             if not os.path.isfile(file.absSourceFile):
                 globFiles = glob.glob(file.absSourceFile)
-                utils.RelAssert(bool(globFiles), f"Bundle file '{file.absSourceFile}' matches nothing")
+                utils.RelAssert(bool(globFiles), f"BundleItem.absSourceFile '{file.absSourceFile}' matches nothing")
                 for globFile in globFiles:
-                    utils.RelAssert(os.path.isfile(globFile), f"Bundle file '{globFile}' is not a file")
+                    utils.RelAssert(os.path.isfile(globFile), f"BundleItem file '{globFile}' is not a file")
                     newFile: BundleFile = copy.copy(file)
                     newFile.absSourceFile = globFile
                     newFiles.append(newFile)
@@ -79,7 +74,7 @@ class Bundle:
                 newFiles.append(file)
 
         for file in newFiles:
-            file.relTargetFile = Bundle.__ResolveTargetWildcard(file.absSourceFile, file.relTargetFile)
+            file.relTargetFile = BundleItem.__ResolveTargetWildcard(file.absSourceFile, file.relTargetFile)
 
         self.files = newFiles
         return newFiles
@@ -101,74 +96,122 @@ class Bundle:
             return newTarget
 
 
-def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> list[Bundle]:
-    bundles = list()
-    bundle: Bundle
+@dataclass(init=False)
+class BundleContainer:
+    name: str
+    namePrefix: str = ""
+    nameSuffix: str = ""
+    items: list[BundleItem]
 
+    def __init__(self):
+        pass
+
+    def VerifyTypes(self) -> None:
+        utils.RelAssert(isinstance(self.name, str), "BundleContainer.name has incorrect type")
+        utils.RelAssert(isinstance(self.namePrefix, str), "BundleContainer.namePrefix has incorrect type")
+        utils.RelAssert(isinstance(self.nameSuffix, str), "BundleContainer.nameSuffix has incorrect type")
+        for item in self.items:
+            utils.RelAssert(isinstance(item, BundleItem), "BundleContainer.items has incorrect type")
+            item.VerifyTypes()
+
+    def VerifyValues(self) -> None:
+        for item in self.items:
+            item.VerifyValues()
+
+    def Normalize(self) -> None:
+        for item in self.items:
+            item.Normalize()
+
+    def ResolveWildcards(self) -> None:
+        for item in self.items:
+            item.ResolveWildcards()
+
+
+def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> list[BundleContainer]:
+    containers = list()
+    
     for jsonFile in jsonFiles:
         jsonDir: str = utils.GetFileDir(jsonFile.path)
         jBundles: dict = jsonFile.data.get("bundles")
-        jBundle: dict
-        jFile: dict
+        jBundleContainer: dict
+        jBundleItem: dict
+        jBundleFile: dict
 
         if not jBundles:
             continue
 
-        jList: dict = jBundles.get("list")
+        containersPrefix: str = jBundles.get("containersPrefix")
+        containersSuffix: str = jBundles.get("containersSuffix")
+        jBundleContainers: dict = jBundles.get("containers")
 
-        if not jList:
+        if not jBundleContainers:
             continue
 
-        for jBundle in jList:
-            bundle = Bundle()
-            bundle.name = utils.GetSecondIfValid("Undefined", jBundle.get("name"))
-            bundle.isBig = utils.GetSecondIfValid(False, jBundle.get("big"))
-            bundle.files = []
-            jFiles = jBundle.get("files")
+        for jBundleContainer in jBundleContainers:
+            container = BundleContainer()
+            container.name = jBundleContainer.get("name")
+            container.namePrefix = utils.GetSecondIfValid(container.namePrefix, containersPrefix)
+            container.nameSuffix = utils.GetSecondIfValid(container.nameSuffix, containersSuffix)
+            container.items = list()
 
-            if jFiles:
-                for jFile in jFiles:
-                    parent = utils.JoinPathIfValid(jsonDir, jsonDir, jFile.get("parent"))
-                    language = jFile.get("language")
-                    rescale = jFile.get("rescale")
-                    if type(rescale) is int:
-                        rescale = float(rescale)
+            jBundleItems: dict = jBundleContainer.get("items")
 
-                    source = jFile.get("source")
-                    if source:
-                        bundleFile = BundleFile()
-                        bundleFile.absSourceFile = os.path.join(parent, source)
-                        bundleFile.relTargetFile = utils.GetSecondIfValid(source, jFile.get("target"))
-                        bundleFile.language = utils.GetSecondIfValid(bundleFile.language, language)
-                        bundleFile.rescale = utils.GetSecondIfValid(bundleFile.rescale, rescale)
-                        bundle.files.append(bundleFile)
+            if not jBundleItems:
+                continue
 
-                    sourceList = jFile.get("sourceList")
-                    if sourceList:
-                        for item in sourceList:
+            for jBundleItem in jBundleItems:
+                item = BundleItem()
+                item.name = utils.GetSecondIfValid("Undefined", jBundleItem.get("name"))
+                item.isBig = utils.GetSecondIfValid(False, jBundleItem.get("big"))
+                item.files = []
+                jFiles = jBundleItem.get("files")
+
+                if jFiles:
+                    for jBundleFile in jFiles:
+                        parent = utils.JoinPathIfValid(jsonDir, jsonDir, jBundleFile.get("parent"))
+                        language = jBundleFile.get("language")
+                        rescale = jBundleFile.get("rescale")
+                        if type(rescale) is int:
+                            rescale = float(rescale)
+
+                        source = jBundleFile.get("source")
+                        if source:
                             bundleFile = BundleFile()
-                            bundleFile.absSourceFile = os.path.join(parent, item)
-                            bundleFile.relTargetFile = item
+                            bundleFile.absSourceFile = os.path.join(parent, source)
+                            bundleFile.relTargetFile = utils.GetSecondIfValid(source, jBundleFile.get("target"))
                             bundleFile.language = utils.GetSecondIfValid(bundleFile.language, language)
                             bundleFile.rescale = utils.GetSecondIfValid(bundleFile.rescale, rescale)
-                            bundle.files.append(bundleFile)
+                            item.files.append(bundleFile)
 
-                    sourceTargetList = jFile.get("sourceTargetList")
-                    if sourceTargetList:
-                        for item in sourceTargetList:
-                            bundleFile = BundleFile()
-                            bundleFile.absSourceFile = os.path.join(parent, item[0])
-                            bundleFile.relTargetFile = item[1]
-                            bundleFile.language = utils.GetSecondIfValid(bundleFile.language, language)
-                            bundleFile.rescale = utils.GetSecondIfValid(bundleFile.rescale, rescale)
-                            bundle.files.append(bundleFile)
+                        sourceList = jBundleFile.get("sourceList")
+                        if sourceList:
+                            for element in sourceList:
+                                bundleFile = BundleFile()
+                                bundleFile.absSourceFile = os.path.join(parent, element)
+                                bundleFile.relTargetFile = element
+                                bundleFile.language = utils.GetSecondIfValid(bundleFile.language, language)
+                                bundleFile.rescale = utils.GetSecondIfValid(bundleFile.rescale, rescale)
+                                item.files.append(bundleFile)
 
-            bundles.append(bundle)
+                        sourceTargetList = jBundleFile.get("sourceTargetList")
+                        if sourceTargetList:
+                            for element in sourceTargetList:
+                                bundleFile = BundleFile()
+                                bundleFile.absSourceFile = os.path.join(parent, element[0])
+                                bundleFile.relTargetFile = element[1]
+                                bundleFile.language = utils.GetSecondIfValid(bundleFile.language, language)
+                                bundleFile.rescale = utils.GetSecondIfValid(bundleFile.rescale, rescale)
+                                item.files.append(bundleFile)
+
+                container.items.append(item)
+
+            containers.append(container)
    
-    for bundle in bundles:
-        bundle.VerifyTypes()
-        bundle.ResolveWildcards()
-        bundle.Normalize()
-        bundle.VerifyValues()
+    container: BundleContainer
+    for container in containers:
+        container.VerifyTypes()
+        container.ResolveWildcards()
+        container.Normalize()
+        container.VerifyValues()
 
-    return bundles
+    return containers
