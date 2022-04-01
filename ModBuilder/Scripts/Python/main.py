@@ -16,7 +16,7 @@ from pprint import pprint
 def __CreateJsonFiles(configPaths: list[str]) -> list[JsonFile]:
     jsonFiles: list[JsonFile] = []
     for configPath in configPaths:
-        if (utils.GetFileExt(configPath) == ".json"):
+        if (utils.HasFileExt(configPath, "json")):
             jsonFiles.append(JsonFile(configPath))
 
     return jsonFiles

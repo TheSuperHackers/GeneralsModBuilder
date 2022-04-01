@@ -48,6 +48,10 @@ def GetFileExt(file: str) -> str:
     return ext
 
 
+def HasFileExt(file: str, ext: str) -> str:
+    return file.lower().endswith(ext.lower())
+
+
 def MakeDirsForFile(file: str) -> None:
     os.makedirs(GetFileDir(file), exist_ok=True)
 
