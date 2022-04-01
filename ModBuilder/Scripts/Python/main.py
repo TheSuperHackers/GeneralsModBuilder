@@ -59,9 +59,10 @@ def Main(args=None):
     configPaths: list[str] = []
 
     # Add default configurations first to list so readers can parse them first.
-    configPaths.append(os.path.join(thisDir, "..", "DefaultFolders.json"))
-    configPaths.append(os.path.join(thisDir, "..", "DefaultRunner.json"))
-    configPaths.append(os.path.join(thisDir, "..", "DefaultTools.json"))
+    configPath: str = os.path.join(thisDir, "..", "..")
+    configPaths.append(os.path.join(configPath, "DefaultFolders.json"))
+    configPaths.append(os.path.join(configPath, "DefaultRunner.json"))
+    configPaths.append(os.path.join(configPath, "DefaultTools.json"))
 
     # Add custom configurations last so readers can write over default configurations last.
     if args.mod_config:

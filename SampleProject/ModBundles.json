@@ -7,7 +7,7 @@
                 "big": true,
                 "files": [
                     {
-                        "parent": "../GameFilesEdited",
+                        "parent": "GameFilesEdited",
                         "sourceTargetList": [
                             [
                                 "Data/INI/*.ini",
@@ -26,13 +26,13 @@
                 "big": true,
                 "files": [
                     {
-                        "parent": "../GameFilesEdited",
+                        "parent": "GameFilesEdited",
                         "source": "Data/generals.str",
                         "target": "Data/English/generals.csf",
                         "language": "English"
                     },
                     {
-                        "parent": "../GameFilesEdited",
+                        "parent": "GameFilesEdited",
                         "source": "Data/generals.str",
                         "target": "Data/Spanish/generals.csf",
                         "language": "Spanish"
@@ -44,12 +44,12 @@
                 "big": true,
                 "files": [
                     {
-                        "parent": "../GameFilesEdited",
+                        "parent": "GameFilesEdited",
                         "source": "Art/TextureWithAlpha.psd",
                         "target": "Art/TextureWithAlpha.tga"
                     },
                     {
-                        "parent": "../GameFilesEdited",
+                        "parent": "GameFilesEdited",
                         "source": "Art/TextureWithoutAlpha.psd",
                         "target": "Art/TextureWithoutAlpha.tga"
                     }
@@ -61,7 +61,7 @@
                 "files": [
                     {
                         "rescale": 2,
-                        "parent": "../GameFilesEdited",
+                        "parent": "GameFilesEdited",
                         "sourceTargetList": [
                             [
                                 "Art/*.psd",
@@ -76,7 +76,7 @@
                 "big": true,
                 "files": [
                     {
-                        "parent": "../GameFilesEdited",
+                        "parent": "GameFilesEdited",
                         "sourceList": [
                             "Window/*.wnd"
                         ]
@@ -88,7 +88,7 @@
                 "big": false,
                 "files": [
                     {
-                        "parent": "../GameFilesEdited",
+                        "parent": "GameFilesEdited",
                         "sourceList": [
                             "Install_Final.bmp",
                             "launcher.bmp"

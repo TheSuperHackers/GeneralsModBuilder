@@ -1,0 +1,10 @@
+{
+    "folders": {
+        "version": 1,
+        "releaseUnpackedDir": "ReleaseUnpacked",
+        "releaseDir": ".Release",
+        "tmpBigUnpackedDir": ".Generated/BigFilesUnpacked",
+        "tmpBigDir": ".Generated/BigFiles",
+        "tmpReleaseUnpackedDir": ".Generated/ReleaseUnpacked"
+    }
+}
