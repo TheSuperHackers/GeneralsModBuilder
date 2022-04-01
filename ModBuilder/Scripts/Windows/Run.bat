@@ -2,8 +2,8 @@ setlocal
 
 set ThisDir=%~dp0.
 
-call "%ThisDir%\SetupFolders.bat" %1
-call "%ThisDir%\VenvCheck.bat" %1
+call "%ThisDir%\SetupFolders.bat"
+call "%ThisDir%\VenvCheck.bat"
 
 set ModBuilderPythonDir=%ThisDir%\..\Python
 
