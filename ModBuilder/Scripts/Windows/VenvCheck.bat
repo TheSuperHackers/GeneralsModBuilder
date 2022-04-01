@@ -1,9 +1,21 @@
 setlocal
+
 set ThisDir=%~dp0.
 
-call "%ThisDir%\SetupFolders.bat" "%~1"
+call "%ThisDir%\SetupFolders.bat" %1
+
+set makeVenv=0
+
+if not exist "%PythonExe%" (
+    set makeVenv=1
+)
+
 if not exist "%VenvExe%" (
-    call "%ThisDir%\VenvMake.bat" "%~1"
+    set makeVenv=1
+)
+
+if %makeVenv%==1 (
+    call "%ThisDir%\VenvMake.bat" %1
 )
 
 endlocal

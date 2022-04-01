@@ -1,11 +1,12 @@
 setlocal
+
 set ThisDir=%~dp0.
-set PythonDir=%ThisDir%\..\Python
-set RootDir=%~1
 
-call "%ThisDir%\SetupFolders.bat" "%RootDir%"
-call "%ThisDir%\VenvCheck.bat" "%RootDir%"
+call "%ThisDir%\SetupFolders.bat" %1
+call "%ThisDir%\VenvCheck.bat" %1
 
-"%VenvExe%" "%PythonDir%\Main.py" %*
+set ModBuilderPythonDir=%ThisDir%\..\Python
+
+"%VenvExe%" "%ModBuilderPythonDir%\main.py" %*
 
 endlocal

@@ -1,7 +1,9 @@
 setlocal
+
 set ThisDir=%~dp0.
 
-call "%ThisDir%\SetupFolders.bat" "%~1"
+call "%ThisDir%\SetupFolders.bat" %1
+call "%ThisDir%\GetPython.bat" %1
 
 :: Remove existing venv dir
 if exist "%VenvDir%\" (
