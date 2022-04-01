@@ -7,6 +7,7 @@ from data.runner import Runner
 from data.tools import Tool
 from dataclasses import dataclass
 from logging import warning
+from pprint import pprint
 
 
 class BuildType(enum.Flag):
@@ -17,7 +18,6 @@ class BuildType(enum.Flag):
     UNINSTALL = enum.auto()
     RUN = enum.auto()
     PRE_BUILD = enum.auto()
-    BUILD_TMP_FILES = enum.auto()
 
 
 @dataclass
@@ -29,16 +29,16 @@ class BuildSetup:
     tools: dict[Tool]
 
     def VerifyTypes(self) -> None:
-        utils.RelAssert(isinstance(self.type, BuildType), "Engine.type has incorrect type")
-        utils.RelAssert(isinstance(self.folders, Folders), "Engine.folders has incorrect type")
-        utils.RelAssert(isinstance(self.runner, Runner), "Engine.runner has incorrect type")
-        utils.RelAssert(isinstance(self.bundles, list), "Engine.bundles has incorrect type")
-        utils.RelAssert(isinstance(self.tools, dict), "Engine.tools has incorrect type")
+        utils.RelAssert(isinstance(self.type, BuildType), "BuildSetup.type has incorrect type")
+        utils.RelAssert(isinstance(self.folders, Folders), "BuildSetup.folders has incorrect type")
+        utils.RelAssert(isinstance(self.runner, Runner), "BuildSetup.runner has incorrect type")
+        utils.RelAssert(isinstance(self.bundles, list), "BuildSetup.bundles has incorrect type")
+        utils.RelAssert(isinstance(self.tools, dict), "BuildSetup.tools has incorrect type")
 
     def VerifyValues(self) -> None:
-        utils.RelAssert(self.tools.get("crunch") != None, "crunch tool definition is missing")
-        utils.RelAssert(self.tools.get("gametextcompiler") != None, "gametextcompiler tool definition is missing")
-        utils.RelAssert(self.tools.get("generalsbigcreator") != None, "generalsbigcreator tool definition is missing")
+        utils.RelAssert(self.tools.get("crunch") != None, "BuildSetup.tools is missing a definition for 'crunch'")
+        utils.RelAssert(self.tools.get("gametextcompiler") != None, "BuildSetup.tools is missing a definition for 'gametextcompiler'")
+        utils.RelAssert(self.tools.get("generalsbigcreator") != None, "BuildSetup.tools is missing a definition for 'generalsbigcreator'")
 
 
 class Engine:
@@ -56,8 +56,17 @@ class Engine:
             warning("Engine.setup.type is NONE. Exiting.")
             return True
 
+        print("Run Build with ...")
+        pprint(self.setup.folders)
+        pprint(self.setup.runner)
+        pprint(self.setup.bundles)
+        pprint(self.setup.tools)
+
         if self.setup.type & (BuildType.BUILD | BuildType.INSTALL | BuildType.UNINSTALL | BuildType.RELEASE):
             self.setup.type |= BuildType.PRE_BUILD
+
+        if self.setup.type & (BuildType.RELEASE):
+            self.setup.type |= BuildType.BUILD
 
         success = True
 

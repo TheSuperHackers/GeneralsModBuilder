@@ -30,11 +30,6 @@ def __Initialize(buildType: BuildType, configPaths: list[str]) -> None:
     bundles = data.bundles.MakeBundlesFromJsons(jsonFiles)
     tools = data.tools.MakeToolsFromJsons(jsonFiles)
 
-    pprint(folders)
-    pprint(runner)
-    pprint(bundles)
-    pprint(tools)
-
     setup = BuildSetup(type=buildType, folders=folders, runner=runner, bundles=bundles, tools=tools)
 
     engine = Engine()
