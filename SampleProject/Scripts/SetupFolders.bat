@@ -8,4 +8,4 @@ set ConfigDir=%__ThisDir%\..
 
 :: Directory to the Mod Builder tool
 set ModBuilderDir=%__ThisDir%\..\..\ModBuilder
-set RunModBuilder=%ModBuilderDir%\Scripts\Windows\Run.bat
+set RunModBuilder=%ModBuilderDir%\Scripts\Windows\RunBuilder.bat

@@ -11,20 +11,11 @@ if exist "%VenvDir%\" (
 )
 
 :: Create new venv
-python -m venv "%VenvDir%"
+"%PythonExe%" -m venv "%VenvDir%"
 
-:: Activate venv
-call "%VenvActivate%"
-
-:: Install pip
-python -m pip install --upgrade pip
-
-:: Install requirements
-:: pip install libname
-pip freeze > "%ThisDir%\requirements.txt"
-pip list --local
-
-:: Exit
-deactivate
+:: Install requirements, if any
+"%VenvExe%" -m ensurepip
+"%VenvExe%" -m pip freeze > "%PythonRequirements%"
+"%VenvExe%" -m pip list --local
 
 endlocal

@@ -2,6 +2,7 @@ setlocal
 set ThisDir=%~dp0.
 
 call "%ThisDir%\SetupFolders.bat"
+
 cd /D "%PythonDir%"
 
 call "%RunModBuilder%" --mod-build --mod-install ^
