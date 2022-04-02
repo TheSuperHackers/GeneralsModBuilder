@@ -6,11 +6,10 @@ import data.runner
 import data.tools
 import utils
 import os.path
-from build.engine import BuildType
+from build.engine import BuildStep
 from build.engine import BuildSetup
 from build.engine import Engine
 from utils import JsonFile
-from pprint import pprint
 
 
 def __CreateJsonFiles(configPaths: list[str]) -> list[JsonFile]:
@@ -22,7 +21,7 @@ def __CreateJsonFiles(configPaths: list[str]) -> list[JsonFile]:
     return jsonFiles
 
 
-def __Initialize(buildType: BuildType, configPaths: list[str]) -> None:
+def __Initialize(buildType: BuildStep, configPaths: list[str]) -> None:
     jsonFiles = __CreateJsonFiles(configPaths)
 
     folders = data.folders.MakeFoldersFromJsons(jsonFiles)
@@ -30,7 +29,7 @@ def __Initialize(buildType: BuildType, configPaths: list[str]) -> None:
     bundles = data.bundles.MakeBundlesFromJsons(jsonFiles)
     tools = data.tools.MakeToolsFromJsons(jsonFiles)
 
-    setup = BuildSetup(type=buildType, folders=folders, runner=runner, bundles=bundles, tools=tools)
+    setup = BuildSetup(step=buildType, folders=folders, runner=runner, bundles=bundles, tools=tools)
 
     engine = Engine()
     engine.Run(setup)
@@ -48,7 +47,7 @@ def Main(args=None):
     parser.add_argument('-run', '--mod-run', action='store_true')
 
     args, unknownargs = parser.parse_known_args(args=args)
-    pprint(args)
+    utils.PPrint(args)
 
     thisDir = utils.GetFileDir(__file__)
     configPaths: list[str] = []
@@ -63,17 +62,17 @@ def Main(args=None):
     if args.mod_config:
         configPaths.extend(args.mod_config)
 
-    buildType = BuildType.NONE
+    buildType = BuildStep.NONE
     if args.mod_build:
-        buildType |= BuildType.BUILD
+        buildType |= BuildStep.BUILD
     if args.mod_release:
-        buildType |= BuildType.RELEASE
+        buildType |= BuildStep.RELEASE
     if args.mod_install:
-        buildType |= BuildType.INSTALL
+        buildType |= BuildStep.INSTALL
     if args.mod_uninstall:
-        buildType |= BuildType.UNINSTALL
+        buildType |= BuildStep.UNINSTALL
     if args.mod_run:
-        buildType |= BuildType.RUN
+        buildType |= BuildStep.RUN
 
     __Initialize(buildType=buildType, configPaths=configPaths)
 

@@ -2,7 +2,37 @@ import os
 import winreg
 import json
 import hashlib
+import pickle
+from pprint import pprint
 from typing import Any
+
+
+def PPrint(obj: Any) -> None:
+    pprint(obj, sort_dicts=False, compact=False)
+
+
+def SerializeLoad(path: str) -> Any:
+    print("Serialize Load", path)
+    data: Any = None
+    with open(path, "rb") as rfile:
+        data = pickle.load(rfile)
+    return data
+
+
+def SerializeSave(path: str, data: Any) -> None:
+    print("Serialize Save", path)
+    MakeDirsForFile(path)
+    with open(path, "wb") as wfile:
+	    pickle.dump(data, wfile)
+
+
+def ReadJson(path: str) -> dict:
+    print("Read Json", path)
+    data: dict = None
+    with open(path, "rb") as rfile:
+        text = rfile.read()
+        data = json.loads(text)
+    return data
 
 
 class JsonFile:
@@ -11,20 +41,12 @@ class JsonFile:
 
     def __init__(self, path: str):
         self.path = os.path.normpath(path)
-        self.data = self.__ReadJson(self.path)
+        self.data = ReadJson(path)
+        self.VerifyTypes()
+
+    def VerifyTypes(self) -> None:
         RelAssert(isinstance(self.path, str), "JsonFile.path has incorrect type")
         RelAssert(isinstance(self.data, dict), "JsonFile.data has incorrect type")
-
-    def __ReadJson(self, path: str) -> dict:
-        print("Read Json", path)
-        jsonData = dict()
-        with open(path, "rb") as rfile:
-            jsonText = rfile.read()
-            jsonData = json.loads(jsonText)
-        return jsonData
-
-    def __PrintJson(self, path) -> None:
-        print(json.dumps(path, indent=2, sort_keys=False))
 
 
 def GetKeyValueFromRegistry(pathStr: str, keyStr: str) -> str:
