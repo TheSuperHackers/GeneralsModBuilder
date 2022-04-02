@@ -1,8 +1,9 @@
 import utils
 import enum
-from data.bundles import BundleContainer
+from data.bundles import BundlePack
 from data.bundles import BundleItem
 from data.bundles import BundleFile
+from data.bundles import Bundles
 from data.folders import Folders
 from data.runner import Runner
 from data.tools import Tool
@@ -26,17 +27,15 @@ class BuildSetup:
     type: BuildType
     folders: Folders
     runner: Runner
-    bundles: list[BundleContainer]
+    bundles: Bundles
     tools: dict[Tool]
 
     def VerifyTypes(self) -> None:
         utils.RelAssert(isinstance(self.type, BuildType), "BuildSetup.type has incorrect type")
         utils.RelAssert(isinstance(self.folders, Folders), "BuildSetup.folders has incorrect type")
         utils.RelAssert(isinstance(self.runner, Runner), "BuildSetup.runner has incorrect type")
-        utils.RelAssert(isinstance(self.bundles, list), "BuildSetup.bundles has incorrect type")
+        utils.RelAssert(isinstance(self.bundles, Bundles), "BuildSetup.bundles has incorrect type")
         utils.RelAssert(isinstance(self.tools, dict), "BuildSetup.tools has incorrect type")
-        for bundle in self.bundles:
-            utils.RelAssert(isinstance(bundle, BundleContainer), "BuildSetup.bundles[bundle] has incorrect type")
         for tool in self.tools.values():
             utils.RelAssert(isinstance(tool, Tool), "BuildSetup.tools[tool] has incorrect type")
 

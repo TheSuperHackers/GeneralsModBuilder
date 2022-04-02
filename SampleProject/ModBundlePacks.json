@@ -1,0 +1,30 @@
+{
+    "bundles": {
+        "version": 1,
+        "packsPrefix": "",
+        "packsSuffix": "_v1.0",
+        "packs": [
+            {
+                "runDefault": true,
+                "name": "SampleProjectTGA",
+                "itemNames": [
+                    "SampleINI",
+                    "SampleLanguages",
+                    "SampleTexturesTGA",
+                    "SampleWindow",
+                    "Misc"
+                ]
+            },
+            {
+                "name": "SampleProjectDDS2x",
+                "itemNames": [
+                    "SampleINI",
+                    "SampleLanguages",
+                    "SampleTexturesDDS2x",
+                    "SampleWindow",
+                    "Misc"
+                ]
+            }
+        ]
+    }
+}

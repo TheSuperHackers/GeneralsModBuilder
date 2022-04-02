@@ -40,7 +40,6 @@ class BundleItem:
     def __init__(self):
         pass
 
-
     def VerifyTypes(self) -> None:
         utils.RelAssert(isinstance(self.name, str), "BundleItem.name has incorrect type")
         utils.RelAssert(isinstance(self.isBig, bool), "BundleItem.isBig has incorrect type")
@@ -97,26 +96,67 @@ class BundleItem:
 
 
 @dataclass(init=False)
-class BundleContainer:
+class BundlePack:
     name: str
     namePrefix: str = ""
     nameSuffix: str = ""
-    items: list[BundleItem]
+    runDefault: bool = False
+    itemNames: list[str]
 
     def __init__(self):
         pass
 
     def VerifyTypes(self) -> None:
-        utils.RelAssert(isinstance(self.name, str), "BundleContainer.name has incorrect type")
-        utils.RelAssert(isinstance(self.namePrefix, str), "BundleContainer.namePrefix has incorrect type")
-        utils.RelAssert(isinstance(self.nameSuffix, str), "BundleContainer.nameSuffix has incorrect type")
+        utils.RelAssert(isinstance(self.name, str), "BundlePack.name has incorrect type")
+        utils.RelAssert(isinstance(self.namePrefix, str), "BundlePack.namePrefix has incorrect type")
+        utils.RelAssert(isinstance(self.nameSuffix, str), "BundlePack.nameSuffix has incorrect type")
+        utils.RelAssert(isinstance(self.runDefault, bool), "BundlePack.runDefault has incorrect type")
+        utils.RelAssert(isinstance(self.itemNames, list), "BundlePack.itemNames has incorrect type")
+        for itemName in self.itemNames:
+            utils.RelAssert(isinstance(itemName, str), "BundlePack.itemNames has incorrect type")
+
+
+@dataclass(init=False)
+class Bundles:
+    items: list[BundleItem]
+    packs: list[BundlePack]
+
+    def __init__(self):
+        pass
+
+    def VerifyTypes(self) -> None:
+        utils.RelAssert(isinstance(self.items, list), "Bundles.items has incorrect type")
+        utils.RelAssert(isinstance(self.packs, list), "Bundles.packs has incorrect type")
         for item in self.items:
-            utils.RelAssert(isinstance(item, BundleItem), "BundleContainer.items has incorrect type")
+            utils.RelAssert(isinstance(item, BundleItem), "Bundles.items has incorrect type")
             item.VerifyTypes()
+        for pack in self.packs:
+            utils.RelAssert(isinstance(pack, BundlePack), "Bundles.packs has incorrect type")
+            pack.VerifyTypes()
 
     def VerifyValues(self) -> None:
         for item in self.items:
             item.VerifyValues()
+        self.__VerifyUniqueItemNames()
+        self.__VerifyKnownItemsinPacks()
+
+    def __VerifyUniqueItemNames(self) -> None:
+        itemLen = len(self.items)
+        for a in range(itemLen):
+            for b in range(a + 1, itemLen):
+                nameA: str = self.items[a].name
+                nameB: str = self.items[b].name
+                utils.RelAssert(nameA != nameB, f"Bundles.items has items with duplicate name '{nameA}'")
+
+    def __VerifyKnownItemsinPacks(self) -> None:
+        for pack in self.packs:
+            for packItemName in pack.itemNames:
+                found: bool = False
+                for item in self.items:
+                    if packItemName == item.name:
+                        found = True
+                        break
+                utils.RelAssert(found, f"Bundles.packs with pack '{pack.name}' references unknown bundle item '{packItemName}'")
 
     def Normalize(self) -> None:
         for item in self.items:
@@ -127,25 +167,25 @@ class BundleContainer:
             item.ResolveWildcards()
 
 
-def __MakeBundleFilesFromDict(jBundleFile: dict, jsonDir: str) -> list[BundleFile]:
+def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
     files: list[BundleFile] = list()
 
-    parent = utils.JoinPathIfValid(jsonDir, jsonDir, jBundleFile.get("parent"))
-    language = jBundleFile.get("language")
-    rescale = jBundleFile.get("rescale")
+    parent = utils.JoinPathIfValid(jsonDir, jsonDir, jFile.get("parent"))
+    language = jFile.get("language")
+    rescale = jFile.get("rescale")
     if type(rescale) is int:
         rescale = float(rescale)
 
-    source = jBundleFile.get("source")
+    source = jFile.get("source")
     if source:
         bundleFile = BundleFile()
         bundleFile.absSourceFile = os.path.join(parent, source)
-        bundleFile.relTargetFile = utils.GetSecondIfValid(source, jBundleFile.get("target"))
+        bundleFile.relTargetFile = utils.GetSecondIfValid(source, jFile.get("target"))
         bundleFile.language = utils.GetSecondIfValid(bundleFile.language, language)
         bundleFile.rescale = utils.GetSecondIfValid(bundleFile.rescale, rescale)
         files.append(bundleFile)
 
-    sourceList = jBundleFile.get("sourceList")
+    sourceList = jFile.get("sourceList")
     if sourceList:
         element: str
         for element in sourceList:
@@ -156,7 +196,7 @@ def __MakeBundleFilesFromDict(jBundleFile: dict, jsonDir: str) -> list[BundleFil
             bundleFile.rescale = utils.GetSecondIfValid(bundleFile.rescale, rescale)
             files.append(bundleFile)
 
-    sourceTargetList = jBundleFile.get("sourceTargetList")
+    sourceTargetList = jFile.get("sourceTargetList")
     if sourceTargetList:
         element: list[str]
         for element in sourceTargetList:
@@ -170,60 +210,61 @@ def __MakeBundleFilesFromDict(jBundleFile: dict, jsonDir: str) -> list[BundleFil
     return files
 
 
-def __MakeBundleItemFromDict(jBundleItem: dict, jsonDir: str) -> BundleItem:
+def __MakeBundleItemFromDict(jItem: dict, jsonDir: str) -> BundleItem:
     item = BundleItem()
-    item.name = utils.GetSecondIfValid("Undefined", jBundleItem.get("name"))
-    item.isBig = utils.GetSecondIfValid(False, jBundleItem.get("big"))
+    item.name = utils.GetSecondIfValid("Undefined", jItem.get("name"))
+    item.isBig = utils.GetSecondIfValid(False, jItem.get("big"))
     item.files = list()
 
-    jBundleFiles = jBundleItem.get("files")
-    if jBundleFiles:
-        jBundleFile: dict
-        for jBundleFile in jBundleFiles:
-            item.files.extend(__MakeBundleFilesFromDict(jBundleFile, jsonDir))
+    jFiles = jItem.get("files")
+    if jFiles:
+        jFile: dict
+        for jFile in jFiles:
+            item.files.extend(__MakeBundleFilesFromDict(jFile, jsonDir))
 
     return item
 
 
-def __MakeBundleContainerFromDict(jBundleContainer: dict, jsonDir: str) -> BundleContainer:
-    container = BundleContainer()
-    container.name = jBundleContainer.get("name")
-    container.items = list()
-
-    jBundleItems: dict = jBundleContainer.get("items")
-    if jBundleItems:
-        jBundleItem: dict
-        for jBundleItem in jBundleItems:
-            container.items.append(__MakeBundleItemFromDict(jBundleItem, jsonDir))
-
-    return container
+def __MakeBundlePackFromDict(jPack: dict) -> BundlePack:
+    pack = BundlePack()
+    pack.name = jPack.get("name")
+    pack.runDefault = utils.GetSecondIfValid(pack.runDefault, jPack.get("runDefault"))
+    pack.itemNames = jPack.get("itemNames")
+        
+    return pack
 
 
-def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> list[BundleContainer]:
-    containers = list()
+def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> Bundles:
+    bundles = Bundles()
+    bundles.items = list()
+    bundles.packs = list()
     
     for jsonFile in jsonFiles:
         jsonDir: str = utils.GetFileDir(jsonFile.path)
         jBundles: dict = jsonFile.data.get("bundles")
         
         if jBundles:
-            containersPrefix: str = jBundles.get("containersPrefix")
-            containersSuffix: str = jBundles.get("containersSuffix")
-            jBundleContainers: dict = jBundles.get("containers")
+            jItems: dict = jBundles.get("items")
+            if jItems:
+                jItem: dict
+                for jItem in jItems:
+                    bundleItem: BundleItem = __MakeBundleItemFromDict(jItem, jsonDir)
+                    bundles.items.append(bundleItem)
 
-            if jBundleContainers:
-                jBundleContainer: dict
-                for jBundleContainer in jBundleContainers:
-                    container: BundleContainer = __MakeBundleContainerFromDict(jBundleContainer, jsonDir)
-                    container.namePrefix = utils.GetSecondIfValid(container.namePrefix, containersPrefix)
-                    container.nameSuffix = utils.GetSecondIfValid(container.nameSuffix, containersSuffix)
-                    containers.append(container)
+            packsPrefix: str = jBundles.get("packsPrefix")
+            packsSuffix: str = jBundles.get("packsSuffix")
+            jPacks: dict = jBundles.get("packs")
+            if jPacks:
+                jPack: dict
+                for jPack in jPacks:
+                    bundlePack: BundlePack = __MakeBundlePackFromDict(jPack)
+                    bundlePack.namePrefix = utils.GetSecondIfValid(bundlePack.namePrefix, packsPrefix)
+                    bundlePack.nameSuffix = utils.GetSecondIfValid(bundlePack.nameSuffix, packsSuffix)
+                    bundles.packs.append(bundlePack)
    
-    container: BundleContainer
-    for container in containers:
-        container.VerifyTypes()
-        container.ResolveWildcards()
-        container.Normalize()
-        container.VerifyValues()
+    bundles.VerifyTypes()
+    bundles.ResolveWildcards()
+    bundles.Normalize()
+    bundles.VerifyValues()
 
-    return containers
+    return bundles
