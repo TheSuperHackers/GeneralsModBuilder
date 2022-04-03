@@ -1,8 +1,8 @@
-from copy import copy
 import utils
-import os.path
+import os
 import enum
-from typing import Any
+import shutil
+from typing import Any, Callable
 from enum import Enum
 from enum import Flag
 from data.bundles import BundlePack
@@ -12,7 +12,7 @@ from data.bundles import Bundles
 from data.folders import Folders
 from data.runner import Runner
 from data.tools import Tool
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from logging import warning
 from glob import glob
 
@@ -62,8 +62,12 @@ class BuildSetup:
 class BuildFile:
     relTarget: str
     absSource: str
-    status = BuildFileStatus.UNKNOWN
-    refFile: Any = None
+    status: BuildFileStatus
+    parentFile: Any
+
+    def __init__(self):
+        self.status = BuildFileStatus.UNKNOWN
+        self.parentFile = None
 
 
 @dataclass(init=False)
@@ -71,7 +75,20 @@ class BuildThing:
     name: str
     absParentDir: str
     files: list[BuildFile]
-    refThing: Any = None
+    parentThing: Any
+    childThings: list[Any]
+    forceRebuild: bool
+
+    def __init__(self):
+        self.parentThing = None
+        self.childThings = list()
+        self.forceRebuild = False
+
+    def ForEachChild(self, function: Callable[[Any], None]) -> None:
+        child: BuildThing
+        for child in self.childThings:
+            function(child)
+            child.ForEachChild(function)
 
 
 @dataclass(init=False)
@@ -81,16 +98,57 @@ class BuildStructure:
     rawBundlePacks: dict[BuildThing]
     zipBundlePacks: dict[BuildThing]
 
+    def FindAny(self, name: str) -> BuildThing:
+        thing: BuildThing
+        if thing := self.rawBundleItems.get(name):
+            return thing
+        if thing := self.bigBundleItems.get(name):
+            return thing
+        if thing := self.rawBundlePacks.get(name):
+            return thing
+        if thing := self.zipBundlePacks.get(name):
+            return thing
+        return None
+
+    def FindRawBundleItem(self, itemName: str) -> BuildThing:
+        return self.rawBundleItems.get(BuildStructure.GetRawBundleItemName(itemName))
+
+    def FindBigBundleItem(self, itemName: str) -> BuildThing:
+        return self.bigBundleItems.get(BuildStructure.GetBigBundleItemName(itemName))
+
+    def FindRawBundlePack(self, packName: str) -> BuildThing:
+        return self.rawBundlePacks.get(BuildStructure.GetRawBundlePackName(packName))
+
+    def FindZipBundlePack(self, packName: str) -> BuildThing:
+        return self.zipBundlePacks.get(BuildStructure.GetZipBundlePackName(packName))
+
+    @staticmethod
+    def GetRawBundleItemName(itemName: str) -> str:
+        return "RawBundleItem_" + itemName
+
+    @staticmethod
+    def GetBigBundleItemName(itemName: str) -> str:
+        return "BigBundleItem_" + itemName
+
+    @staticmethod
+    def GetRawBundlePackName(packName: str) -> str:
+        return "RawBundlePack_" + packName
+
+    @staticmethod
+    def GetZipBundlePackName(packName: str) -> str:
+        return "ZipBundlePack_" + packName
+
 
 @dataclass(init=False)
-class BuildSourceInfo:
+class BuildFilePathInfo:
+    ownerThingName: str
     md5: str
 
 
 @dataclass(init=False)
 class BuildDiff:
-    newInfos: dict[BuildSourceInfo]
-    oldInfos: dict[BuildSourceInfo]
+    newInfos: dict[BuildFilePathInfo]
+    oldInfos: dict[BuildFilePathInfo]
     path: str
 
     def __init__(self, path: str):
@@ -103,7 +161,7 @@ class BuildDiff:
         try:
             self.oldInfos = utils.SerializeLoad(self.path)
             return True
-        except FileNotFoundError:
+        except:
             return False
 
     def SaveNew(self) -> bool:
@@ -188,7 +246,7 @@ class Engine:
 
         for item in bundles.items:
             newThing = BuildThing()
-            newThing.name = item.name
+            newThing.name = BuildStructure.GetRawBundleItemName(item.name)
             newThing.absParentDir = os.path.join(folders.buildDir, "RawBundleItems", item.name)
             newThing.files = list()
             for itemFile in item.files:
@@ -206,15 +264,16 @@ class Engine:
 
         for item in bundles.items:
             if item.isBig:
-                refThing: BuildThing = structure.rawBundleItems.get(item.name)
-                assert(refThing != None)
+                parentThing: BuildThing = structure.FindRawBundleItem(item.name)
+                assert(parentThing != None)
                 newThing = BuildThing()
-                newThing.name = item.name
+                newThing.name = BuildStructure.GetBigBundleItemName(item.name)
                 newThing.absParentDir = os.path.join(folders.buildDir, "BigBundleItems")
-                newThing.refThing = refThing
+                newThing.parentThing = parentThing
                 newThing.files = [BuildFile()]
-                newThing.files[0].absSource = refThing.absParentDir
+                newThing.files[0].absSource = parentThing.absParentDir
                 newThing.files[0].relTarget = item.name + ".big"
+                parentThing.childThings.append(newThing)
                 structure.bigBundleItems[newThing.name] = newThing
 
 
@@ -229,7 +288,7 @@ class Engine:
 
         for pack in bundles.packs:
             newThing = BuildThing()
-            newThing.name = pack.name
+            newThing.name = BuildStructure.GetRawBundlePackName(pack.name)
             newThing.absParentDir = os.path.join(folders.buildDir, "RawBundlePacks", pack.name)
             newThing.files = list()
 
@@ -237,21 +296,21 @@ class Engine:
                 buildFile = BuildFile()
                 buildFile.absSource = absReleaseFiles[i]
                 buildFile.relTarget = relReleaseFiles[i]
-                buildFile.refFile = None
                 newThing.files.append(buildFile)
 
             for packItemName in pack.itemNames:
-                refThing: BuildThing
-                refThing = structure.bigBundleItems.get(packItemName)
-                if not refThing:
-                    refThing = structure.rawBundleItems.get(packItemName)
-                    assert refThing != None
+                parentThing: BuildThing
+                parentThing = structure.FindBigBundleItem(packItemName)
+                if not parentThing:
+                    parentThing = structure.FindRawBundleItem(packItemName)
+                    assert parentThing != None
+                parentThing.childThings.append(newThing)
 
-                for refFile in refThing.files:
+                for parentFile in parentThing.files:
                     buildFile = BuildFile()
-                    buildFile.absSource = os.path.join(refThing.absParentDir, refFile.relTarget)
-                    buildFile.relTarget = refFile.relTarget
-                    buildFile.refFile = refFile
+                    buildFile.absSource = os.path.join(parentThing.absParentDir, parentFile.relTarget)
+                    buildFile.relTarget = parentFile.relTarget
+                    buildFile.parentFile = parentFile
                     newThing.files.append(buildFile)
 
             structure.rawBundlePacks[newThing.name] = newThing
@@ -263,56 +322,86 @@ class Engine:
         pack: BundlePack
 
         for pack in bundles.packs:
-            refThing: BuildThing = structure.rawBundlePacks.get(pack.name)
-            assert(refThing != None)
+            parentThing: BuildThing = structure.FindRawBundlePack(pack.name)
+            assert(parentThing != None)
             newThing = BuildThing()
-            newThing.name = pack.name
+            newThing.name = BuildStructure.GetZipBundlePackName(pack.name)
             newThing.absParentDir = folders.releaseDir
-            newThing.refThing = refThing
+            newThing.parentThing = parentThing
             newThing.files = [BuildFile()]
-            newThing.files[0].absSource = refThing.absParentDir
+            newThing.files[0].absSource = parentThing.absParentDir
             newThing.files[0].relTarget = pack.name + ".zip"
+            parentThing.childThings.append(newThing)
             structure.zipBundlePacks[newThing.name] = newThing
 
 
     def __Build(self) -> bool:
         print("Do Build ...")
 
-        diffFile = os.path.join(self.setup.folders.buildDir, "RawBundleItems.pickle")
+        diffFile = os.path.join(self.setup.folders.buildDir, "Diff.pickle")
         self.diff = BuildDiff(diffFile)
-        self.diff.newInfos = Engine.__CreateBuildSourceInfoDictFromThings(self.structure.rawBundleItems)
+        self.diff.newInfos = dict()
+        self.diff.newInfos.update(Engine.__CreateFilePathInfoDictFromThings(self.structure.rawBundleItems, sourceMd5=True))
+        self.diff.newInfos.update(Engine.__CreateFilePathInfoDictFromThings(self.structure.bigBundleItems))
+        self.diff.newInfos.update(Engine.__CreateFilePathInfoDictFromThings(self.structure.rawBundlePacks))
+        self.diff.newInfos.update(Engine.__CreateFilePathInfoDictFromThings(self.structure.zipBundlePacks))
 
-        Engine.__CreateBuildFileStatusInStructure(self.structure, self.diff)
+        utils.pprint(self.diff)
+        
+        Engine.__CreateFileStatusInStructure(self.structure, self.diff)
 
-        utils.pprint(self.structure)
+        #utils.pprint(self.structure)
+
+        Engine.__DeleteObsoleteFiles(self.structure, self.diff)
 
         return True
 
 
     @staticmethod
-    def __CreateBuildSourceInfoDictFromThings(buildThings: dict[BuildThing]) -> dict[BuildSourceInfo]:
-        infos: dict[BuildSourceInfo] = dict()
+    def __CreateFilePathInfoDictFromThings(buildThings: dict[BuildThing], sourceMd5=False) -> dict[BuildFilePathInfo]:
+        print("Create File Path Info Dict From Things ...")
+
+        infos: dict[BuildFilePathInfo] = dict()
         thing: BuildThing
         file: BuildFile
 
         for thing in buildThings.values():
             for file in thing.files:
-                if not infos.get(file.absSource):
-                    info = BuildSourceInfo()
-                    info.md5 = utils.GetFileMd5(file.absSource)
-                    infos[file.absSource] = info
+                absSource = file.absSource
+                absTarget = os.path.join(thing.absParentDir, file.relTarget)
+                absTargetDirs: list[str] = utils.GetAllFileDirs(absTarget, thing.absParentDir)
+                absTargetDir: str
+
+                for absTargetDir in absTargetDirs:
+                    if not infos.get(absTargetDir):
+                        info = BuildFilePathInfo()
+                        info.ownerThingName = thing.name
+                        info.md5 = ""
+                        infos[absTargetDir] = info
+
+                if not infos.get(absSource):
+                    info = BuildFilePathInfo()
+                    info.ownerThingName = thing.name
+                    info.md5 = utils.GetFileMd5(absSource) if sourceMd5 else ""
+                    infos[absSource] = info
+
+                if not infos.get(absTarget):
+                    info = BuildFilePathInfo()
+                    info.ownerThingName = thing.name
+                    info.md5 = ""
+                    infos[absTarget] = info
 
         return infos
 
 
     @staticmethod
-    def __CreateBuildFileStatusInStructure(structure: BuildStructure, diff: BuildDiff) -> None:
+    def __CreateFileStatusInStructure(structure: BuildStructure, diff: BuildDiff) -> None:
         print("Create Build File Status ...")
 
         Engine.__CreateBuildFileStatusFromDiff(structure.rawBundleItems, diff)
-        Engine.__CreateBuildFileStatusFromReferences(structure.bigBundleItems)
-        Engine.__CreateBuildFileStatusFromReferences(structure.rawBundlePacks)
-        Engine.__CreateBuildFileStatusFromReferences(structure.zipBundlePacks)
+        Engine.__CreateBuildFileStatusFromParents(structure.bigBundleItems)
+        Engine.__CreateBuildFileStatusFromParents(structure.rawBundlePacks)
+        Engine.__CreateBuildFileStatusFromParents(structure.zipBundlePacks)
 
         Engine.__PrintBuildFileStatus(structure.rawBundleItems)
         Engine.__PrintBuildFileStatus(structure.bigBundleItems)
@@ -327,8 +416,8 @@ class Engine:
 
         for thing in things.values():
             for file in thing.files:
-                newInfo: BuildSourceInfo = diff.newInfos.get(file.absSource)
-                oldInfo: BuildSourceInfo = diff.oldInfos.get(file.absSource)
+                newInfo: BuildFilePathInfo = diff.newInfos.get(file.absSource)
+                oldInfo: BuildFilePathInfo = diff.oldInfos.get(file.absSource)
 
                 if bool(newInfo) and bool(oldInfo):
                     if newInfo.md5 != oldInfo.md5:
@@ -340,34 +429,34 @@ class Engine:
 
 
     @staticmethod
-    def __CreateBuildFileStatusFromReferences(things: dict[BuildThing]) -> None:
-        refThing: BuildThing
-        refFile: BuildFile
+    def __CreateBuildFileStatusFromParents(things: dict[BuildThing]) -> None:
+        parentThing: BuildThing
+        parentFile: BuildFile
         thing: BuildThing
         file: BuildFile
         status: BuildFileStatus
 
         for thing in things.values():
-            refThing = thing.refThing
-            if bool(refThing):
+            parentThing = thing.parentThing
+            if bool(parentThing):
                 status = BuildFileStatus.UNKNOWN
-                for refFile in refThing.files:
-                    if refFile.status == BuildFileStatus.CHANGED:
+                for parentFile in parentThing.files:
+                    if parentFile.status == BuildFileStatus.CHANGED:
                         status = BuildFileStatus.CHANGED
                         break
-                    elif refFile.status == BuildFileStatus.ADDED:
+                    elif parentFile.status == BuildFileStatus.ADDED:
                         if status != BuildFileStatus.CHANGED:
                             status = BuildFileStatus.ADDED
-                    elif refFile.status == BuildFileStatus.UNCHANGED:
+                    elif parentFile.status == BuildFileStatus.UNCHANGED:
                         if status != BuildFileStatus.CHANGED and status != BuildFileStatus.ADDED:
                             status = BuildFileStatus.UNCHANGED
                 for file in thing.files:
                     file.status = status
             else:
                 for file in thing.files:
-                    refFile = file.refFile
-                    if bool(refFile):
-                        file.status = refFile.status
+                    parentFile = file.parentFile
+                    if bool(parentFile):
+                        file.status = parentFile.status
                     else:
                         absSource = file.absSource
                         absTarget = os.path.join(thing.absParentDir, file.relTarget)
@@ -389,6 +478,54 @@ class Engine:
         for thing in things.values():
             for file in thing.files:
                 print(f"File {file.absSource} is {file.status.name}")
+
+
+    @staticmethod
+    def __DeleteObsoleteFiles(structure: BuildStructure, diff: BuildDiff) -> None:
+        print("Delete Obsolete Files ...")
+
+        def __SetForceRebuildInThing(thing: BuildThing) -> None:
+            thing.forceRebuild = True
+
+        fileNames: list[str] = list()
+        fileNames.extend(Engine.__CreateListOfGeneratedFilesFromThings(structure.rawBundleItems))
+        fileNames.extend(Engine.__CreateListOfGeneratedFilesFromThings(structure.bigBundleItems))
+        fileNames.extend(Engine.__CreateListOfGeneratedFilesFromThings(structure.rawBundlePacks))
+        fileNames.extend(Engine.__CreateListOfGeneratedFilesFromThings(structure.zipBundlePacks))
+        fileName: str
+
+        for fileName in fileNames:
+            if os.path.exists(fileName) and not diff.newInfos.get(fileName):
+                oldInfo: BuildFilePathInfo = diff.oldInfos.get(fileName)
+                if oldInfo:
+                    thing: BuildThing = structure.FindAny(oldInfo.ownerThingName)
+                    thing.ForEachChild(__SetForceRebuildInThing)
+                if os.path.isfile(fileName):
+                    os.remove(fileName)
+                    print("Deleted", fileName)
+                elif os.path.isdir(fileName):
+                    shutil.rmtree(fileName)
+                    print("Deleted", fileName)
+
+
+    @staticmethod
+    def __CreateListOfGeneratedFilesFromThings(things: dict[BuildThing]) -> list[str]:
+        dirs: list[str] = Engine.__CreateListOfDirsFromThings(things)
+        dir: str
+        files: list[str] = list()
+        for dir in dirs:
+            globFiles = glob(os.path.join(dir, "**", "*"), recursive=True)
+            files.extend(globFiles)
+        return files
+
+
+    @staticmethod
+    def __CreateListOfDirsFromThings(things: dict[BuildThing]) -> list[str]:
+        dirs = list()
+        thing: BuildThing
+        for thing in things.values():
+            dirs.append(thing.absParentDir)
+        return dirs
 
 
     def __PostBuild(self) -> bool:

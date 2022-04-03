@@ -69,7 +69,23 @@ def GetKeyValueFromRegistry(pathStr: str, keyStr: str) -> str:
 
 
 def GetFileDir(file: str) -> str:
-    return os.path.dirname(os.path.realpath(file))
+    return os.path.dirname(file)
+
+
+def GetAllFileDirs(file: str, stopPath: str = "") -> list[str]:
+    paths: list[str] = list()
+    path1: str = os.path.dirname(file)
+    path2: str = ""
+    while path1 != stopPath and path2 != path1:
+        path2 = path1
+        paths.append(path2)
+        path1 = os.path.normpath(os.path.join(path2, ".."))
+    return paths
+
+
+def GetFileName(file: str) -> str:
+    path, file = os.path.split(file)
+    return file
 
 
 def GetFileExt(file: str) -> str:
