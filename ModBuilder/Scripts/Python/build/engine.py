@@ -1,3 +1,4 @@
+from copy import copy
 import utils
 import os.path
 import enum
@@ -13,6 +14,7 @@ from data.runner import Runner
 from data.tools import Tool
 from dataclasses import dataclass
 from logging import warning
+from glob import glob
 
 
 class BuildStep(Flag):
@@ -221,11 +223,22 @@ class Engine:
         structure.rawBundlePacks = dict()
         pack: BundlePack
 
+        releaseUnpackedDirWithWildcards = os.path.join(folders.releaseUnpackedDir, "**", "*.*")
+        absReleaseFiles = glob(releaseUnpackedDirWithWildcards, recursive=True)
+        relReleaseFiles = utils.CreateRelPaths(absReleaseFiles, folders.releaseUnpackedDir)
+
         for pack in bundles.packs:
             newThing = BuildThing()
             newThing.name = pack.name
             newThing.absParentDir = os.path.join(folders.buildDir, "RawBundlePacks", pack.name)
             newThing.files = list()
+
+            for i in range(len(absReleaseFiles)):
+                buildFile = BuildFile()
+                buildFile.absSource = absReleaseFiles[i]
+                buildFile.relTarget = relReleaseFiles[i]
+                buildFile.refFile = None
+                newThing.files.append(buildFile)
 
             for packItemName in pack.itemNames:
                 refThing: BuildThing
@@ -355,6 +368,18 @@ class Engine:
                     refFile = file.refFile
                     if bool(refFile):
                         file.status = refFile.status
+                    else:
+                        absSource = file.absSource
+                        absTarget = os.path.join(thing.absParentDir, file.relTarget)
+                        if os.path.isfile(absSource) and os.path.isfile(absTarget):
+                            sourceMd5 = utils.GetFileMd5(absSource)
+                            targetMd5 = utils.GetFileMd5(absTarget)
+                            if sourceMd5 != targetMd5:
+                                file.status = BuildFileStatus.CHANGED
+                            else:
+                                file.status = BuildFileStatus.UNCHANGED
+                        elif os.path.isfile(absSource):
+                            file.status = BuildFileStatus.ADDED
 
 
     @staticmethod

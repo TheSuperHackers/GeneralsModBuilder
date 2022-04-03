@@ -1,7 +1,7 @@
 import copy
 import utils
 import os.path
-import glob
+from glob import glob
 from utils import JsonFile
 from dataclasses import dataclass
 
@@ -62,7 +62,7 @@ class BundleItem:
 
         for file in self.files:
             if not os.path.isfile(file.absSourceFile):
-                globFiles = glob.glob(file.absSourceFile)
+                globFiles = glob(file.absSourceFile, recursive=True)
                 utils.RelAssert(bool(globFiles), f"BundleItem.absSourceFile '{file.absSourceFile}' matches nothing")
                 for globFile in globFiles:
                     utils.RelAssert(os.path.isfile(globFile), f"BundleItem file '{globFile}' is not a file")

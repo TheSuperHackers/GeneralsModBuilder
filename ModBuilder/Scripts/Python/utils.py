@@ -3,6 +3,7 @@ import winreg
 import json
 import hashlib
 import pickle
+from copy import copy
 from typing import Any
 from beeprint import pp
 
@@ -80,6 +81,13 @@ def HasFileExt(file: str, ext: str) -> str:
     return file.lower().endswith(ext.lower())
 
 
+def CreateRelPaths(paths: list[str], start: str) -> list[str]:
+    relPaths = copy(paths)
+    for i in range(len(relPaths)):
+        relPaths[i] = os.path.relpath(path=relPaths[i], start=start)
+    return relPaths
+
+
 def MakeDirsForFile(file: str) -> None:
     os.makedirs(GetFileDir(file), exist_ok=True)
 
@@ -112,11 +120,14 @@ def RelAssert(condition: bool, message: str = "") -> None:
 
 def GetFileMd5(path) -> str:
     print("Get md5", path)
-    md5 = hashlib.md5()
-    with open(path, "rb") as rfile:
-        for chunk in iter(lambda: rfile.read(4096), b""):
-            md5.update(chunk)
-    return md5.hexdigest()
+    md5str = ""
+    if os.path.isfile(path):
+        md5obj = hashlib.md5()
+        with open(path, "rb") as rfile:
+            for chunk in iter(lambda: rfile.read(4096), b""):
+                md5obj.update(chunk)
+        md5str = md5obj.hexdigest()
+    return md5str
 
 
 def IsPathSyntax(s: str) -> bool:
