@@ -89,6 +89,24 @@ class BuildSourceInfo:
 class BuildDiff:
     newInfos: dict[BuildSourceInfo]
     oldInfos: dict[BuildSourceInfo]
+    path: str
+
+    def __init__(self, path: str):
+        self.newInfos = dict()
+        self.oldInfos = dict()
+        self.path = path
+        self.TryLoadOld()
+
+    def TryLoadOld(self) -> bool:
+        try:
+            self.oldInfos = utils.SerializeLoad(self.path)
+            return True
+        except FileNotFoundError:
+            return False
+
+    def SaveNew(self) -> bool:
+        utils.SerializeSave(self.path, self.newInfos)
+        return True
 
 
 class Engine:
@@ -244,18 +262,39 @@ class Engine:
             structure.zipBundlePacks[newThing.name] = newThing
 
 
+    def __Build(self) -> bool:
+        print("Do Build ...")
+
+        diffFile = os.path.join(self.setup.folders.buildDir, "RawBundleItems.pickle")
+        self.diff = BuildDiff(diffFile)
+        self.diff.newInfos = Engine.__CreateBuildSourceInfoDictFromThings(self.structure.rawBundleItems)
+
+        Engine.__CreateBuildFileStatusInStructure(self.structure, self.diff)
+
+        utils.pprint(self.structure)
+
+        return True
+
+
     @staticmethod
-    def __CreateBuildFileStatusInStructure(structure: BuildStructure, diff: BuildDiff) -> None:
-        print("Create Build File Status ...")
+    def __CreateBuildSourceInfoDictFromThings(buildThings: dict[BuildThing]) -> dict[BuildSourceInfo]:
+        infos: dict[BuildSourceInfo] = dict()
         thing: BuildThing
         file: BuildFile
 
-        for thing in structure.rawBundleItems.values():
+        for thing in buildThings.values():
             for file in thing.files:
-                if not diff.newInfos.get(file.absSource):
+                if not infos.get(file.absSource):
                     info = BuildSourceInfo()
                     info.md5 = utils.GetFileMd5(file.absSource)
-                    diff.newInfos[file.absSource] = info
+                    infos[file.absSource] = info
+
+        return infos
+
+
+    @staticmethod
+    def __CreateBuildFileStatusInStructure(structure: BuildStructure, diff: BuildDiff) -> None:
+        print("Create Build File Status ...")
 
         Engine.__CreateBuildFileStatusFromDiff(structure.rawBundleItems, diff)
         Engine.__CreateBuildFileStatusFromReferences(structure.bigBundleItems)
@@ -327,46 +366,10 @@ class Engine:
                 print(f"File {file.absSource} is {file.status.name}")
 
 
-    @staticmethod
-    def __DiffFilePath(folders: Folders) -> str:
-        return os.path.join(folders.buildDir, "RawBundleItems.pickle")
-
-
-    @staticmethod
-    def __LoadDiff(folders: Folders) -> BuildDiff:
-        diff = BuildDiff()
-        diff.oldInfos = dict()
-        diff.newInfos = dict()
-        try:
-            diff.oldInfos = utils.SerializeLoad(Engine.__DiffFilePath(folders))
-        except FileNotFoundError:
-            pass
-        return diff
-
-
-    @staticmethod
-    def __SaveDiff(diff: BuildDiff, folders: Folders) -> None:
-        utils.SerializeSave(Engine.__DiffFilePath(folders), diff.newInfos)
-
-
-    def __Build(self) -> bool:
-        print("Do Build ...")
-
-        folders: Folders = self.setup.folders
-
-        self.diff = Engine.__LoadDiff(folders)
-
-        Engine.__CreateBuildFileStatusInStructure(self.structure, self.diff)
-
-        utils.pprint(self.structure)
-
-        return True
-
-
     def __PostBuild(self) -> bool:
         print("Do Post Build ...")
 
-        Engine.__SaveDiff(self.diff, self.setup.folders)
+        self.diff.SaveNew()
 
         return True
 
