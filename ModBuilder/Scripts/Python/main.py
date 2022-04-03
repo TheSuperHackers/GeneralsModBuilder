@@ -5,7 +5,7 @@ import data.folders
 import data.runner
 import data.tools
 import utils
-import os.path
+import os
 from build.engine import BuildStep
 from build.engine import BuildSetup
 from build.engine import Engine
@@ -47,7 +47,7 @@ def Main(args=None):
     parser.add_argument('-run', '--mod-run', action='store_true')
 
     args, unknownargs = parser.parse_known_args(args=args)
-    utils.PPrint(args)
+    utils.pprint(args)
 
     thisDir = utils.GetFileDir(__file__)
     configPaths: list[str] = []

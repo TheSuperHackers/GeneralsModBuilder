@@ -1,0 +1,2 @@
+beeprint==2.4.10
+urwid==2.1.2

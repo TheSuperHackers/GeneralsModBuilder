@@ -107,14 +107,14 @@ class Engine:
         self.setup.VerifyValues()
 
         if self.setup.step == BuildStep.NONE:
-            warning("Engine.setup.type is NONE. Exiting.")
+            warning("Engine.setup.step is NONE. Exiting.")
             return True
 
         print("Run Build with ...")
-        utils.PPrint(self.setup.folders)
-        utils.PPrint(self.setup.runner)
-        utils.PPrint(self.setup.bundles)
-        utils.PPrint(self.setup.tools)
+        utils.pprint(self.setup.folders)
+        utils.pprint(self.setup.runner)
+        utils.pprint(self.setup.bundles)
+        utils.pprint(self.setup.tools)
 
         if self.setup.step & (BuildStep.RELEASE):
             self.setup.step |= BuildStep.BUILD
@@ -358,7 +358,7 @@ class Engine:
 
         Engine.__CreateBuildFileStatusInStructure(self.structure, self.diff)
 
-        utils.PPrint(self.structure)
+        utils.pprint(self.structure)
 
         return True
 

@@ -15,6 +15,7 @@ if exist "%VenvDir%\" (
 
 :: Install requirements, if any
 "%VenvExe%" -m ensurepip
+"%VenvExe%" -m pip install beeprint
 "%VenvExe%" -m pip freeze > "%PythonRequirements%"
 "%VenvExe%" -m pip list --local
 
