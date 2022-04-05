@@ -29,13 +29,17 @@
                         "parent": "GameFilesEdited",
                         "source": "Data/generals.str",
                         "target": "Data/English/generals.csf",
-                        "language": "English"
+                        "params": {
+                            "language": "English"
+                        }
                     },
                     {
                         "parent": "GameFilesEdited",
                         "source": "Data/generals.str",
                         "target": "Data/Spanish/generals.csf",
-                        "language": "Spanish"
+                        "params": {
+                            "language": "Spanish"
+                        }
                     }
                 ]
             },
@@ -60,14 +64,16 @@
                 "big": true,
                 "files": [
                     {
-                        "rescale": 2,
                         "parent": "GameFilesEdited",
                         "sourceTargetList": [
                             [
                                 "Art/*.psd",
                                 "Art/*.dds"
                             ]
-                        ]
+                        ],
+                        "params": {
+                            "relscale": 2
+                        }
                     }
                 ]
             },

@@ -117,7 +117,7 @@ def __MakeToolFromDict(jTool: dict, jsonDir: str) -> Tool:
     return tool
 
 
-def MakeToolsFromJsons(jsonFiles: list[JsonFile]) -> dict[Tool]:
+def MakeToolsFromJsons(jsonFiles: list[JsonFile]) -> dict[str, Tool]:
     tools = dict()
     tool: Tool
 
@@ -141,7 +141,7 @@ def MakeToolsFromJsons(jsonFiles: list[JsonFile]) -> dict[Tool]:
     return tools
 
 
-def InstallTools(tools: dict[Tool]) -> bool:
+def InstallTools(tools: dict[str, Tool]) -> bool:
     tool: Tool
     success: bool = True
     for tool in tools.values():

@@ -8,7 +8,7 @@ import utils
 import os
 from build.engine import BuildStep
 from build.engine import BuildSetup
-from build.engine import Engine
+from build.engine import BuildEngine
 from utils import JsonFile
 
 
@@ -31,7 +31,7 @@ def __Initialize(buildType: BuildStep, configPaths: list[str]) -> None:
 
     setup = BuildSetup(step=buildType, folders=folders, runner=runner, bundles=bundles, tools=tools)
 
-    engine = Engine()
+    engine = BuildEngine()
     engine.Run(setup)
 
 

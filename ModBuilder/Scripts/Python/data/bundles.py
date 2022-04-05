@@ -1,17 +1,17 @@
 import copy
 import utils
 import os.path
+from typing import Any
 from glob import glob
-from utils import JsonFile
 from dataclasses import dataclass
+from utils import JsonFile
 
 
 @dataclass(init=False)
 class BundleFile:
     absSourceFile: str
     relTargetFile: str
-    language: str = ""
-    rescale: float = 1.0
+    params: dict[str, Any]
 
     def __init__(self):
         pass
@@ -19,8 +19,9 @@ class BundleFile:
     def VerifyTypes(self) -> None:
         utils.RelAssert(isinstance(self.absSourceFile, str), "BundleFile.absSourceFile has incorrect type")
         utils.RelAssert(isinstance(self.relTargetFile, str), "BundleFile.relTargetFile has incorrect type")
-        utils.RelAssert(isinstance(self.language, str), "BundleFile.language has incorrect type")
-        utils.RelAssert(isinstance(self.rescale, float), "BundleFile.rescale has incorrect type")
+        utils.RelAssert(isinstance(self.params, dict), "BundleFile.params has incorrect type")
+        for k in self.params.keys():
+            utils.RelAssert(isinstance(k, str), "BundleFile.params has incorrect type")
 
     def VerifyValues(self) -> None:
         utils.RelAssert(os.path.isabs(self.absSourceFile), "BundleFile.absSourceFile is not an absolute path")
@@ -34,11 +35,11 @@ class BundleFile:
 @dataclass(init=False)
 class BundleItem:
     name: str
-    isBig: bool = True
+    isBig: bool
     files: list[BundleFile]
 
     def __init__(self):
-        pass
+        self.isBig = True
 
     def VerifyTypes(self) -> None:
         utils.RelAssert(isinstance(self.name, str), "BundleItem.name has incorrect type")
@@ -98,13 +99,15 @@ class BundleItem:
 @dataclass(init=False)
 class BundlePack:
     name: str
-    namePrefix: str = ""
-    nameSuffix: str = ""
-    runDefault: bool = False
+    namePrefix: str
+    nameSuffix: str
+    runDefault: bool
     itemNames: list[str]
 
     def __init__(self):
-        pass
+        self.namePrefix = ""
+        self.nameSuffix = ""
+        self.runDefault = False
 
     def VerifyTypes(self) -> None:
         utils.RelAssert(isinstance(self.name, str), "BundlePack.name has incorrect type")
@@ -171,18 +174,16 @@ def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
     files: list[BundleFile] = list()
 
     parent = utils.JoinPathIfValid(jsonDir, jsonDir, jFile.get("parent"))
-    language = jFile.get("language")
-    rescale = jFile.get("rescale")
-    if type(rescale) is int:
-        rescale = float(rescale)
+    params = jFile.get("params")
+    if params == None:
+        params = dict()
 
     source = jFile.get("source")
     if source:
         bundleFile = BundleFile()
         bundleFile.absSourceFile = os.path.join(parent, source)
         bundleFile.relTargetFile = utils.GetSecondIfValid(source, jFile.get("target"))
-        bundleFile.language = utils.GetSecondIfValid(bundleFile.language, language)
-        bundleFile.rescale = utils.GetSecondIfValid(bundleFile.rescale, rescale)
+        bundleFile.params = params
         files.append(bundleFile)
 
     sourceList = jFile.get("sourceList")
@@ -192,8 +193,7 @@ def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
             bundleFile = BundleFile()
             bundleFile.absSourceFile = os.path.join(parent, element)
             bundleFile.relTargetFile = element
-            bundleFile.language = utils.GetSecondIfValid(bundleFile.language, language)
-            bundleFile.rescale = utils.GetSecondIfValid(bundleFile.rescale, rescale)
+            bundleFile.params = params
             files.append(bundleFile)
 
     sourceTargetList = jFile.get("sourceTargetList")
@@ -203,8 +203,7 @@ def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
             bundleFile = BundleFile()
             bundleFile.absSourceFile = os.path.join(parent, element[0])
             bundleFile.relTargetFile = element[1]
-            bundleFile.language = utils.GetSecondIfValid(bundleFile.language, language)
-            bundleFile.rescale = utils.GetSecondIfValid(bundleFile.rescale, rescale)
+            bundleFile.params = params
             files.append(bundleFile)
 
     return files
