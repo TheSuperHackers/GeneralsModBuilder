@@ -230,7 +230,7 @@ def __MakeBundlePackFromDict(jPack: dict) -> BundlePack:
     pack.name = jPack.get("name")
     pack.runDefault = utils.GetSecondIfValid(pack.runDefault, jPack.get("runDefault"))
     pack.itemNames = jPack.get("itemNames")
-        
+
     return pack
 
 
@@ -238,11 +238,11 @@ def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> Bundles:
     bundles = Bundles()
     bundles.items = list()
     bundles.packs = list()
-    
+
     for jsonFile in jsonFiles:
         jsonDir: str = utils.GetFileDir(jsonFile.path)
         jBundles: dict = jsonFile.data.get("bundles")
-        
+
         if jBundles:
             jItems: dict = jBundles.get("items")
             if jItems:
@@ -261,7 +261,7 @@ def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> Bundles:
                     bundlePack.namePrefix = utils.GetSecondIfValid(bundlePack.namePrefix, packsPrefix)
                     bundlePack.nameSuffix = utils.GetSecondIfValid(bundlePack.nameSuffix, packsSuffix)
                     bundles.packs.append(bundlePack)
-   
+
     bundles.VerifyTypes()
     bundles.ResolveWildcards()
     bundles.Normalize()

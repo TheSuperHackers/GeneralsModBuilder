@@ -3,6 +3,7 @@ import winreg
 import json
 import hashlib
 import pickle
+import shutil
 from copy import copy
 from typing import Any
 from beeprint import pp
@@ -106,6 +107,17 @@ def CreateRelPaths(paths: list[str], start: str) -> list[str]:
 
 def MakeDirsForFile(file: str) -> None:
     os.makedirs(GetFileDir(file), exist_ok=True)
+
+
+def DeleteFileOrPath(path: str) -> bool:
+    if os.path.isfile(path):
+        os.remove(path)
+        return True
+    elif os.path.isdir(path):
+        shutil.rmtree(path)
+        return True
+    else:
+        return False
 
 
 def GetSecondIfValid(first: Any, second: Any) -> Any:
