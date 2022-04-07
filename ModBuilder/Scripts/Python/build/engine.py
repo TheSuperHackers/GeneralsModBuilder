@@ -339,6 +339,7 @@ class BuildEngine:
             BuildEngine.__PopulateBuildFileStatusInThings(data.things, data.diff)
             BuildEngine.__DeleteObsoleteFilesOfThings(data.things, data.diff)
             BuildEngine.__CopyFilesOfThings(data.things, buildCopy)
+            BuildEngine.__RehashFilePathInfoDict(data.diff.newInfos, data.things)
 
             data.diff.SaveNewInfos()
 
@@ -390,6 +391,21 @@ class BuildEngine:
                 infos[absTarget] = info
 
         return infos
+
+
+    @staticmethod
+    def __RehashFilePathInfoDict(infos: BuildFilePathInfosT, things: dict[str, BuildThing]) -> None:
+        thing: BuildThing
+        file: BuildFile
+
+        for thing in things.values():
+            print(f"Rehash files for {thing.name} ...")
+
+            for file in thing.files:
+                if file.targetStatus != BuildFileStatus.UNCHANGED:
+                    absTarget: str = file.AbsTarget(thing.absParentDir)
+                    targetInfo: BuildFilePathInfo = infos.get(absTarget)
+                    targetInfo.md5 = utils.GetFileMd5(absTarget)
 
 
     @staticmethod
