@@ -1,3 +1,4 @@
+import os
 import subprocess
 import shutil
 import utils
@@ -111,24 +112,25 @@ class BuildCopy:
         copyFunction: Callable = self.__GetCopyFunction(sourceType, targetType)
         success: bool = copyFunction(source, target, params)
 
-        if success == True:
-            BuildCopy.__PrintCopySuccess(source, target)
-        else:
-            BuildCopy.__PrintCopyFail(source, target)
-
         return success
 
 
     @staticmethod
-    def __PrintCopySuccess(source: str, target: str) -> None:
+    def __PrintCopyResult(source: str, target: str) -> None:
         print("Copy", source)
         print("  to", target)
 
 
     @staticmethod
-    def __PrintCopyFail(source: str, target: str) -> None:
-        print("FAILED Copy", source)
-        print("         to", target)
+    def __PrintLinkResult(source: str, target: str) -> None:
+        print("Link", source)
+        print("  to", target)
+
+
+    @staticmethod
+    def __PrintMakeResult(source: str, target: str) -> None:
+        print("With", source)
+        print("make", target)
 
 
     def __GetCopyFunction(self, sourceT: BuildFileType, targetT: BuildFileType) -> Callable:
@@ -166,7 +168,13 @@ class BuildCopy:
 
 
     def __CopyTo(self, source: str, target: str, params: ParamsT) -> bool:
-        shutil.copy(src=source, dst=target)
+        try:
+            os.symlink(src=source, dst=target)
+            BuildCopy.__PrintLinkResult(source, target)
+        except OSError:
+            shutil.copy(src=source, dst=target)
+            BuildCopy.__PrintCopyResult(source, target)
+
         return True
 
 
@@ -182,6 +190,7 @@ class BuildCopy:
 
         subprocess.run(args, check=True)
 
+        BuildCopy.__PrintMakeResult(source, target)
         return True
 
 
@@ -197,6 +206,7 @@ class BuildCopy:
 
         subprocess.run(args, check=True)
 
+        BuildCopy.__PrintMakeResult(source, target)
         return True
 
 
@@ -208,21 +218,28 @@ class BuildCopy:
 
         subprocess.run(args=args, check=True)
 
+        BuildCopy.__PrintMakeResult(source, target)
         return True
 
 
     def __CopyToZIP(self, source: str, target: str, params: ParamsT) -> bool:
         shutil.make_archive(base_name=utils.GetFileDirAndName(target), format="zip", root_dir=source)
+
+        BuildCopy.__PrintMakeResult(source, target)
         return True
 
 
     def __CopyToTAR(self, source: str, target: str, params: ParamsT) -> bool:
         shutil.make_archive(base_name=utils.GetFileDirAndName(target), format="tar", root_dir=source)
+
+        BuildCopy.__PrintMakeResult(source, target)
         return True
 
 
     def __CopyToGZTAR(self, source: str, target: str, params: ParamsT) -> bool:
         shutil.make_archive(base_name=utils.GetFileDirAndName(target), format="gztar", root_dir=source)
+
+        BuildCopy.__PrintMakeResult(source, target)
         return True
 
 
@@ -238,6 +255,7 @@ class BuildCopy:
 
         subprocess.run(args=argsRun, check=True)
 
+        BuildCopy.__PrintMakeResult(source, target)
         return True
 
 
@@ -255,6 +273,7 @@ class BuildCopy:
 
         subprocess.run(args=args, check=True)
 
+        BuildCopy.__PrintMakeResult(source, target)
         return True
 
 
@@ -272,6 +291,7 @@ class BuildCopy:
 
         subprocess.run(args=args, check=True)
 
+        BuildCopy.__PrintMakeResult(source, target)
         return True
 
 
