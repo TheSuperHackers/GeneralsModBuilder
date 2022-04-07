@@ -328,22 +328,22 @@ class BuildEngine:
     def __Build(self) -> bool:
         print("Do Build ...")
 
-        buildCopy = BuildCopy(tools=self.setup.tools)
-        structure: BuildStructure = self.structure
-        index: DataIndex
-
-        for index in DataIndex:
-            data: BuildProcessData = structure.GetProcessData(index)
-            data.diff.newInfos = BuildEngine.__CreateFilePathInfoDictFromThings(data.things)
-
-            BuildEngine.__PopulateBuildFileStatusInThings(data.things, data.diff)
-            BuildEngine.__DeleteObsoleteFilesOfThings(data.things, data.diff)
-            BuildEngine.__CopyFilesOfThings(data.things, buildCopy)
-            BuildEngine.__RehashFilePathInfoDict(data.diff.newInfos, data.things)
-
-            data.diff.SaveNewInfos()
+        BuildEngine.__BuildWithData(self.structure.GetProcessData(DataIndex.RAW_BUNDLE_ITEM), self.setup.tools)
+        BuildEngine.__BuildWithData(self.structure.GetProcessData(DataIndex.BIG_BUNDLE_ITEM), self.setup.tools)
 
         return True
+
+
+    @staticmethod
+    def __BuildWithData(data: BuildProcessData, tools: dict[str, Tool]) -> None:
+        data.diff.newInfos = BuildEngine.__CreateFilePathInfoDictFromThings(data.things)
+
+        BuildEngine.__PopulateBuildFileStatusInThings(data.things, data.diff)
+        BuildEngine.__DeleteObsoleteFilesOfThings(data.things, data.diff)
+        BuildEngine.__CopyFilesOfThings(data.things, tools)
+        BuildEngine.__RehashFilePathInfoDict(data.diff.newInfos, data.things)
+
+        data.diff.SaveNewInfos()
 
 
     @staticmethod
@@ -486,7 +486,8 @@ class BuildEngine:
 
 
     @staticmethod
-    def __CopyFilesOfThings(things: dict[str, BuildThing], buildCopy: BuildCopy) -> None:
+    def __CopyFilesOfThings(things: dict[str, BuildThing], tools: dict[str, Tool]) -> None:
+        buildCopy = BuildCopy(tools=tools)
         thing: BuildThing
 
         for thing in things.values():
@@ -502,6 +503,10 @@ class BuildEngine:
 
     def __BuildRelease(self) -> bool:
         print("Do Build Release ...")
+
+        BuildEngine.__BuildWithData(self.structure.GetProcessData(DataIndex.RAW_BUNDLE_PACK), self.setup.tools)
+        BuildEngine.__BuildWithData(self.structure.GetProcessData(DataIndex.ZIP_BUNDLE_PACK), self.setup.tools)
+
         return True
 
 
