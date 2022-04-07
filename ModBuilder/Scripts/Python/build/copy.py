@@ -25,26 +25,26 @@ class BuildFileType(Enum):
     AUTO = enum.auto()
 
 
-def GetFileType(ext: str) -> BuildFileType:
-    if ext.endswith("csf"):
+def GetFileType(filePath: str) -> BuildFileType:
+    if utils.HasFileExt(filePath, "csf"):
         return BuildFileType.CSF
-    if ext.endswith("str"):
+    if utils.HasFileExt(filePath, "str"):
         return BuildFileType.STR
-    if ext.endswith("big"):
+    if utils.HasFileExt(filePath, "big"):
         return BuildFileType.BIG
-    if ext.endswith("zip"):
+    if utils.HasFileExt(filePath, "zip"):
         return BuildFileType.ZIP
-    if ext.endswith("tar"):
+    if utils.HasFileExt(filePath, "tar"):
         return BuildFileType.TAR
-    if ext.endswith("gz"):
+    if utils.HasFileExt(filePath, "gz"):
         return BuildFileType.GZTAR
-    if ext.endswith("psd"):
+    if utils.HasFileExt(filePath, "psd"):
         return BuildFileType.PSD
-    if ext.endswith("bmp"):
+    if utils.HasFileExt(filePath, "bmp"):
         return BuildFileType.BMP
-    if ext.endswith("tga"):
+    if utils.HasFileExt(filePath, "tga"):
         return BuildFileType.TGA
-    if ext.endswith("dds"):
+    if utils.HasFileExt(filePath, "dds"):
         return BuildFileType.DDS
     return BuildFileType.ANY
 
