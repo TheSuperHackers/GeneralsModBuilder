@@ -5,7 +5,7 @@ import hashlib
 import pickle
 import shutil
 from copy import copy
-from typing import Any
+from typing import Any, Callable
 from beeprint import pp
 
 
@@ -151,19 +151,27 @@ def RelAssert(condition: bool, message: str = "") -> None:
         raise Exception(message)
 
 
-def GetFileMd5(path) -> str:
-    print("Get md5", path)
-    md5str = ""
+def GetFileMd5(path: str) -> str:
+    return GetFileHash(path, hashlib.md5)
+
+
+def GetFileSha256(path: str) -> str:
+    return GetFileHash(path, hashlib.sha256)
+
+
+def GetFileHash(path, hashFunc: Callable) -> str:
+    hashStr: str = ""
     if os.path.isfile(path):
-        md5obj = hashlib.md5()
+        hashObj: hashlib._Hash = hashFunc()
         with open(path, "rb") as rfile:
             for chunk in iter(lambda: rfile.read(4096), b""):
-                md5obj.update(chunk)
-        md5str = md5obj.hexdigest()
-    return md5str
+                hashObj.update(chunk)
+        hashStr = hashObj.hexdigest()
+        print(f"Hashed {path} as {hashStr}")
+    return hashStr
 
 
-def IsPathSyntax(s: str) -> bool:
-    if s and isinstance(s, str) and (s.endswith("/") or s.endswith("\\")):
+def IsPathSyntax(path: str) -> bool:
+    if path and isinstance(path, str) and (path.endswith("/") or path.endswith("\\")):
         return True
     return False
