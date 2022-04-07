@@ -19,23 +19,23 @@ def pprint(obj: Any) -> None:
         tuple_in_line=False)
 
 
-def SerializeLoad(path: str) -> Any:
-    print("Serialize Load", path)
+def LoadPickle(path: str) -> Any:
     data: Any = None
     with open(path, "rb") as rfile:
         data = pickle.load(rfile)
+    print("Loaded pickle", path)
     return data
 
 
-def SerializeSave(path: str, data: Any) -> None:
-    print("Serialize Save", path)
+def SavePickle(path: str, data: Any) -> None:
     MakeDirsForFile(path)
     with open(path, "wb") as wfile:
-	    pickle.dump(data, wfile)
+        pickle.dump(data, wfile)
+    print("Saved pickle", path)
 
 
 def ReadJson(path: str) -> dict:
-    print("Read Json", path)
+    print("Read json", path)
     data: dict = None
     with open(path, "rb") as rfile:
         text = rfile.read()

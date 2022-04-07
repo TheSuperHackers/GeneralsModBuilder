@@ -54,30 +54,34 @@ class BuildFilePathInfo:
     ownerThingName: str
     md5: str
 
+    def __init__(self):
+        pass
+
+
 BuildFilePathInfosT = dict[str, BuildFilePathInfo]
 
 
 @dataclass(init=False)
 class BuildDiff:
-    newInfos: dict[str, BuildFilePathInfo]
-    oldInfos: dict[str, BuildFilePathInfo]
-    path: str
+    newInfos: BuildFilePathInfosT
+    oldInfos: BuildFilePathInfosT
+    loadPath: str
 
-    def __init__(self, path: str):
+    def __init__(self, loadPath: str):
         self.newInfos = dict()
         self.oldInfos = dict()
-        self.path = path
+        self.loadPath = loadPath
         self.TryLoadOldInfos()
 
     def TryLoadOldInfos(self) -> bool:
         try:
-            self.oldInfos = utils.SerializeLoad(self.path)
+            self.oldInfos = utils.LoadPickle(self.loadPath)
             return True
         except:
             return False
 
     def SaveNewInfos(self) -> bool:
-        utils.SerializeSave(self.path, self.newInfos)
+        utils.SavePickle(self.loadPath, self.newInfos)
         return True
 
 
@@ -115,7 +119,7 @@ class BuildProcessData:
 
     def __init__(self, diffPath: str):
         self.things = dict()
-        self.diff = BuildDiff(path=diffPath)
+        self.diff = BuildDiff(loadPath=diffPath)
 
 
 @dataclass(init=False)
