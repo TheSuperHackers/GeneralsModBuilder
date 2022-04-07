@@ -3,11 +3,11 @@ import shutil
 import utils
 import enum
 from enum import Enum
-from typing import Any, Callable, Union
+from typing import Callable, Union
 from dataclasses import dataclass
 from data.bundles import ParamsT
-from data.tools import Tool
-from build.thing import BuildFile, BuildFileStatus, BuildThing
+from data.tools import ToolsT
+from build.thing import BuildFile, BuildThing, BuildThingsT
 
 
 class BuildFileType(Enum):
@@ -51,10 +51,10 @@ def GetFileType(ext: str) -> BuildFileType:
 
 @dataclass
 class BuildCopy:
-    tools: dict[str, Tool]
+    tools: ToolsT
 
 
-    def CopyThings(self, things: dict[str, BuildThing]) -> bool:
+    def CopyThings(self, things: BuildThingsT) -> bool:
         success: bool = True
         thing: BuildThing
 

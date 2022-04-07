@@ -7,11 +7,11 @@ from dataclasses import dataclass
 from logging import warning
 from glob import glob
 from build.copy import BuildCopy
-from build.thing import BuildFile, BuildFileStatus, BuildThing
+from build.thing import BuildFile, BuildFileStatus, BuildThing, BuildFilesT, BuildThingsT
 from data.bundles import Bundles, BundlePack, BundleItem, BundleFile
 from data.folders import Folders
 from data.runner import Runner
-from data.tools import Tool
+from data.tools import Tool, ToolsT
 
 
 class BuildStep(Flag):
@@ -31,7 +31,7 @@ class BuildSetup:
     folders: Folders
     runner: Runner
     bundles: Bundles
-    tools: dict[str, Tool]
+    tools: ToolsT
 
     def VerifyTypes(self) -> None:
         utils.RelAssert(isinstance(self.step, BuildStep), "BuildSetup.step has incorrect type")
@@ -68,8 +68,8 @@ class BuildDiff:
     loadPath: str
 
     def __init__(self, loadPath: str):
-        self.newInfos = dict()
-        self.oldInfos = dict()
+        self.newInfos = BuildFilePathInfosT()
+        self.oldInfos = BuildFilePathInfosT()
         self.loadPath = loadPath
         self.TryLoadOldInfos()
 
@@ -114,11 +114,11 @@ def MakeDiffPath(index: DataIndex, folders: Folders) -> str:
 
 @dataclass(init=False)
 class BuildProcessData:
-    things: dict[str, BuildThing]
+    things: BuildThingsT
     diff: BuildDiff
 
     def __init__(self, diffPath: str):
-        self.things = dict()
+        self.things = BuildThingsT()
         self.diff = BuildDiff(loadPath=diffPath)
 
 
@@ -127,7 +127,7 @@ class BuildStructure:
     data: list[BuildProcessData]
 
     def __init__(self, folders: Folders):
-        self.data = list()
+        self.data = list[BuildProcessData]()
         for index in DataIndex:
             diffPath: str = MakeDiffPath(index, folders)
             self.data.append(BuildProcessData(diffPath=diffPath))
@@ -135,7 +135,7 @@ class BuildStructure:
     def GetProcessData(self, index: DataIndex) -> BuildProcessData:
         return self.data[index.value]
 
-    def GetThings(self, index: DataIndex) -> dict[str, BuildThing]:
+    def GetThings(self, index: DataIndex) -> BuildThingsT:
         return self.data[index.value].things
 
     def GetDiff(self, index: DataIndex) -> BuildDiff:
@@ -238,7 +238,7 @@ class BuildEngine:
             newThing = BuildThing()
             newThing.name = MakeThingName(DataIndex.RAW_BUNDLE_ITEM, item.name)
             newThing.absParentDir = os.path.join(folders.buildDir, "RawBundleItems", item.name)
-            newThing.files = list()
+            newThing.files = BuildFilesT()
             for itemFile in item.files:
                 buildFile = BuildFile()
                 buildFile.absSource = itemFile.absSourceFile
@@ -281,7 +281,7 @@ class BuildEngine:
             newThing = BuildThing()
             newThing.name = MakeThingName(DataIndex.RAW_BUNDLE_PACK, pack.name)
             newThing.absParentDir = os.path.join(folders.buildDir, "RawBundlePacks", pack.name)
-            newThing.files = list()
+            newThing.files = BuildFilesT()
 
             for i in range(len(absReleaseFiles)):
                 buildFile = BuildFile()
@@ -335,7 +335,7 @@ class BuildEngine:
 
 
     @staticmethod
-    def __BuildWithData(data: BuildProcessData, tools: dict[str, Tool]) -> None:
+    def __BuildWithData(data: BuildProcessData, tools: ToolsT) -> None:
         data.diff.newInfos = BuildEngine.__CreateFilePathInfoDictFromThings(data.things)
 
         BuildEngine.__PopulateBuildFileStatusInThings(data.things, data.diff)
@@ -347,8 +347,8 @@ class BuildEngine:
 
 
     @staticmethod
-    def __CreateFilePathInfoDictFromThings(things: dict[str, BuildThing]) -> BuildFilePathInfosT:
-        infos: BuildFilePathInfosT = dict()
+    def __CreateFilePathInfoDictFromThings(things: BuildThingsT) -> BuildFilePathInfosT:
+        infos = BuildFilePathInfosT()
         thing: BuildThing
 
         for thing in things.values():
@@ -361,7 +361,7 @@ class BuildEngine:
 
     @staticmethod
     def __CreateFilePathInfoDictFromThing(thing: BuildThing) -> BuildFilePathInfosT:
-        infos: BuildFilePathInfosT = dict()
+        infos = BuildFilePathInfosT()
         file: BuildFile
 
         for file in thing.files:
@@ -394,7 +394,7 @@ class BuildEngine:
 
 
     @staticmethod
-    def __RehashFilePathInfoDict(infos: BuildFilePathInfosT, things: dict[str, BuildThing]) -> None:
+    def __RehashFilePathInfoDict(infos: BuildFilePathInfosT, things: BuildThingsT) -> None:
         thing: BuildThing
         file: BuildFile
 
@@ -409,7 +409,7 @@ class BuildEngine:
 
 
     @staticmethod
-    def __PopulateBuildFileStatusInThings(things: dict[str, BuildThing], diff: BuildDiff) -> None:
+    def __PopulateBuildFileStatusInThings(things: BuildThingsT, diff: BuildDiff) -> None:
         thing: BuildThing
 
         for thing in things.values():
@@ -455,7 +455,7 @@ class BuildEngine:
 
 
     @staticmethod
-    def __DeleteObsoleteFilesOfThings(things: dict[str, BuildThing], diff: BuildDiff) -> None:
+    def __DeleteObsoleteFilesOfThings(things: BuildThingsT, diff: BuildDiff) -> None:
         def SetParentHasDeletedFiles(thing: BuildThing) -> None:
             thing.parentHasDeletedFiles = True
 
@@ -486,7 +486,7 @@ class BuildEngine:
 
 
     @staticmethod
-    def __CopyFilesOfThings(things: dict[str, BuildThing], tools: dict[str, Tool]) -> None:
+    def __CopyFilesOfThings(things: BuildThingsT, tools: ToolsT) -> None:
         buildCopy = BuildCopy(tools=tools)
         thing: BuildThing
 

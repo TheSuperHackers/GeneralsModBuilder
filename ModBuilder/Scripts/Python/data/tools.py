@@ -95,6 +95,9 @@ class Tool:
         return success
 
 
+ToolsT = dict[str, Tool]
+
+
 def __MakeToolFileFromDict(jFile: dict, jsonDir: str) -> ToolFile:
     toolFile = ToolFile()
     toolFile.url = jFile.get("url")
@@ -117,7 +120,7 @@ def __MakeToolFromDict(jTool: dict, jsonDir: str) -> Tool:
     return tool
 
 
-def MakeToolsFromJsons(jsonFiles: list[JsonFile]) -> dict[str, Tool]:
+def MakeToolsFromJsons(jsonFiles: list[JsonFile]) -> ToolsT:
     tools = dict()
     tool: Tool
 
@@ -141,7 +144,7 @@ def MakeToolsFromJsons(jsonFiles: list[JsonFile]) -> dict[str, Tool]:
     return tools
 
 
-def InstallTools(tools: dict[str, Tool]) -> bool:
+def InstallTools(tools: ToolsT) -> bool:
     tool: Tool
     success: bool = True
     for tool in tools.values():

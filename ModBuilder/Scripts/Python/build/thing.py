@@ -38,11 +38,14 @@ class BuildFile:
         return self.targetStatus == BuildFileStatus.UNCHANGED and self.sourceStatus == BuildFileStatus.UNCHANGED
 
 
+BuildFilesT = list[BuildFile]
+
+
 @dataclass(init=False)
 class BuildThing:
     name: str
     absParentDir: str
-    files: list[BuildFile]
+    files: BuildFilesT
     childThings: list[Any]
     parentHasDeletedFiles: bool
 
@@ -54,3 +57,6 @@ class BuildThing:
         child: BuildThing
         for child in self.childThings:
             function(child)
+
+
+BuildThingsT = dict[str, BuildThing]
