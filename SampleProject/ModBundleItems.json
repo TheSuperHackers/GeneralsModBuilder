@@ -44,7 +44,7 @@
                 ]
             },
             {
-                "name": "SampleTexturesTGA",
+                "name": "SampleTexturesTGA256",
                 "big": true,
                 "files": [
                     {
@@ -60,7 +60,7 @@
                 ]
             },
             {
-                "name": "SampleTexturesDDS2x",
+                "name": "SampleTexturesDDS512",
                 "big": true,
                 "files": [
                     {
@@ -72,7 +72,12 @@
                             ]
                         ],
                         "params": {
-                            "relscale": 2
+                            "-rescale": [
+                                512,
+                                512
+                            ],
+                            "-quality": 255,
+                            "-mipmode": "None"
                         }
                     }
                 ]

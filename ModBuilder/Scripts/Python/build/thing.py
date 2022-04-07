@@ -1,13 +1,15 @@
+import os
 import enum
 from enum import Enum
 from dataclasses import dataclass
-import os
 from typing import Any, Callable
+from data.bundles import ParamsT
 
 
 class BuildFileStatus(Enum):
     UNKNOWN = enum.auto()
     UNCHANGED = enum.auto()
+    MISSING = enum.auto()
     ADDED = enum.auto()
     CHANGED = enum.auto()
 
@@ -16,12 +18,12 @@ class BuildFileStatus(Enum):
 class BuildFile:
     relTarget: str
     absSource: str
-    params: dict[str, Any]
+    params: ParamsT
+    targetStatus: BuildFileStatus
     sourceStatus: BuildFileStatus
 
     def __init__(self):
-        self.params = None
-        self.sourceStatus = BuildFileStatus.UNKNOWN
+        self.params = dict()
 
     def RelTarget(self) -> str:
         return self.relTarget
@@ -31,6 +33,9 @@ class BuildFile:
 
     def AbsSource(self) -> str:
         return self.absSource
+
+    def IsUnchanged(self) -> bool:
+        return self.targetStatus == BuildFileStatus.UNCHANGED and self.sourceStatus == BuildFileStatus.UNCHANGED
 
 
 @dataclass(init=False)

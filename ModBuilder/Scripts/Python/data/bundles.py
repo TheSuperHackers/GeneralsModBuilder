@@ -1,17 +1,20 @@
 import copy
 import utils
 import os.path
-from typing import Any
+from typing import Any, Union
 from glob import glob
 from dataclasses import dataclass
 from utils import JsonFile
+
+
+ParamsT = dict[str, Union[str, int, float, bool, list[Union[str, int, float, bool]]]]
 
 
 @dataclass(init=False)
 class BundleFile:
     absSourceFile: str
     relTargetFile: str
-    params: dict[str, Any]
+    params: ParamsT
 
     def __init__(self):
         pass
@@ -20,8 +23,22 @@ class BundleFile:
         utils.RelAssert(isinstance(self.absSourceFile, str), "BundleFile.absSourceFile has incorrect type")
         utils.RelAssert(isinstance(self.relTargetFile, str), "BundleFile.relTargetFile has incorrect type")
         utils.RelAssert(isinstance(self.params, dict), "BundleFile.params has incorrect type")
-        for k in self.params.keys():
-            utils.RelAssert(isinstance(k, str), "BundleFile.params has incorrect type")
+        
+        for key,value in self.params.items():
+            utils.RelAssert(isinstance(key, str), "BundleFile.params has incorrect type")
+            utils.RelAssert(isinstance(value, str) or
+                isinstance(value, int) or
+                isinstance(value, float) or
+                isinstance(value, bool) or
+                isinstance(value, list), "BundleFile.params has incorrect type")
+
+            if isinstance(value, list):
+                for subValue in value:
+                    utils.RelAssert(
+                        isinstance(subValue, str) or
+                        isinstance(subValue, int) or
+                        isinstance(subValue, float) or
+                        isinstance(subValue, bool), "BundleFile.params has incorrect type")
 
     def VerifyValues(self) -> None:
         utils.RelAssert(os.path.isabs(self.absSourceFile), "BundleFile.absSourceFile is not an absolute path")
@@ -174,9 +191,9 @@ def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
     files: list[BundleFile] = list()
 
     parent = utils.JoinPathIfValid(jsonDir, jsonDir, jFile.get("parent"))
-    params = jFile.get("params")
+    params: ParamsT = jFile.get("params")
     if params == None:
-        params = dict()
+        params = ParamsT()
 
     source = jFile.get("source")
     if source:

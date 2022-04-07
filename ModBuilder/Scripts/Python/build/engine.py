@@ -54,6 +54,8 @@ class BuildFilePathInfo:
     ownerThingName: str
     md5: str
 
+BuildFilePathInfosT = dict[str, BuildFilePathInfo]
+
 
 @dataclass(init=False)
 class BuildDiff:
@@ -333,7 +335,6 @@ class BuildEngine:
             utils.pprint(data.diff)
 
             BuildEngine.__PopulateBuildFileStatusInThings(data.things, data.diff)
-            BuildEngine.__PrintBuildFileStatusFromThings(data.things)
             BuildEngine.__DeleteObsoleteFilesOfThings(data.things, data.diff)
 
             buildCopy.CopyThings(data.things)
@@ -356,16 +357,22 @@ class BuildEngine:
 
 
     @staticmethod
-    def __CreateFilePathInfoDictFromThing(thing: BuildThing) -> dict[str, BuildFilePathInfo]:
-        infos: dict[str, BuildFilePathInfo] = dict()
+    def __CreateFilePathInfoDictFromThing(thing: BuildThing) -> BuildFilePathInfosT:
+        infos: BuildFilePathInfosT = dict()
         file: BuildFile
 
         for file in thing.files:
-            absSource = file.AbsSource()
+            absSource = file.absSource
+            if not infos.get(absSource):
+                info = BuildFilePathInfo()
+                info.ownerThingName = thing.name
+                info.md5 = utils.GetFileMd5(absSource)
+                infos[absSource] = info
+
+        for file in thing.files:
             absTarget = file.AbsTarget(thing.absParentDir)
             absTargetDirs: list[str] = utils.GetAllFileDirs(absTarget, thing.absParentDir)
             absTargetDir: str
-
             for absTargetDir in absTargetDirs:
                 if not infos.get(absTargetDir):
                     info = BuildFilePathInfo()
@@ -373,16 +380,11 @@ class BuildEngine:
                     info.md5 = ""
                     infos[absTargetDir] = info
 
-            if not infos.get(absSource):
-                info = BuildFilePathInfo()
-                info.ownerThingName = thing.name
-                info.md5 = utils.GetFileMd5(absSource)
-                infos[absSource] = info
-
+            absTarget = file.AbsTarget(thing.absParentDir)
             if not infos.get(absTarget):
                 info = BuildFilePathInfo()
                 info.ownerThingName = thing.name
-                info.md5 = ""
+                info.md5 = utils.GetFileMd5(absTarget)
                 infos[absTarget] = info
 
         return infos
@@ -400,31 +402,37 @@ class BuildEngine:
     @staticmethod
     def __PopulateBuildFileStatusInThing(thing: BuildThing, diff: BuildDiff) -> None:
         file: BuildFile
+
         for file in thing.files:
-            newInfo: BuildFilePathInfo = diff.newInfos.get(file.absSource)
-            if newInfo != None and newInfo.md5:
-                oldInfo: BuildFilePathInfo = diff.oldInfos.get(file.absSource)
-                if oldInfo != None and oldInfo.md5:
-                    if newInfo.md5 != oldInfo.md5:
-                        file.sourceStatus = BuildFileStatus.CHANGED
-                    else:
-                        file.sourceStatus = BuildFileStatus.UNCHANGED
+            absSource: str = file.AbsSource()
+            file.sourceStatus = BuildEngine.__PopulateBuildFileStatusInFile(absSource, diff)
+            if file.sourceStatus != BuildFileStatus.UNCHANGED:
+                print(f"Source {absSource} is {file.sourceStatus.name}")
+
+        for file in thing.files:
+            absTarget: str = file.AbsTarget(thing.absParentDir)
+            file.targetStatus = BuildEngine.__PopulateBuildFileStatusInFile(absTarget, diff)
+            if file.sourceStatus != BuildFileStatus.UNCHANGED:
+                print(f"Target {absTarget} is {file.targetStatus.name}")
+
+
+    @staticmethod
+    def __PopulateBuildFileStatusInFile(filePath: str,  diff: BuildDiff) -> BuildFileStatus:
+        if os.path.exists(filePath):
+            oldInfo: BuildFilePathInfo = diff.oldInfos.get(filePath)
+
+            if oldInfo == None:
+                return BuildFileStatus.ADDED
+            else:
+                newInfo: BuildFilePathInfo = diff.newInfos.get(filePath)
+                utils.RelAssert(newInfo != None, "Info must exist")
+
+                if newInfo.md5 != oldInfo.md5:
+                    return BuildFileStatus.CHANGED
                 else:
-                    file.sourceStatus = BuildFileStatus.ADDED
-
-
-    @staticmethod
-    def __PrintBuildFileStatusFromThings(things: dict[str, BuildThing]) -> None:
-        thing: BuildThing
-        for thing in things.values():
-            BuildEngine.__PrintBuildFileStatusFromThing(thing)
-
-
-    @staticmethod
-    def __PrintBuildFileStatusFromThing(thing: BuildThing) -> None:
-        file: BuildFile
-        for file in thing.files:
-            print(f"Source {file.absSource} is {file.sourceStatus.name}")
+                    return BuildFileStatus.UNCHANGED
+        else:
+            return BuildFileStatus.MISSING
 
 
     @staticmethod

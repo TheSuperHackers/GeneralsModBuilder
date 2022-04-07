@@ -6,21 +6,21 @@
         "packs": [
             {
                 "runDefault": true,
-                "name": "SampleProjectTGA",
+                "name": "SampleProjectTGA256",
                 "itemNames": [
                     "SampleINI",
                     "SampleLanguages",
-                    "SampleTexturesTGA",
+                    "SampleTexturesTGA256",
                     "SampleWindow",
                     "Misc"
                 ]
             },
             {
-                "name": "SampleProjectDDS2x",
+                "name": "SampleProjectDDS512",
                 "itemNames": [
                     "SampleINI",
                     "SampleLanguages",
-                    "SampleTexturesDDS2x",
+                    "SampleTexturesDDS512",
                     "SampleWindow",
                     "Misc"
                 ]

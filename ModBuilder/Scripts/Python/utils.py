@@ -94,6 +94,11 @@ def GetFileExt(file: str) -> str:
     return ext
 
 
+def GetFileDirAndName(file: str) -> str:
+    path, ext = os.path.splitext(file)
+    return path
+
+
 def HasFileExt(file: str, ext: str) -> str:
     return file.lower().endswith(ext.lower())
 
