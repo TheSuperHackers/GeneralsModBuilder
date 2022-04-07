@@ -336,12 +336,9 @@ class BuildEngine:
             data: BuildProcessData = structure.GetProcessData(index)
             data.diff.newInfos = BuildEngine.__CreateFilePathInfoDictFromThings(data.things)
 
-            utils.pprint(data.diff)
-
             BuildEngine.__PopulateBuildFileStatusInThings(data.things, data.diff)
             BuildEngine.__DeleteObsoleteFilesOfThings(data.things, data.diff)
-
-            buildCopy.CopyThings(data.things)
+            BuildEngine.__CopyFilesOfThings(data.things, buildCopy)
 
             data.diff.SaveNewInfos()
 
@@ -349,12 +346,13 @@ class BuildEngine:
 
 
     @staticmethod
-    def __CreateFilePathInfoDictFromThings(buildThings: dict[str, BuildThing]) -> dict[BuildFilePathInfo]:
-        print("Create File Path Info Dict From Things ...")
-
-        infos: dict[BuildFilePathInfo] = dict()
+    def __CreateFilePathInfoDictFromThings(things: dict[str, BuildThing]) -> BuildFilePathInfosT:
+        infos: BuildFilePathInfosT = dict()
         thing: BuildThing
-        for thing in buildThings.values():
+
+        for thing in things.values():
+            print(f"Create file infos for {thing.name} ...")
+
             infos.update(BuildEngine.__CreateFilePathInfoDictFromThing(thing))
 
         return infos
@@ -396,10 +394,11 @@ class BuildEngine:
 
     @staticmethod
     def __PopulateBuildFileStatusInThings(things: dict[str, BuildThing], diff: BuildDiff) -> None:
-        print("Create Build File Status In Things ...")
-
         thing: BuildThing
+
         for thing in things.values():
+            print(f"Populate file status for {thing.name} ...")
+
             BuildEngine.__PopulateBuildFileStatusInThing(thing, diff)
 
 
@@ -441,14 +440,14 @@ class BuildEngine:
 
     @staticmethod
     def __DeleteObsoleteFilesOfThings(things: dict[str, BuildThing], diff: BuildDiff) -> None:
-        print("Delete Obsolete Files ...")
-
         def SetParentHasDeletedFiles(thing: BuildThing) -> None:
             thing.parentHasDeletedFiles = True
 
         thing: BuildThing
 
         for thing in things.values():
+            print(f"Delete files for {thing.name} ...")
+
             fileNames: list[str] = BuildEngine.__CreateListOfExistingFilesFromThing(thing)
             fileName: str
 
@@ -468,6 +467,16 @@ class BuildEngine:
     def __CreateListOfExistingFilesFromThing(thing: BuildThing) -> list[str]:
         search: str = os.path.join(thing.absParentDir, "**", "*")
         return glob(search, recursive=True)
+
+
+    @staticmethod
+    def __CopyFilesOfThings(things: dict[str, BuildThing], buildCopy: BuildCopy) -> None:
+        thing: BuildThing
+
+        for thing in things.values():
+            print(f"Copy files for {thing.name} ...")
+
+            buildCopy.CopyThing(thing)
 
 
     def __PostBuild(self) -> bool:
