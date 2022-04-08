@@ -1,11 +1,14 @@
-import sys
 import argparse
-import data.bundles
-import data.folders
-import data.runner
-import data.tools
 import utils
 import os
+import data.folders
+import data.runner
+import data.bundles
+import data.tools
+from data.folders import Folders
+from data.runner import Runner
+from data.bundles import Bundles
+from data.tools import ToolsT
 from build.engine import BuildStep
 from build.engine import BuildSetup
 from build.engine import BuildEngine
@@ -21,23 +24,44 @@ def __CreateJsonFiles(configPaths: list[str]) -> list[JsonFile]:
     return jsonFiles
 
 
-def __Initialize(buildType: BuildStep, configPaths: list[str]) -> None:
-    jsonFiles = __CreateJsonFiles(configPaths)
+def __CreateBuildStep(build: bool, release: bool, install: bool, uninstall: bool, run: bool) -> BuildStep:
+    buildStep = BuildStep.NONE
+    if build:
+        buildStep |= BuildStep.BUILD
+    if release:
+        buildStep |= BuildStep.RELEASE
+    if install:
+        buildStep |= BuildStep.INSTALL
+    if uninstall:
+        buildStep |= BuildStep.UNINSTALL
+    if run:
+        buildStep |= BuildStep.RUN
 
-    folders = data.folders.MakeFoldersFromJsons(jsonFiles)
-    runner = data.runner.MakeRunnerFromJsons(jsonFiles)
-    bundles = data.bundles.MakeBundlesFromJsons(jsonFiles)
-    tools = data.tools.MakeToolsFromJsons(jsonFiles)
+    return buildStep
 
-    setup = BuildSetup(step=buildType, folders=folders, runner=runner, bundles=bundles, tools=tools)
+
+def RunWithConfig(configPaths: list[str],
+        build: bool=False,
+        release: bool=False,
+        install: bool=False,
+        uninstall: bool=False,
+        run: bool=False) -> None:
+
+    jsonFiles: list[JsonFile] = __CreateJsonFiles(configPaths)
+    buildStep: BuildStep = __CreateBuildStep(build, release, install, uninstall, run)
+
+    folders: Folders = data.folders.MakeFoldersFromJsons(jsonFiles)
+    runner: Runner = data.runner.MakeRunnerFromJsons(jsonFiles)
+    bundles: Bundles = data.bundles.MakeBundlesFromJsons(jsonFiles)
+    tools: ToolsT = data.tools.MakeToolsFromJsons(jsonFiles)
+
+    setup = BuildSetup(step=buildStep, folders=folders, runner=runner, bundles=bundles, tools=tools)
 
     engine = BuildEngine()
     engine.Run(setup)
 
 
 def Main(args=None):
-    utils.RelAssert(sys.version_info >= (3,10), f"Python version must be 3.10 or higher")
-
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--mod-config', type=str, action="append", help='Path to a configuration file (json). Multiples can be specified.')
     parser.add_argument('-b', '--mod-build', action='store_true')
@@ -62,21 +86,14 @@ def Main(args=None):
     if args.mod_config:
         configPaths.extend(args.mod_config)
 
-    buildType = BuildStep.NONE
-    if args.mod_build:
-        buildType |= BuildStep.BUILD
-    if args.mod_release:
-        buildType |= BuildStep.RELEASE
-    if args.mod_install:
-        buildType |= BuildStep.INSTALL
-    if args.mod_uninstall:
-        buildType |= BuildStep.UNINSTALL
-    if args.mod_run:
-        buildType |= BuildStep.RUN
-
-    __Initialize(buildType=buildType, configPaths=configPaths)
+    RunWithConfig(
+        configPaths=configPaths,
+        build=bool(args.mod_build),
+        release=bool(args.mod_release),
+        install=bool(args.mod_install),
+        uninstall=bool(args.mod_uninstall),
+        run=bool(args.mod_run))
 
 
 if __name__ == "__main__":
-    print(sys.version_info)
     Main()

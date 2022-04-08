@@ -1,0 +1,3 @@
+import modbuilder
+
+modbuilder.Main()
