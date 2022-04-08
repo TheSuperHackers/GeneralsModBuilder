@@ -1,0 +1,24 @@
+{
+    "bundles": {
+        "version": 1,
+        "packsPrefix": "",
+        "packsSuffix": "",
+        "packs": [
+            {
+                "runDefault": true,
+                "name": "PackName1",
+                "itemNames": [
+                    "ItemName1",
+                    "ItemName2"
+                ]
+            },
+            {
+                "name": "PackName2",
+                "itemNames": [
+                    "ItemName1",
+                    "ItemName3"
+                ]
+            }
+        ]
+    }
+}

@@ -78,7 +78,6 @@ def Main(args=None):
 
     # Add default configurations first to list so readers can parse them first.
     configPath: str = os.path.join(thisDir, "..", "..")
-    configPaths.append(os.path.join(configPath, "DefaultFolders.json"))
     configPaths.append(os.path.join(configPath, "DefaultRunner.json"))
     configPaths.append(os.path.join(configPath, "DefaultTools.json"))
 

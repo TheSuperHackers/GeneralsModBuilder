@@ -3,30 +3,9 @@
         "version": 1,
         "gameRootDir": "REGISTRY:SOFTWARE\\WOW6432Node\\Electronic Arts\\EA Games\\Command and Conquer Generals Zero Hour:InstallPath",
         "gameExeFile": "generals.exe",
-        "gameExeArgs": "-win -quickstart",
-        "gameFilesToDisable": [
-            "200_ControlBarObsEnglishZH.big",
-            "250_HideIP_WindowZH.big",
-            "251_HideMail_WindowZH.big",
-            "339_ControlBarProHideIpZH.big",
-            "339_ControlBarProHideMailZH.big",
-            "340_ControlBarPro2160ZH.big",
-            "340_ControlBarPro1440ZH.big",
-            "340_ControlBarPro1080ZH.big",
-            "340_ControlBarPro900ZH.big",
-            "340_ControlBarPro720ZH.big",
-            "340_ControlBarProZH.big",
-            "400_ControlBarHDBaseZH.big",
-            "400_ControlBarHDBrazilianZH.big",
-            "400_ControlBarHDChineseZH.big",
-            "400_ControlBarHDEnglishZH.big",
-            "400_ControlBarHDFrenchZH.big",
-            "400_ControlBarHDGermanZH.big",
-            "400_ControlBarHDItalianZH.big",
-            "400_ControlBarHDKoreanZH.big",
-            "400_ControlBarHDPolishZH.big",
-            "400_ControlBarHDSpanishZH.big",
-            "800_GermanUncutLiteZH.big"
-        ]
+        "gameExeArgs": {
+            "-win": "",
+            "-quickstart": ""
+        }
     }
 }

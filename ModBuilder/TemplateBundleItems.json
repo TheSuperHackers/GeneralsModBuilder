@@ -1,0 +1,22 @@
+{
+    "bundles": {
+        "version": 1,
+        "items": [
+            {
+                "name": "ItemName1",
+                "big": false,
+                "files": []
+            },
+            {
+                "name": "ItemName2",
+                "big": false,
+                "files": []
+            },
+            {
+                "name": "ItemName3",
+                "big": false,
+                "files": []
+            }
+        ]
+    }
+}

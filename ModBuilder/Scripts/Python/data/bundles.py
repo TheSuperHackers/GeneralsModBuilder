@@ -1,13 +1,10 @@
 import copy
 import utils
 import os.path
-from typing import Any, Union
 from glob import glob
 from dataclasses import dataclass
+from data.common import ParamsT, VerifyParamsType
 from utils import JsonFile
-
-
-ParamsT = dict[str, Union[str, int, float, bool, list[Union[str, int, float, bool]]]]
 
 
 @dataclass(init=False)
@@ -22,23 +19,7 @@ class BundleFile:
     def VerifyTypes(self) -> None:
         utils.RelAssert(isinstance(self.absSourceFile, str), "BundleFile.absSourceFile has incorrect type")
         utils.RelAssert(isinstance(self.relTargetFile, str), "BundleFile.relTargetFile has incorrect type")
-        utils.RelAssert(isinstance(self.params, dict), "BundleFile.params has incorrect type")
-        
-        for key,value in self.params.items():
-            utils.RelAssert(isinstance(key, str), "BundleFile.params has incorrect type")
-            utils.RelAssert(isinstance(value, str) or
-                isinstance(value, int) or
-                isinstance(value, float) or
-                isinstance(value, bool) or
-                isinstance(value, list), "BundleFile.params has incorrect type")
-
-            if isinstance(value, list):
-                for subValue in value:
-                    utils.RelAssert(
-                        isinstance(subValue, str) or
-                        isinstance(subValue, int) or
-                        isinstance(subValue, float) or
-                        isinstance(subValue, bool), "BundleFile.params has incorrect type")
+        VerifyParamsType(self.params, "BundleFile.params")
 
     def VerifyValues(self) -> None:
         utils.RelAssert(os.path.isabs(self.absSourceFile), "BundleFile.absSourceFile is not an absolute path")
