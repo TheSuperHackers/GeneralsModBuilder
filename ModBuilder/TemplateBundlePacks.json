@@ -5,7 +5,7 @@
         "packsSuffix": "",
         "packs": [
             {
-                "runDefault": true,
+                "install": true,
                 "name": "PackName1",
                 "itemNames": [
                     "ItemName1",

@@ -5,7 +5,7 @@
         "packsSuffix": "_v1.0",
         "packs": [
             {
-                "runDefault": true,
+                "install": true,
                 "name": "SampleProjectTGA256",
                 "itemNames": [
                     "SampleINI",

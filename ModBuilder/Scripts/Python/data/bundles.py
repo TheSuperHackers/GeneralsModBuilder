@@ -101,19 +101,19 @@ class BundlePack:
     name: str
     namePrefix: str
     nameSuffix: str
-    runDefault: bool
+    install: bool
     itemNames: list[str]
 
     def __init__(self):
         self.namePrefix = ""
         self.nameSuffix = ""
-        self.runDefault = False
+        self.install = False
 
     def VerifyTypes(self) -> None:
         utils.RelAssert(isinstance(self.name, str), "BundlePack.name has incorrect type")
         utils.RelAssert(isinstance(self.namePrefix, str), "BundlePack.namePrefix has incorrect type")
         utils.RelAssert(isinstance(self.nameSuffix, str), "BundlePack.nameSuffix has incorrect type")
-        utils.RelAssert(isinstance(self.runDefault, bool), "BundlePack.runDefault has incorrect type")
+        utils.RelAssert(isinstance(self.install, bool), "BundlePack.install has incorrect type")
         utils.RelAssert(isinstance(self.itemNames, list), "BundlePack.itemNames has incorrect type")
         for itemName in self.itemNames:
             utils.RelAssert(isinstance(itemName, str), "BundlePack.itemNames has incorrect type")
@@ -227,7 +227,7 @@ def __MakeBundleItemFromDict(jItem: dict, jsonDir: str) -> BundleItem:
 def __MakeBundlePackFromDict(jPack: dict) -> BundlePack:
     pack = BundlePack()
     pack.name = jPack.get("name")
-    pack.runDefault = utils.GetSecondIfValid(pack.runDefault, jPack.get("runDefault"))
+    pack.install = utils.GetSecondIfValid(pack.install, jPack.get("install"))
     pack.itemNames = jPack.get("itemNames")
 
     return pack
