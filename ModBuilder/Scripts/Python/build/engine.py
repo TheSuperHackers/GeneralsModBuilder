@@ -103,13 +103,13 @@ def MakeThingName(index: DataIndex, name: str) -> str:
 
 def MakeDiffPath(index: DataIndex, folders: Folders) -> str:
     if index == DataIndex.RAW_BUNDLE_ITEM:
-        return os.path.join(folders.buildDir, "RawBundleItem.pickle")
+        return os.path.join(folders.absBuildDir, "RawBundleItem.pickle")
     if index == DataIndex.BIG_BUNDLE_ITEM:
-        return os.path.join(folders.buildDir, "BigBundleItem.pickle")
+        return os.path.join(folders.absBuildDir, "BigBundleItem.pickle")
     if index == DataIndex.RAW_BUNDLE_PACK:
-        return os.path.join(folders.buildDir, "RawBundlePack.pickle")
+        return os.path.join(folders.absBuildDir, "RawBundlePack.pickle")
     if index == DataIndex.ZIP_BUNDLE_PACK:
-        return os.path.join(folders.buildDir, "ZipBundlePack.pickle")
+        return os.path.join(folders.absBuildDir, "ZipBundlePack.pickle")
 
 
 @dataclass(init=False)
@@ -237,7 +237,7 @@ class BuildEngine:
         for item in bundles.items:
             newThing = BuildThing()
             newThing.name = MakeThingName(DataIndex.RAW_BUNDLE_ITEM, item.name)
-            newThing.absParentDir = os.path.join(folders.buildDir, "RawBundleItems", item.name)
+            newThing.absParentDir = os.path.join(folders.absBuildDir, "RawBundleItems", item.name)
             newThing.files = BuildFilesT()
             for itemFile in item.files:
                 buildFile = BuildFile()
@@ -259,7 +259,7 @@ class BuildEngine:
                 assert(parentThing != None)
                 newThing = BuildThing()
                 newThing.name = MakeThingName(DataIndex.BIG_BUNDLE_ITEM, item.name)
-                newThing.absParentDir = os.path.join(folders.buildDir, "BigBundleItems")
+                newThing.absParentDir = os.path.join(folders.absBuildDir, "BigBundleItems")
                 newThing.files = [BuildFile()]
                 newThing.files[0].absSource = parentThing.absParentDir
                 newThing.files[0].relTarget = item.name + ".big"
@@ -273,14 +273,14 @@ class BuildEngine:
         itemName: str
         parentFile: BuildFile
 
-        releaseUnpackedDirWithWildcards = os.path.join(folders.releaseUnpackedDir, "**", "*.*")
+        releaseUnpackedDirWithWildcards = os.path.join(folders.absReleaseUnpackedDir, "**", "*.*")
         absReleaseFiles = glob(releaseUnpackedDirWithWildcards, recursive=True)
-        relReleaseFiles = utils.CreateRelPaths(absReleaseFiles, folders.releaseUnpackedDir)
+        relReleaseFiles = utils.CreateRelPaths(absReleaseFiles, folders.absReleaseUnpackedDir)
 
         for pack in bundles.packs:
             newThing = BuildThing()
             newThing.name = MakeThingName(DataIndex.RAW_BUNDLE_PACK, pack.name)
-            newThing.absParentDir = os.path.join(folders.buildDir, "RawBundlePacks", pack.name)
+            newThing.absParentDir = os.path.join(folders.absBuildDir, "RawBundlePacks", pack.name)
             newThing.files = BuildFilesT()
 
             for i in range(len(absReleaseFiles)):
@@ -317,7 +317,7 @@ class BuildEngine:
             assert(parentThing != None)
             newThing = BuildThing()
             newThing.name = MakeThingName(DataIndex.ZIP_BUNDLE_PACK, pack.name)
-            newThing.absParentDir = folders.releaseDir
+            newThing.absParentDir = folders.absReleaseDir
             newThing.files = [BuildFile()]
             newThing.files[0].absSource = parentThing.absParentDir
             newThing.files[0].relTarget = pack.name + ".zip"

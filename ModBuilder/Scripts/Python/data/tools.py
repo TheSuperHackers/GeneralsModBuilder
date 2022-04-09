@@ -10,7 +10,7 @@ from dataclasses import dataclass
 @dataclass(init=False)
 class ToolFile:
     url: str
-    target: str
+    absTarget: str
     md5: str = ""
     runnable: bool = False
 
@@ -18,22 +18,22 @@ class ToolFile:
         pass
 
     def Normalize(self) -> None:
-        self.target = utils.NormalizePath(self.target)
+        self.absTarget = utils.NormalizePath(self.absTarget)
 
     def VerifyTypes(self) -> None:
         utils.RelAssert(isinstance(self.url, str), "Tool.url has incorrect type")
         utils.RelAssert(isinstance(self.md5, str), "Tool.md5 has incorrect type")
-        utils.RelAssert(isinstance(self.target, str), "Tool.target has incorrect type")
+        utils.RelAssert(isinstance(self.absTarget, str), "Tool.target has incorrect type")
         utils.RelAssert(isinstance(self.runnable, bool), "Tool.runnable has incorrect type")
 
     def VerifyInstall(self) -> None:
-        utils.RelAssert(os.path.isfile(self.target), f"Tool.target file '{self.target}' does not exist")
+        utils.RelAssert(os.path.isfile(self.absTarget), f"Tool.target file '{self.absTarget}' does not exist")
         if self.md5:
-            actualMd5 = utils.GetFileMd5(self.target)
-            utils.RelAssert(self.md5 == actualMd5, f"Tool.md5 '{self.md5}' does not match md5 '{actualMd5}' of target file '{self.target}'")
+            actualMd5 = utils.GetFileMd5(self.absTarget)
+            utils.RelAssert(self.md5 == actualMd5, f"Tool.md5 '{self.md5}' does not match md5 '{actualMd5}' of target file '{self.absTarget}'")
 
     def IsInstalled(self) -> bool:
-        return os.path.isfile(self.target) and (not self.md5 or utils.GetFileMd5(self.target) == self.md5)
+        return os.path.isfile(self.absTarget) and (not self.md5 or utils.GetFileMd5(self.absTarget) == self.md5)
 
     def Install(self) -> bool:
         success = True
@@ -43,8 +43,8 @@ class ToolFile:
                 response: http.client.HTTPResponse = urllib.request.urlopen(self.url)
                 if response.code == 200:
                     data: bytes = response.read()
-                    utils.MakeDirsForFile(self.target)
-                    with open(self.target, 'wb') as wfile:
+                    utils.MakeDirsForFile(self.absTarget)
+                    with open(self.absTarget, 'wb') as wfile:
                         wfile.write(data)
                     success = self.IsInstalled()
 
@@ -78,7 +78,7 @@ class Tool:
         file: ToolFile
         for file in self.files:
             if file.runnable:
-                return file.target
+                return file.absTarget
         return None
 
     def Install(self) -> bool:
@@ -87,9 +87,9 @@ class Tool:
         for file in self.files:
             installed: bool = file.Install()
             if installed:
-                print(f"Tool '{self.name}' file '{file.target}' is installed")
+                print(f"Tool '{self.name}' file '{file.absTarget}' is installed")
             else:
-                warning(f"Tool '{self.name}' file '{file.target}' was not installed")
+                warning(f"Tool '{self.name}' file '{file.absTarget}' was not installed")
                 success = False
 
         return success
@@ -101,7 +101,7 @@ ToolsT = dict[str, Tool]
 def __MakeToolFileFromDict(jFile: dict, jsonDir: str) -> ToolFile:
     toolFile = ToolFile()
     toolFile.url = jFile.get("url")
-    toolFile.target = utils.JoinPathIfValid(None, jsonDir, jFile.get("target"))
+    toolFile.absTarget = utils.JoinPathIfValid(None, jsonDir, jFile.get("target"))
     toolFile.md5 = utils.GetSecondIfValid(toolFile.md5, jFile.get("md5"))
     toolFile.runnable = utils.GetSecondIfValid(toolFile.runnable, jFile.get("runnable"))
     return toolFile

@@ -5,38 +5,38 @@ from dataclasses import dataclass
 
 @dataclass(init=False)
 class Folders:
-    releaseUnpackedDir: str
-    releaseDir: str
-    buildDir: str
+    absReleaseUnpackedDir: str
+    absReleaseDir: str
+    absBuildDir: str
 
     def __init__(self):
         pass
 
     def Normalize(self) -> None:
-        self.releaseUnpackedDir = utils.NormalizePath(self.releaseUnpackedDir)
-        self.releaseDir = utils.NormalizePath(self.releaseDir)
-        self.buildDir = utils.NormalizePath(self.buildDir)
+        self.absReleaseUnpackedDir = utils.NormalizePath(self.absReleaseUnpackedDir)
+        self.absReleaseDir = utils.NormalizePath(self.absReleaseDir)
+        self.absBuildDir = utils.NormalizePath(self.absBuildDir)
 
     def VerifyTypes(self) -> None:
-        utils.RelAssert(isinstance(self.releaseUnpackedDir, str), "Folders.releaseUnpackedDir has incorrect type")
-        utils.RelAssert(isinstance(self.releaseDir, str), "Folders.releaseDir has incorrect type")
-        utils.RelAssert(isinstance(self.buildDir, str), "Folders.buildDir has incorrect type")
+        utils.RelAssert(isinstance(self.absReleaseUnpackedDir, str), "Folders.releaseUnpackedDir has incorrect type")
+        utils.RelAssert(isinstance(self.absReleaseDir, str), "Folders.releaseDir has incorrect type")
+        utils.RelAssert(isinstance(self.absBuildDir, str), "Folders.buildDir has incorrect type")
 
 
 def MakeFoldersFromJsons(jsonFiles: list[JsonFile]) -> Folders:
     folders = Folders()
-    folders.releaseUnpackedDir = None
-    folders.releaseDir = None
-    folders.buildDir = None
+    folders.absReleaseUnpackedDir = None
+    folders.absReleaseDir = None
+    folders.absBuildDir = None
 
     for jsonFile in jsonFiles:
         jsonDir: str = utils.GetFileDir(jsonFile.path)
         jFolders: dict = jsonFile.data.get("folders")
 
         if jFolders:
-            folders.releaseUnpackedDir = utils.JoinPathIfValid(folders.releaseUnpackedDir, jsonDir, jFolders.get("releaseUnpackedDir"))
-            folders.releaseDir = utils.JoinPathIfValid(folders.releaseDir, jsonDir, jFolders.get("releaseDir"))
-            folders.buildDir = utils.JoinPathIfValid(folders.buildDir, jsonDir, jFolders.get("buildDir"))
+            folders.absReleaseUnpackedDir = utils.JoinPathIfValid(folders.absReleaseUnpackedDir, jsonDir, jFolders.get("releaseUnpackedDir"))
+            folders.absReleaseDir = utils.JoinPathIfValid(folders.absReleaseDir, jsonDir, jFolders.get("releaseDir"))
+            folders.absBuildDir = utils.JoinPathIfValid(folders.absBuildDir, jsonDir, jFolders.get("buildDir"))
 
     folders.VerifyTypes()
     folders.Normalize()

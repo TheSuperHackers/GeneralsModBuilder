@@ -10,8 +10,8 @@ from data.common import ParamsT, VerifyParamsType, VerifyStringListType
 
 @dataclass(init=False)
 class Runner:
-    gameRootDir: str
-    gameExeFile: str
+    absGameRootDir: str
+    relGameExeFile: str
     gameExeArgs: ParamsT
     relevantGameDataFileTypes: list[str]
     absRegularGameDataFiles: list[str]
@@ -22,24 +22,24 @@ class Runner:
         self.absRegularGameDataFiles = list[str]()
 
     def AbsGameExeFile(self) -> str:
-        return os.path.join(self.gameRootDir, self.gameExeFile)
+        return os.path.join(self.absGameRootDir, self.relGameExeFile)
 
     def Normalize(self) -> None:
-        self.gameRootDir = utils.NormalizePath(self.gameRootDir)
-        self.gameExeFile = utils.NormalizePath(self.gameExeFile)
+        self.absGameRootDir = utils.NormalizePath(self.absGameRootDir)
+        self.relGameExeFile = utils.NormalizePath(self.relGameExeFile)
         for i in range(len(self.absRegularGameDataFiles)):
             self.absRegularGameDataFiles[i] = utils.NormalizePath(self.absRegularGameDataFiles[i])
 
     def VerifyTypes(self) -> None:
-        utils.RelAssert(isinstance(self.gameRootDir, str), "Runner.gameRootDir has incorrect type")
-        utils.RelAssert(isinstance(self.gameExeFile, str), "Runner.gameExeFile has incorrect type")
+        utils.RelAssert(isinstance(self.absGameRootDir, str), "Runner.gameRootDir has incorrect type")
+        utils.RelAssert(isinstance(self.relGameExeFile, str), "Runner.gameExeFile has incorrect type")
         VerifyParamsType(self.gameExeArgs, "Runner.gameExeArgs")
         VerifyStringListType(self.relevantGameDataFileTypes, "Runner.relevantGameDataFileTypes")
         VerifyStringListType(self.absRegularGameDataFiles, "Runner.regularGameDataFiles has incorrect type")
 
     def VerifyValues(self) -> None:
-        utils.RelAssert(os.path.isdir(self.gameRootDir), f"Runner.gameRootDir '{self.gameRootDir}' is not a valid path")
-        utils.RelAssert(os.path.isfile(self.AbsGameExeFile()), f"Runner.gameExeFile '{self.gameExeFile}' is not a valid file")
+        utils.RelAssert(os.path.isdir(self.absGameRootDir), f"Runner.gameRootDir '{self.absGameRootDir}' is not a valid path")
+        utils.RelAssert(os.path.isfile(self.AbsGameExeFile()), f"Runner.gameExeFile '{self.relGameExeFile}' is not a valid file")
         file: str
         for file in self.absRegularGameDataFiles:
             utils.RelAssert(os.path.isfile(self.AbsGameExeFile()), f"Runner.regularGameDataFiles {file} is not a valid file")
@@ -80,29 +80,29 @@ def ResolveRegistryToken(s: str) -> str:
 
 def MakeRunnerFromJsons(jsonFiles: list[JsonFile]) -> Runner:
     runner = Runner()
-    runner.gameRootDir = None
-    runner.gameExeFile = None
+    runner.absGameRootDir = None
+    runner.relGameExeFile = None
 
     for jsonFile in jsonFiles:
         jsonDir: str = utils.GetFileDir(jsonFile.path)
         jRunner: dict = jsonFile.data.get("runner")
 
         if jRunner:
-            runner.gameRootDir = utils.GetSecondIfValid(runner.gameRootDir, jRunner.get("gameRootDir"))
-            runner.gameExeFile = utils.GetSecondIfValid(runner.gameExeFile, jRunner.get("gameExeFile"))
+            runner.absGameRootDir = utils.GetSecondIfValid(runner.absGameRootDir, jRunner.get("gameRootDir"))
+            runner.relGameExeFile = utils.GetSecondIfValid(runner.relGameExeFile, jRunner.get("gameExeFile"))
             runner.gameExeArgs = utils.GetSecondIfValid(runner.gameExeArgs, jRunner.get("gameExeArgs"))
             runner.relevantGameDataFileTypes = utils.GetSecondIfValid(runner.relevantGameDataFileTypes, jRunner.get("relevantGameDataFileTypes"))
             runner.absRegularGameDataFiles = utils.GetSecondIfValid(runner.absRegularGameDataFiles, jRunner.get("regularGameDataFiles"))
 
-            if runner.gameRootDir != None:
-                if IsRegistryToken(runner.gameRootDir):
-                    runner.gameRootDir = ResolveRegistryToken(runner.gameRootDir)
+            if runner.absGameRootDir != None:
+                if IsRegistryToken(runner.absGameRootDir):
+                    runner.absGameRootDir = ResolveRegistryToken(runner.absGameRootDir)
                 else:
-                    runner.gameRootDir = os.path.join(jsonDir, runner.gameRootDir)
+                    runner.absGameRootDir = os.path.join(jsonDir, runner.absGameRootDir)
 
             if runner.absRegularGameDataFiles != None:
                 for i in range(len(runner.absRegularGameDataFiles)):
-                    runner.absRegularGameDataFiles[i] = os.path.join(runner.gameRootDir, runner.absRegularGameDataFiles[i])
+                    runner.absRegularGameDataFiles[i] = os.path.join(runner.absGameRootDir, runner.absRegularGameDataFiles[i])
 
     runner.VerifyTypes()
     runner.Normalize()
