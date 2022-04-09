@@ -2,7 +2,8 @@ import utils
 from typing import Union
 
 
-ParamsT = dict[str, Union[str, int, float, bool, list[Union[str, int, float, bool]]]]
+ParamT = Union[str, int, float, bool]
+ParamsT = dict[str, Union[str, int, float, bool, list[ParamT]]]
 
 
 def VerifyParamsType(params: ParamsT, name: str) -> None:

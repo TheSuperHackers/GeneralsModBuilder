@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from data.bundles import ParamsT
 from data.tools import ToolsT
 from build.thing import BuildFile, BuildThing, BuildThingsT
+from build.common import ParamsToArgs
 
 
 class BuildFileType(Enum):
@@ -251,7 +252,7 @@ class BuildCopy:
             "-out", target,
             "-fileformat", "bmp"]
 
-        argsRun.extend(BuildCopy.__ParamsToArgs(params))
+        argsRun.extend(ParamsToArgs(params))
 
         subprocess.run(args=argsRun, check=True)
 
@@ -268,7 +269,7 @@ class BuildCopy:
             "-out", target,
             "-fileformat", "tga"]
 
-        args.extend(BuildCopy.__ParamsToArgs(params))
+        args.extend(ParamsToArgs(params))
         args.append("-A8R8G8B8" if hasAlpha else "-R8G8B8")
 
         subprocess.run(args=args, check=True)
@@ -286,7 +287,7 @@ class BuildCopy:
             "-out", target,
             "-fileformat", "dds"]
 
-        args.extend(BuildCopy.__ParamsToArgs(params))
+        args.extend(ParamsToArgs(params))
         args.append("-DXT5" if hasAlpha else "-DXT1")
 
         subprocess.run(args=args, check=True)
@@ -304,27 +305,6 @@ class BuildCopy:
         if (b"FORMAT: A8L8" in upper) or (b"FORMAT: A8R8G8B8" in upper):
             hasAlpha = True
         return hasAlpha
-
-
-    @staticmethod
-    def __ParamsToArgs(params: ParamsT) -> list[str]:
-        args = list()
-        for key,value in params.items():
-            BuildCopy.__AppendParamToArgs(args, key)
-
-            if isinstance(value, list):
-                for subValue in value:
-                    BuildCopy.__AppendParamToArgs(args, subValue)
-            else:
-                BuildCopy.__AppendParamToArgs(args, value)
-
-        return args
-
-
-    @staticmethod
-    def __AppendParamToArgs(args: list[str], val: Union[str, int, float, bool]) -> None:
-        if strVal := str(val):
-            args.append(strVal)
 
 
     def __GetToolExePath(self, name: str) -> str:

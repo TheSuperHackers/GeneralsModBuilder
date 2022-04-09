@@ -1,3 +1,4 @@
+import subprocess
 import utils
 import os
 import enum
@@ -8,6 +9,7 @@ from logging import warning
 from glob import glob
 from build.copy import BuildCopy
 from build.thing import BuildFile, BuildFileStatus, BuildThing, BuildFilesT, BuildThingsT
+from build.common import ParamsToArgs
 from data.bundles import Bundles, BundlePack, BundleItem, BundleFile
 from data.folders import Folders
 from data.runner import Runner
@@ -330,6 +332,7 @@ class BuildEngine:
 
         BuildEngine.__BuildWithData(self.structure.GetProcessData(DataIndex.RAW_BUNDLE_ITEM), self.setup.tools)
         BuildEngine.__BuildWithData(self.structure.GetProcessData(DataIndex.BIG_BUNDLE_ITEM), self.setup.tools)
+        BuildEngine.__BuildWithData(self.structure.GetProcessData(DataIndex.RAW_BUNDLE_PACK), self.setup.tools)
 
         return True
 
@@ -504,7 +507,6 @@ class BuildEngine:
     def __BuildRelease(self) -> bool:
         print("Do Build Release ...")
 
-        BuildEngine.__BuildWithData(self.structure.GetProcessData(DataIndex.RAW_BUNDLE_PACK), self.setup.tools)
         BuildEngine.__BuildWithData(self.structure.GetProcessData(DataIndex.ZIP_BUNDLE_PACK), self.setup.tools)
 
         return True
@@ -517,6 +519,14 @@ class BuildEngine:
 
     def __Run(self) -> bool:
         print("Do Run ...")
+
+        runner: Runner = self.setup.runner
+        exec: str = runner.AbsGameExeFile()
+        args: list[str] = [exec]
+        args.extend(ParamsToArgs(runner.gameExeArgs))
+
+        subprocess.run(args=args)
+
         return True
 
 
