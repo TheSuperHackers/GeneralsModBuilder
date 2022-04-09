@@ -22,8 +22,8 @@ class BundleFile:
         VerifyParamsType(self.params, "BundleFile.params")
 
     def VerifyValues(self) -> None:
-        utils.RelAssert(os.path.isabs(self.absSourceFile), "BundleFile.absSourceFile is not an absolute path")
-        utils.RelAssert(not os.path.isabs(self.relTargetFile), "BundleFile.absSourceFile is not a relative path")
+        utils.RelAssert(os.path.isfile(self.absSourceFile), f"BundleFile.absSourceFile '{self.absSourceFile}' is not a valid file")
+        utils.RelAssert(not os.path.isabs(self.relTargetFile), f"BundleFile.relTargetFile '{self.relTargetFile}' is not a relative path")
 
     def Normalize(self) -> None:
         self.absSourceFile = utils.NormalizePath(self.absSourceFile)
@@ -56,26 +56,27 @@ class BundleItem:
             file.Normalize()
 
     def ResolveWildcards(self) -> None:
-        newFiles: list[BundleFile] = []
-        file: BundleFile
+        newBundleFiles: list[BundleFile] = []
+        bundleFile: BundleFile
 
-        for file in self.files:
-            if not os.path.isfile(file.absSourceFile):
-                globFiles = glob(file.absSourceFile, recursive=True)
-                utils.RelAssert(bool(globFiles), f"BundleItem.absSourceFile '{file.absSourceFile}' matches nothing")
+        for bundleFile in self.files:
+            file: str = bundleFile.absSourceFile
+            if not os.path.isfile(file) and "*" in file:
+                globFiles = glob(file, recursive=True)
+                utils.RelAssert(bool(globFiles), f"Wildcard '{file}' matches nothing")
                 for globFile in globFiles:
-                    utils.RelAssert(os.path.isfile(globFile), f"BundleItem file '{globFile}' is not a file")
-                    newFile: BundleFile = copy.copy(file)
+                    utils.RelAssert(os.path.isfile(globFile), f"Wildcard file '{globFile}' is not a file")
+                    newFile: BundleFile = copy.copy(bundleFile)
                     newFile.absSourceFile = globFile
-                    newFiles.append(newFile)
+                    newBundleFiles.append(newFile)
             else:
-                newFiles.append(file)
+                newBundleFiles.append(bundleFile)
 
-        for file in newFiles:
-            file.relTargetFile = BundleItem.__ResolveTargetWildcard(file.absSourceFile, file.relTargetFile)
+        for bundleFile in newBundleFiles:
+            bundleFile.relTargetFile = BundleItem.__ResolveTargetWildcard(bundleFile.absSourceFile, bundleFile.relTargetFile)
 
-        self.files = newFiles
-        return newFiles
+        self.files = newBundleFiles
+        return newBundleFiles
 
     @staticmethod
     def __ResolveTargetWildcard(source: str, target: str) -> str:
@@ -90,6 +91,7 @@ class BundleItem:
             targetName, targetExtn = os.path.splitext(targetFile)
             newName = sourceName if targetName == "*" else targetName
             newExtn = sourceExtn if targetExtn == ".*" else targetExtn
+            # TODO: Resolve wildcard folder too
             newTarget = os.path.join(targetPath, newName + newExtn)
             return newTarget
 
