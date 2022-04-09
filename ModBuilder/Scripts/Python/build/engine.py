@@ -7,7 +7,7 @@ from enum import Flag
 from dataclasses import dataclass
 from logging import warning
 from glob import glob
-from build.copy import BuildCopy
+from build.copy import BuildCopy, BuildCopyOption
 from build.thing import BuildFile, BuildFileStatus, BuildThing, BuildFilesT, BuildThingsT
 from build.common import ParamsToArgs
 from data.bundles import Bundles, BundlePack, BundleItem, BundleFile
@@ -92,6 +92,7 @@ class DataIndex(Enum):
     BIG_BUNDLE_ITEM = enum.auto()
     RAW_BUNDLE_PACK = enum.auto()
     ZIP_BUNDLE_PACK = enum.auto()
+    INSTALL_BUNDLE_PACK = enum.auto()
 
 def MakeThingName(index: DataIndex, name: str) -> str:
     if index == DataIndex.RAW_BUNDLE_ITEM:
@@ -102,6 +103,8 @@ def MakeThingName(index: DataIndex, name: str) -> str:
         return "RawBundlePack_" + name
     if index == DataIndex.ZIP_BUNDLE_PACK:
         return "ZipBundlePack_" + name
+    if index == DataIndex.INSTALL_BUNDLE_PACK:
+        return "InstallBundlePack_" + name
 
 def MakeDiffPath(index: DataIndex, folders: Folders) -> str:
     if index == DataIndex.RAW_BUNDLE_ITEM:
@@ -112,27 +115,29 @@ def MakeDiffPath(index: DataIndex, folders: Folders) -> str:
         return os.path.join(folders.absBuildDir, "RawBundlePack.pickle")
     if index == DataIndex.ZIP_BUNDLE_PACK:
         return os.path.join(folders.absBuildDir, "ZipBundlePack.pickle")
+    if index == DataIndex.INSTALL_BUNDLE_PACK:
+        return os.path.join(folders.absBuildDir, "InstallBundlePack.pickle")
 
 
 @dataclass(init=False)
 class BuildProcessData:
+    index: DataIndex
     things: BuildThingsT
     diff: BuildDiff
 
-    def __init__(self, diffPath: str):
+    def __init__(self, index: DataIndex):
+        self.index = index
         self.things = BuildThingsT()
-        self.diff = BuildDiff(loadPath=diffPath)
 
 
 @dataclass(init=False)
 class BuildStructure:
     data: list[BuildProcessData]
 
-    def __init__(self, folders: Folders):
+    def __init__(self):
         self.data = list[BuildProcessData]()
         for index in DataIndex:
-            diffPath: str = MakeDiffPath(index, folders)
-            self.data.append(BuildProcessData(diffPath=diffPath))
+            self.data.append(BuildProcessData(index))
 
     def GetProcessData(self, index: DataIndex) -> BuildProcessData:
         return self.data[index.value]
@@ -160,6 +165,7 @@ class BuildStructure:
 class BuildEngine:
     setup: BuildSetup
     structure: BuildStructure
+    installCopy: BuildCopy
 
 
     def __init__(self):
@@ -219,14 +225,18 @@ class BuildEngine:
         print("Do Pre Build ...")
 
         folders: Folders = self.setup.folders
+        runner: Runner = self.setup.runner
         bundles: Bundles = self.setup.bundles
+        tools: ToolsT = self.setup.tools
 
-        self.structure = BuildStructure(folders)
+        self.installCopy = BuildCopy(tools=tools, options=BuildCopyOption.ENABLE_BACKUP)
+        self.structure = BuildStructure()
 
         BuildEngine.__PopulateStructureRawBundleItems(self.structure, bundles, folders)
         BuildEngine.__PopulateStructureBigBundleItems(self.structure, bundles, folders)
         BuildEngine.__PopulateStructureRawBundlePacks(self.structure, bundles, folders)
         BuildEngine.__PopulateStructureZipBundlePacks(self.structure, bundles, folders)
+        BuildEngine.__PopulateStructureInstallBundlePacks(self.structure, bundles, runner)
 
         return True
 
@@ -327,26 +337,60 @@ class BuildEngine:
             structure.AddThing(DataIndex.ZIP_BUNDLE_PACK, newThing)
 
 
+    @staticmethod
+    def __PopulateStructureInstallBundlePacks(structure: BuildStructure, bundles: Bundles, runner: Runner) -> None:
+        parentFile: BuildFile
+        pack: BundlePack
+
+        for pack in bundles.packs:
+            if pack.install:
+                parentName: str = MakeThingName(DataIndex.RAW_BUNDLE_PACK, pack.name)
+                parentThing: BuildThing = structure.FindAnyThing(parentName)
+                assert(parentThing != None)
+                newThing = BuildThing()
+                newThing.name = MakeThingName(DataIndex.INSTALL_BUNDLE_PACK, pack.name)
+                newThing.absParentDir = runner.absGameRootDir
+                newThing.files = BuildFilesT()
+
+                for parentFile in parentThing.files:
+                    if utils.HasAnyFileExt(parentFile.relTarget, runner.relevantGameDataFileTypes):
+                        newFile = BuildFile()
+                        newFile.absSource = parentFile.AbsTarget(parentThing.absParentDir)
+                        newFile.relTarget = parentFile.relTarget
+                        newThing.files.append(newFile)
+
+                parentThing.childThings.append(newThing)
+                structure.AddThing(DataIndex.INSTALL_BUNDLE_PACK, newThing)
+
+
     def __Build(self) -> bool:
         print("Do Build ...")
 
-        BuildEngine.__BuildWithData(self.structure.GetProcessData(DataIndex.RAW_BUNDLE_ITEM), self.setup.tools)
-        BuildEngine.__BuildWithData(self.structure.GetProcessData(DataIndex.BIG_BUNDLE_ITEM), self.setup.tools)
-        BuildEngine.__BuildWithData(self.structure.GetProcessData(DataIndex.RAW_BUNDLE_PACK), self.setup.tools)
+        BuildEngine.__BuildWithData(self.structure.GetProcessData(DataIndex.RAW_BUNDLE_ITEM), self.setup)
+        BuildEngine.__BuildWithData(self.structure.GetProcessData(DataIndex.BIG_BUNDLE_ITEM), self.setup)
+        BuildEngine.__BuildWithData(self.structure.GetProcessData(DataIndex.RAW_BUNDLE_PACK), self.setup)
 
         return True
 
 
     @staticmethod
-    def __BuildWithData(data: BuildProcessData, tools: ToolsT) -> None:
-        data.diff.newInfos = BuildEngine.__CreateFilePathInfoDictFromThings(data.things)
+    def __BuildWithData(data: BuildProcessData, setup: BuildSetup) -> None:
+        copy = BuildCopy(tools=setup.tools)
 
+        BuildEngine.__PopulateDiffFromThings(data, setup.folders)
         BuildEngine.__PopulateBuildFileStatusInThings(data.things, data.diff)
         BuildEngine.__DeleteObsoleteFilesOfThings(data.things, data.diff)
-        BuildEngine.__CopyFilesOfThings(data.things, tools)
+        BuildEngine.__CopyFilesOfThings(data.things, copy)
         BuildEngine.__RehashFilePathInfoDict(data.diff.newInfos, data.things)
 
         data.diff.SaveNewInfos()
+
+
+    @staticmethod
+    def __PopulateDiffFromThings(data: BuildProcessData, folders: Folders) -> None:
+        path: str = MakeDiffPath(data.index, folders)
+        data.diff = BuildDiff(path)
+        data.diff.newInfos = BuildEngine.__CreateFilePathInfoDictFromThings(data.things)
 
 
     @staticmethod
@@ -489,14 +533,23 @@ class BuildEngine:
 
 
     @staticmethod
-    def __CopyFilesOfThings(things: BuildThingsT, tools: ToolsT) -> None:
-        buildCopy = BuildCopy(tools=tools)
+    def __CopyFilesOfThings(things: BuildThingsT, copy: BuildCopy) -> None:
         thing: BuildThing
 
         for thing in things.values():
             print(f"Copy files for {thing.name} ...")
 
-            buildCopy.CopyThing(thing)
+            copy.CopyThing(thing)
+
+
+    @staticmethod
+    def __UncopyFilesOfThings(things: BuildThingsT, copy: BuildCopy) -> None:
+        thing: BuildThing
+
+        for thing in things.values():
+            print(f"Remove files for {thing.name} ...")
+
+            copy.UncopyThing(thing)
 
 
     def __PostBuild(self) -> bool:
@@ -507,23 +560,74 @@ class BuildEngine:
     def __BuildRelease(self) -> bool:
         print("Do Build Release ...")
 
-        BuildEngine.__BuildWithData(self.structure.GetProcessData(DataIndex.ZIP_BUNDLE_PACK), self.setup.tools)
+        BuildEngine.__BuildWithData(self.structure.GetProcessData(DataIndex.ZIP_BUNDLE_PACK), self.setup)
 
         return True
 
 
     def __Install(self) -> bool:
         print("Do Install ...")
+
+        setup: BuildSetup = self.setup
+        data: BuildProcessData = self.structure.GetProcessData(DataIndex.INSTALL_BUNDLE_PACK)
+
+        BuildEngine.__PopulateDiffFromThings(data, setup.folders)
+        BuildEngine.__PopulateBuildFileStatusInThings(data.things, data.diff)
+        BuildEngine.__CopyFilesOfThings(data.things, self.installCopy)
+        BuildEngine.__RehashFilePathInfoDict(data.diff.newInfos, data.things)
+
+        data.diff.SaveNewInfos()
+
+        installedFiles: list[str] = BuildEngine.__GetAllTargetFilesFromThings(data.things)
+        BuildEngine.__CheckGameInstallFiles(installedFiles, self.setup.runner)
+
         return True
 
 
-    def __Run(self) -> bool:
-        print("Do Run ...")
+    @staticmethod
+    def __CheckGameInstallFiles(installedFiles: list[str], runner: Runner) -> None:
+        search: str = os.path.join(runner.absGameRootDir, "**", "*")
+        allGameFiles: list[str] = glob(search, recursive=True)
+        gameDataFilesFilter = filter(lambda file: utils.HasAnyFileExt(file, runner.relevantGameDataFileTypes), allGameFiles)
+        relevantGameDataFiles = list[str](gameDataFilesFilter)
+        expectedGameDataFiles = runner.absRegularGameDataFiles
+        expectedGameDataFiles.extend(installedFiles)
+        expectedGameDataFilesDict: dict[str, None] = dict.fromkeys(runner.absRegularGameDataFiles, 1)
+        unexpectedGameFiles = list[str]()
 
+        file: str
+        for file in relevantGameDataFiles:
+            if expectedGameDataFilesDict.get(file) == None:
+                unexpectedGameFiles.append(file)
+
+        print(f"Checking game install at {runner.absGameRootDir} ...")
+        if len(unexpectedGameFiles) > 0:
+            print(f"WARNING: The installed Mod may not work correctly. {len(unexpectedGameFiles)} unexpected file(s) were found:")
+            for file in unexpectedGameFiles:
+                print("Unexpected:", file)
+
+
+    @staticmethod
+    def __GetAllTargetFilesFromThings(things: BuildThingsT) -> list[str]:
+        allFiles = list[str]()
+        thing: BuildThing
+        file: BuildFile
+
+        for thing in things.values():
+            for file in thing.files:
+                absTarget: str = file.AbsTarget(thing.absParentDir)
+                allFiles.append(absTarget)
+
+        return allFiles
+
+
+    def __Run(self) -> bool:
         runner: Runner = self.setup.runner
         exec: str = runner.AbsGameExeFile()
         args: list[str] = [exec]
         args.extend(ParamsToArgs(runner.gameExeArgs))
+
+        print("Run", " ".join(args))
 
         subprocess.run(args=args)
 
@@ -532,4 +636,9 @@ class BuildEngine:
 
     def __Uninstall(self) -> bool:
         print("Do Uninstall ...")
+
+        data: BuildProcessData = self.structure.GetProcessData(DataIndex.INSTALL_BUNDLE_PACK)
+
+        BuildEngine.__UncopyFilesOfThings(data.things, self.installCopy)
+
         return True

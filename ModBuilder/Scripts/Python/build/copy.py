@@ -3,9 +3,9 @@ import subprocess
 import shutil
 import utils
 import enum
-from enum import Enum
+from enum import Enum, Flag
 from typing import Callable, Union
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from data.bundles import ParamsT
 from data.tools import ToolsT
 from build.thing import BuildFile, BuildThing, BuildThingsT
@@ -51,20 +51,15 @@ def GetFileType(filePath: str) -> BuildFileType:
     return BuildFileType.ANY
 
 
+class BuildCopyOption(Flag):
+    NONE = 0
+    ENABLE_BACKUP = enum.auto()
+
+
 @dataclass
 class BuildCopy:
     tools: ToolsT
-
-
-    def CopyThings(self, things: BuildThingsT) -> bool:
-        success: bool = True
-        thing: BuildThing
-
-        for thing in things.values():
-            if not self.CopyThing(thing):
-                success = False
-
-        return success
+    options: BuildCopyOption = field(default=BuildCopyOption.NONE)
 
 
     def CopyThing(self, thing: BuildThing) -> bool:
@@ -78,6 +73,17 @@ class BuildCopy:
             for file in thing.files:
                 if not file.IsUnchanged():
                     success &= self.__CopyFile(file, thing.absParentDir)
+
+        return success
+
+
+    def UncopyThing(self, thing: BuildThing) -> bool:
+        success: bool = True
+        file: BuildFile
+
+        for file in thing.files:
+            absTarget: str = file.AbsTarget(thing.absParentDir)
+            success &= self.Uncopy(absTarget)
 
         return success
 
@@ -110,10 +116,54 @@ class BuildCopy:
 
         utils.MakeDirsForFile(target)
 
+        if self.options & BuildCopyOption.ENABLE_BACKUP:
+            BuildCopy.__CreateBackup(target)
+
         copyFunction: Callable = self.__GetCopyFunction(sourceType, targetType)
         success: bool = copyFunction(source, target, params)
 
         return success
+
+
+    def Uncopy(self, file: str) -> bool:
+        success: bool = True
+
+        if os.path.isfile(file):
+            os.remove(file)
+            BuildCopy.__PrintUncopyResult(file)
+
+        if self.options & BuildCopyOption.ENABLE_BACKUP:
+            success &= BuildCopy.__RevertBackup(file)
+
+        return success
+
+
+    @staticmethod
+    def __CreateBackup(file: str) -> bool:
+        if os.path.isfile(file):
+            backupFile: str = BuildCopy.__MakeBackupFileName(file)
+
+            if not os.path.isfile(backupFile):
+                os.rename(src=file, dst=backupFile)
+                return True
+
+        return False
+
+
+    @staticmethod
+    def __RevertBackup(file: str) -> bool:
+        backupFile: str = BuildCopy.__MakeBackupFileName(file)
+
+        if os.path.isfile(backupFile):
+            os.rename(src=backupFile, dst=file)
+            return True
+
+        return False
+
+
+    @staticmethod
+    def __MakeBackupFileName(file: str) -> str:
+        return file + ".BAK"
 
 
     @staticmethod
@@ -132,6 +182,11 @@ class BuildCopy:
     def __PrintMakeResult(source: str, target: str) -> None:
         print("With", source)
         print("make", target)
+
+
+    @staticmethod
+    def __PrintUncopyResult(file) -> None:
+        print("Remove", file)
 
 
     def __GetCopyFunction(self, sourceT: BuildFileType, targetT: BuildFileType) -> Callable:

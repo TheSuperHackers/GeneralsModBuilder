@@ -99,11 +99,19 @@ def GetFileDirAndName(file: str) -> str:
     return path
 
 
-def HasFileExt(file: str, expectedExt: str) -> str:
+def HasFileExt(file: str, expectedExt: str) -> bool:
     fileExt: str = GetFileExt(file)
     if fileExt and fileExt[0] == '.':
         fileExt = fileExt[1:]
     return fileExt.lower() == expectedExt.lower()
+
+
+def HasAnyFileExt(file: str, expectedExtList: list[str]) -> bool:
+    ext: str
+    for ext in expectedExtList:
+        if HasFileExt(file, ext):
+            return True
+    return False
 
 
 def CreateRelPaths(paths: list[str], start: str) -> list[str]:
