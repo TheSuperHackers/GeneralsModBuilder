@@ -54,6 +54,7 @@ def GetFileType(filePath: str) -> BuildFileType:
 class BuildCopyOption(Flag):
     NONE = 0
     ENABLE_BACKUP = enum.auto()
+    ENABLE_SYMLINKS = enum.auto()
 
 
 @dataclass
@@ -214,13 +215,16 @@ class BuildCopy:
 
 
     def __CopyTo(self, source: str, target: str, params: ParamsT) -> bool:
-        try:
-            os.symlink(src=source, dst=target)
-            BuildCopy.__PrintLinkResult(source, target)
-        except OSError:
-            shutil.copy(src=source, dst=target)
-            BuildCopy.__PrintCopyResult(source, target)
+        if self.options & BuildCopyOption.ENABLE_SYMLINKS:
+            try:
+                os.symlink(src=source, dst=target)
+                BuildCopy.__PrintLinkResult(source, target)
+                return True
+            except OSError:
+                pass
 
+        shutil.copy(src=source, dst=target)
+        BuildCopy.__PrintCopyResult(source, target)
         return True
 
 

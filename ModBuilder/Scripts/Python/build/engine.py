@@ -186,8 +186,8 @@ class BuildEngine:
         runner: Runner = self.setup.runner
         bundles: Bundles = self.setup.bundles
         tools: ToolsT = self.setup.tools
-
-        self.installCopy = BuildCopy(tools=tools, options=BuildCopyOption.ENABLE_BACKUP)
+        options = BuildCopyOption.ENABLE_BACKUP | BuildCopyOption.ENABLE_SYMLINKS
+        self.installCopy = BuildCopy(tools=tools, options=options)
         self.structure = BuildStructure()
 
         BuildEngine.__PopulateStructureRawBundleItems(self.structure, bundles, folders)
@@ -331,18 +331,18 @@ class BuildEngine:
         print("Do Build ...")
 
         structure: BuildStructure = self.structure
+        tools: ToolsT = self.setup.tools
+        copy = BuildCopy(tools=tools, options=BuildCopyOption.ENABLE_SYMLINKS)
 
-        BuildEngine.__BuildWithData(structure.GetProcessData(BuildIndex.RAW_BUNDLE_ITEM), self.setup)
-        BuildEngine.__BuildWithData(structure.GetProcessData(BuildIndex.BIG_BUNDLE_ITEM), self.setup)
-        BuildEngine.__BuildWithData(structure.GetProcessData(BuildIndex.RAW_BUNDLE_PACK), self.setup)
+        BuildEngine.__BuildWithData(structure.GetProcessData(BuildIndex.RAW_BUNDLE_ITEM), copy, self.setup)
+        BuildEngine.__BuildWithData(structure.GetProcessData(BuildIndex.BIG_BUNDLE_ITEM), copy, self.setup)
+        BuildEngine.__BuildWithData(structure.GetProcessData(BuildIndex.RAW_BUNDLE_PACK), copy, self.setup)
 
         return True
 
 
     @staticmethod
-    def __BuildWithData(data: BuildIndexData, setup: BuildSetup) -> None:
-        copy = BuildCopy(tools=setup.tools)
-
+    def __BuildWithData(data: BuildIndexData, copy: BuildCopy, setup: BuildSetup) -> None:
         BuildEngine.__PopulateDiffFromThings(data, setup.folders)
         BuildEngine.__PopulateBuildFileStatusInThings(data.things, data.diff)
         BuildEngine.__DeleteObsoleteFilesOfThings(data.things, data.diff)
@@ -551,7 +551,10 @@ class BuildEngine:
     def __BuildRelease(self) -> bool:
         print("Do Build Release ...")
 
-        BuildEngine.__BuildWithData(self.structure.GetProcessData(BuildIndex.RELEASE_BUNDLE_PACK), self.setup)
+        tools: ToolsT = self.setup.tools
+        copy = BuildCopy(tools=tools)
+
+        BuildEngine.__BuildWithData(self.structure.GetProcessData(BuildIndex.RELEASE_BUNDLE_PACK), copy, self.setup)
 
         return True
 
