@@ -51,7 +51,7 @@ class BuildDiff:
         return True
 
 
-class DataIndex(enum.Enum):
+class BuildIndex(enum.Enum):
     RAW_BUNDLE_ITEM = 0
     BIG_BUNDLE_ITEM = enum.auto()
     RAW_BUNDLE_PACK = enum.auto()
@@ -59,62 +59,62 @@ class DataIndex(enum.Enum):
     INSTALL_BUNDLE_PACK = enum.auto()
 
 
-g_DataIndexNames: list[str] = [None] * len(DataIndex)
-g_DataIndexNames[DataIndex.RAW_BUNDLE_ITEM.value] = "RawBundleItem"
-g_DataIndexNames[DataIndex.BIG_BUNDLE_ITEM.value] = "BigBundleItem"
-g_DataIndexNames[DataIndex.RAW_BUNDLE_PACK.value] = "RawBundlePack"
-g_DataIndexNames[DataIndex.RELEASE_BUNDLE_PACK.value] = "ReleaseBundlePack"
-g_DataIndexNames[DataIndex.INSTALL_BUNDLE_PACK.value] = "InstallBundlePack"
+g_DataIndexNames: list[str] = [None] * len(BuildIndex)
+g_DataIndexNames[BuildIndex.RAW_BUNDLE_ITEM.value] = "RawBundleItem"
+g_DataIndexNames[BuildIndex.BIG_BUNDLE_ITEM.value] = "BigBundleItem"
+g_DataIndexNames[BuildIndex.RAW_BUNDLE_PACK.value] = "RawBundlePack"
+g_DataIndexNames[BuildIndex.RELEASE_BUNDLE_PACK.value] = "ReleaseBundlePack"
+g_DataIndexNames[BuildIndex.INSTALL_BUNDLE_PACK.value] = "InstallBundlePack"
 
 
-def GetDataName(index: DataIndex) -> str:
+def GetDataName(index: BuildIndex) -> str:
     return g_DataIndexNames[index.value]
 
-def MakeThingName(index: DataIndex, thingName: str) -> str:
+def MakeThingName(index: BuildIndex, thingName: str) -> str:
     return f"{GetDataName(index)}_{thingName}"
 
-def MakeDiffPath(index: DataIndex, folders: Folders) -> str:
+def MakeDiffPath(index: BuildIndex, folders: Folders) -> str:
     return os.path.join(folders.absBuildDir, f"{GetDataName(index)}.pickle")
 
 
 @dataclass(init=False)
-class BuildProcessData:
-    index: DataIndex
+class BuildIndexData:
+    index: BuildIndex
     things: BuildThingsT
     diff: BuildDiff
 
-    def __init__(self, index: DataIndex):
+    def __init__(self, index: BuildIndex):
         self.index = index
         self.things = BuildThingsT()
 
 
 @dataclass(init=False)
 class BuildStructure:
-    data: list[BuildProcessData]
+    data: list[BuildIndexData]
 
     def __init__(self):
-        self.data = list[BuildProcessData]()
-        for index in DataIndex:
-            self.data.append(BuildProcessData(index))
+        self.data = list[BuildIndexData]()
+        for index in BuildIndex:
+            self.data.append(BuildIndexData(index))
 
-    def GetProcessData(self, index: DataIndex) -> BuildProcessData:
+    def GetProcessData(self, index: BuildIndex) -> BuildIndexData:
         return self.data[index.value]
 
-    def GetThings(self, index: DataIndex) -> BuildThingsT:
+    def GetThings(self, index: BuildIndex) -> BuildThingsT:
         return self.data[index.value].things
 
-    def GetDiff(self, index: DataIndex) -> BuildDiff:
+    def GetDiff(self, index: BuildIndex) -> BuildDiff:
         return self.data[index.value].diff
 
-    def AddThing(self, index: DataIndex, thing: BuildThing) -> None:
+    def AddThing(self, index: BuildIndex, thing: BuildThing) -> None:
         self.data[index.value].things[thing.name] = thing
 
-    def FindThing(self, index: DataIndex, name: str) -> BuildThing:
+    def FindThing(self, index: BuildIndex, name: str) -> BuildThing:
         return self.data[index.value].things.get(name)
 
     def FindAnyThing(self, name: str) -> BuildThing:
         thing: BuildThing
-        for index in DataIndex:
+        for index in BuildIndex:
             if thing := self.FindThing(index, name):
                 return thing
         return None
@@ -206,7 +206,7 @@ class BuildEngine:
 
         for item in bundles.items:
             newThing = BuildThing()
-            newThing.name = MakeThingName(DataIndex.RAW_BUNDLE_ITEM, item.name)
+            newThing.name = MakeThingName(BuildIndex.RAW_BUNDLE_ITEM, item.name)
             newThing.absParentDir = os.path.join(folders.absBuildDir, "RawBundleItems", item.name)
             newThing.files = BuildFilesT()
 
@@ -217,7 +217,7 @@ class BuildEngine:
                 buildFile.params = itemFile.params
                 newThing.files.append(buildFile)
 
-            structure.AddThing(DataIndex.RAW_BUNDLE_ITEM, newThing)
+            structure.AddThing(BuildIndex.RAW_BUNDLE_ITEM, newThing)
 
 
     @staticmethod
@@ -226,18 +226,18 @@ class BuildEngine:
 
         for item in bundles.items:
             if item.isBig:
-                parentName: str = MakeThingName(DataIndex.RAW_BUNDLE_ITEM, item.name)
+                parentName: str = MakeThingName(BuildIndex.RAW_BUNDLE_ITEM, item.name)
                 parentThing: BuildThing = structure.FindAnyThing(parentName)
                 assert(parentThing != None)
                 newThing = BuildThing()
-                newThing.name = MakeThingName(DataIndex.BIG_BUNDLE_ITEM, item.name)
+                newThing.name = MakeThingName(BuildIndex.BIG_BUNDLE_ITEM, item.name)
                 newThing.absParentDir = os.path.join(folders.absBuildDir, "BigBundleItems")
                 newThing.files = [BuildFile()]
                 newThing.files[0].absSource = parentThing.absParentDir
                 newThing.files[0].relTarget = item.name + ".big"
                 newThing.parentThing = parentThing
 
-                structure.AddThing(DataIndex.BIG_BUNDLE_ITEM, newThing)
+                structure.AddThing(BuildIndex.BIG_BUNDLE_ITEM, newThing)
 
 
     @staticmethod
@@ -252,7 +252,7 @@ class BuildEngine:
 
         for pack in bundles.packs:
             newThing = BuildThing()
-            newThing.name = MakeThingName(DataIndex.RAW_BUNDLE_PACK, pack.name)
+            newThing.name = MakeThingName(BuildIndex.RAW_BUNDLE_PACK, pack.name)
             newThing.absParentDir = os.path.join(folders.absBuildDir, "RawBundlePacks", pack.name)
             newThing.files = BuildFilesT()
 
@@ -263,10 +263,10 @@ class BuildEngine:
                 newThing.files.append(buildFile)
 
             for itemName in pack.itemNames:
-                parentName: str = MakeThingName(DataIndex.BIG_BUNDLE_ITEM, itemName)
+                parentName: str = MakeThingName(BuildIndex.BIG_BUNDLE_ITEM, itemName)
                 parentThing: BuildThing = structure.FindAnyThing(parentName)
                 if parentThing == None:
-                    parentName = MakeThingName(DataIndex.RAW_BUNDLE_ITEM, itemName)
+                    parentName = MakeThingName(BuildIndex.RAW_BUNDLE_ITEM, itemName)
                     parentThing = structure.FindAnyThing(parentName)
                     assert(parentThing != None)
 
@@ -279,7 +279,7 @@ class BuildEngine:
                     buildFile.parentFile = parentFile
                     newThing.files.append(buildFile)
 
-            structure.AddThing(DataIndex.RAW_BUNDLE_PACK, newThing)
+            structure.AddThing(BuildIndex.RAW_BUNDLE_PACK, newThing)
 
 
     @staticmethod
@@ -287,18 +287,18 @@ class BuildEngine:
         pack: BundlePack
 
         for pack in bundles.packs:
-            parentName: str = MakeThingName(DataIndex.RAW_BUNDLE_PACK, pack.name)
+            parentName: str = MakeThingName(BuildIndex.RAW_BUNDLE_PACK, pack.name)
             parentThing: BuildThing = structure.FindAnyThing(parentName)
             assert(parentThing != None)
             newThing = BuildThing()
-            newThing.name = MakeThingName(DataIndex.RELEASE_BUNDLE_PACK, pack.name)
+            newThing.name = MakeThingName(BuildIndex.RELEASE_BUNDLE_PACK, pack.name)
             newThing.absParentDir = folders.absReleaseDir
             newThing.files = [BuildFile()]
             newThing.files[0].absSource = parentThing.absParentDir
             newThing.files[0].relTarget = pack.name + ".zip"
             newThing.parentThing = parentThing
 
-            structure.AddThing(DataIndex.RELEASE_BUNDLE_PACK, newThing)
+            structure.AddThing(BuildIndex.RELEASE_BUNDLE_PACK, newThing)
 
 
     @staticmethod
@@ -308,11 +308,11 @@ class BuildEngine:
 
         for pack in bundles.packs:
             if pack.install:
-                parentName: str = MakeThingName(DataIndex.RAW_BUNDLE_PACK, pack.name)
+                parentName: str = MakeThingName(BuildIndex.RAW_BUNDLE_PACK, pack.name)
                 parentThing: BuildThing = structure.FindAnyThing(parentName)
                 assert(parentThing != None)
                 newThing = BuildThing()
-                newThing.name = MakeThingName(DataIndex.INSTALL_BUNDLE_PACK, pack.name)
+                newThing.name = MakeThingName(BuildIndex.INSTALL_BUNDLE_PACK, pack.name)
                 newThing.absParentDir = runner.absGameRootDir
                 newThing.files = BuildFilesT()
                 newThing.parentThing = parentThing
@@ -324,7 +324,7 @@ class BuildEngine:
                         newFile.relTarget = parentFile.relTarget
                         newThing.files.append(newFile)
 
-                structure.AddThing(DataIndex.INSTALL_BUNDLE_PACK, newThing)
+                structure.AddThing(BuildIndex.INSTALL_BUNDLE_PACK, newThing)
 
 
     def __Build(self) -> bool:
@@ -332,15 +332,15 @@ class BuildEngine:
 
         structure: BuildStructure = self.structure
 
-        BuildEngine.__BuildWithData(structure.GetProcessData(DataIndex.RAW_BUNDLE_ITEM), self.setup)
-        BuildEngine.__BuildWithData(structure.GetProcessData(DataIndex.BIG_BUNDLE_ITEM), self.setup)
-        BuildEngine.__BuildWithData(structure.GetProcessData(DataIndex.RAW_BUNDLE_PACK), self.setup)
+        BuildEngine.__BuildWithData(structure.GetProcessData(BuildIndex.RAW_BUNDLE_ITEM), self.setup)
+        BuildEngine.__BuildWithData(structure.GetProcessData(BuildIndex.BIG_BUNDLE_ITEM), self.setup)
+        BuildEngine.__BuildWithData(structure.GetProcessData(BuildIndex.RAW_BUNDLE_PACK), self.setup)
 
         return True
 
 
     @staticmethod
-    def __BuildWithData(data: BuildProcessData, setup: BuildSetup) -> None:
+    def __BuildWithData(data: BuildIndexData, setup: BuildSetup) -> None:
         copy = BuildCopy(tools=setup.tools)
 
         BuildEngine.__PopulateDiffFromThings(data, setup.folders)
@@ -353,7 +353,7 @@ class BuildEngine:
 
 
     @staticmethod
-    def __PopulateDiffFromThings(data: BuildProcessData, folders: Folders) -> None:
+    def __PopulateDiffFromThings(data: BuildIndexData, folders: Folders) -> None:
         path: str = MakeDiffPath(data.index, folders)
         data.diff = BuildDiff(path)
         data.diff.newInfos = BuildEngine.__CreateFilePathInfoDictFromThings(data.things)
@@ -551,7 +551,7 @@ class BuildEngine:
     def __BuildRelease(self) -> bool:
         print("Do Build Release ...")
 
-        BuildEngine.__BuildWithData(self.structure.GetProcessData(DataIndex.RELEASE_BUNDLE_PACK), self.setup)
+        BuildEngine.__BuildWithData(self.structure.GetProcessData(BuildIndex.RELEASE_BUNDLE_PACK), self.setup)
 
         return True
 
@@ -560,7 +560,7 @@ class BuildEngine:
         print("Do Install ...")
 
         setup: BuildSetup = self.setup
-        data: BuildProcessData = self.structure.GetProcessData(DataIndex.INSTALL_BUNDLE_PACK)
+        data: BuildIndexData = self.structure.GetProcessData(BuildIndex.INSTALL_BUNDLE_PACK)
 
         BuildEngine.__PopulateDiffFromThings(data, setup.folders)
         BuildEngine.__PopulateBuildFileStatusInThings(data.things, data.diff)
@@ -628,7 +628,7 @@ class BuildEngine:
     def __Uninstall(self) -> bool:
         print("Do Uninstall ...")
 
-        data: BuildProcessData = self.structure.GetProcessData(DataIndex.INSTALL_BUNDLE_PACK)
+        data: BuildIndexData = self.structure.GetProcessData(BuildIndex.INSTALL_BUNDLE_PACK)
 
         BuildEngine.__UncopyFilesOfThings(data.things, self.installCopy)
 
