@@ -91,32 +91,26 @@ class DataIndex(Enum):
     RAW_BUNDLE_ITEM = 0
     BIG_BUNDLE_ITEM = enum.auto()
     RAW_BUNDLE_PACK = enum.auto()
-    ZIP_BUNDLE_PACK = enum.auto()
+    RELEASE_BUNDLE_PACK = enum.auto()
     INSTALL_BUNDLE_PACK = enum.auto()
 
-def MakeThingName(index: DataIndex, name: str) -> str:
-    if index == DataIndex.RAW_BUNDLE_ITEM:
-        return "RawBundleItem_" + name
-    if index == DataIndex.BIG_BUNDLE_ITEM:
-        return "BigBundleItem_" + name
-    if index == DataIndex.RAW_BUNDLE_PACK:
-        return "RawBundlePack_" + name
-    if index == DataIndex.ZIP_BUNDLE_PACK:
-        return "ZipBundlePack_" + name
-    if index == DataIndex.INSTALL_BUNDLE_PACK:
-        return "InstallBundlePack_" + name
+
+g_DataIndexNames: list[str] = [None] * len(DataIndex)
+g_DataIndexNames[DataIndex.RAW_BUNDLE_ITEM.value] = "RawBundleItem"
+g_DataIndexNames[DataIndex.BIG_BUNDLE_ITEM.value] = "BigBundleItem"
+g_DataIndexNames[DataIndex.RAW_BUNDLE_PACK.value] = "RawBundlePack"
+g_DataIndexNames[DataIndex.RELEASE_BUNDLE_PACK.value] = "ReleaseBundlePack"
+g_DataIndexNames[DataIndex.INSTALL_BUNDLE_PACK.value] = "InstallBundlePack"
+
+
+def GetDataName(index: DataIndex) -> str:
+    return g_DataIndexNames[index.value]
+
+def MakeThingName(index: DataIndex, thingName: str) -> str:
+    return f"{GetDataName(index)}_{thingName}"
 
 def MakeDiffPath(index: DataIndex, folders: Folders) -> str:
-    if index == DataIndex.RAW_BUNDLE_ITEM:
-        return os.path.join(folders.absBuildDir, "RawBundleItem.pickle")
-    if index == DataIndex.BIG_BUNDLE_ITEM:
-        return os.path.join(folders.absBuildDir, "BigBundleItem.pickle")
-    if index == DataIndex.RAW_BUNDLE_PACK:
-        return os.path.join(folders.absBuildDir, "RawBundlePack.pickle")
-    if index == DataIndex.ZIP_BUNDLE_PACK:
-        return os.path.join(folders.absBuildDir, "ZipBundlePack.pickle")
-    if index == DataIndex.INSTALL_BUNDLE_PACK:
-        return os.path.join(folders.absBuildDir, "InstallBundlePack.pickle")
+    return os.path.join(folders.absBuildDir, f"{GetDataName(index)}.pickle")
 
 
 @dataclass(init=False)
@@ -333,14 +327,14 @@ class BuildEngine:
             parentThing: BuildThing = structure.FindAnyThing(parentName)
             assert(parentThing != None)
             newThing = BuildThing()
-            newThing.name = MakeThingName(DataIndex.ZIP_BUNDLE_PACK, pack.name)
+            newThing.name = MakeThingName(DataIndex.RELEASE_BUNDLE_PACK, pack.name)
             newThing.absParentDir = folders.absReleaseDir
             newThing.files = [BuildFile()]
             newThing.files[0].absSource = parentThing.absParentDir
             newThing.files[0].relTarget = pack.name + ".zip"
             newThing.parentThing = parentThing
 
-            structure.AddThing(DataIndex.ZIP_BUNDLE_PACK, newThing)
+            structure.AddThing(DataIndex.RELEASE_BUNDLE_PACK, newThing)
 
 
     @staticmethod
@@ -593,7 +587,7 @@ class BuildEngine:
     def __BuildRelease(self) -> bool:
         print("Do Build Release ...")
 
-        BuildEngine.__BuildWithData(self.structure.GetProcessData(DataIndex.ZIP_BUNDLE_PACK), self.setup)
+        BuildEngine.__BuildWithData(self.structure.GetProcessData(DataIndex.RELEASE_BUNDLE_PACK), self.setup)
 
         return True
 
