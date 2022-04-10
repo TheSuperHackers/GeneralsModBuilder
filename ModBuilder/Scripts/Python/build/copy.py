@@ -4,16 +4,16 @@ import shutil
 import utils
 import enum
 from enum import Enum, Flag
-from typing import Callable, Union
+from typing import Callable
 from dataclasses import dataclass, field
 from data.bundles import ParamsT
 from data.tools import ToolsT
-from build.thing import BuildFile, BuildThing, BuildThingsT
+from build.thing import BuildFile, BuildThing
 from build.common import ParamsToArgs
 
 
 class BuildFileType(Enum):
-    CSF = enum.auto()
+    CSF = 0
     STR = enum.auto()
     BIG = enum.auto()
     ZIP = enum.auto()
@@ -66,13 +66,12 @@ class BuildCopy:
         success: bool = True
         file: BuildFile
 
-        if BuildCopy.__RequiresFullCopy(thing):
-            for file in thing.files:
-                success &= self.__CopyFile(file, thing.absParentDir)
-        else:
-            for file in thing.files:
-                if not file.IsUnchanged():
-                    success &= self.__CopyFile(file, thing.absParentDir)
+        for file in thing.files:
+            if file.RequiresRebuild():
+                absSource: str = file.AbsSource()
+                absTarget: str = file.AbsTarget(thing.absParentDir)
+                params: ParamsT = file.params
+                success &= self.Copy(absSource, absTarget, params)
 
         return success
 
@@ -86,18 +85,6 @@ class BuildCopy:
             success &= self.Uncopy(absTarget)
 
         return success
-
-
-    @staticmethod
-    def __RequiresFullCopy(thing: BuildThing) -> bool:
-        return thing.parentHasDeletedFiles
-
-
-    def __CopyFile(self, file: BuildFile, absParentDir: str) -> bool:
-        absSource: str = file.AbsSource()
-        absTarget: str = file.AbsTarget(absParentDir)
-        params: ParamsT = file.params
-        return self.Copy(absSource, absTarget, params)
 
 
     def Copy(
@@ -118,6 +105,9 @@ class BuildCopy:
 
         if self.options & BuildCopyOption.ENABLE_BACKUP:
             BuildCopy.__CreateBackup(target)
+
+        if os.path.isfile(target):
+            os.remove(target)
 
         copyFunction: Callable = self.__GetCopyFunction(sourceType, targetType)
         success: bool = copyFunction(source, target, params)

@@ -251,12 +251,14 @@ class BuildEngine:
             newThing.name = MakeThingName(DataIndex.RAW_BUNDLE_ITEM, item.name)
             newThing.absParentDir = os.path.join(folders.absBuildDir, "RawBundleItems", item.name)
             newThing.files = BuildFilesT()
+
             for itemFile in item.files:
                 buildFile = BuildFile()
                 buildFile.absSource = itemFile.absSourceFile
                 buildFile.relTarget = itemFile.relTargetFile
                 buildFile.params = itemFile.params
                 newThing.files.append(buildFile)
+
             structure.AddThing(DataIndex.RAW_BUNDLE_ITEM, newThing)
 
 
@@ -275,7 +277,8 @@ class BuildEngine:
                 newThing.files = [BuildFile()]
                 newThing.files[0].absSource = parentThing.absParentDir
                 newThing.files[0].relTarget = item.name + ".big"
-                parentThing.childThings.append(newThing)
+                newThing.parentThing = parentThing
+
                 structure.AddThing(DataIndex.BIG_BUNDLE_ITEM, newThing)
 
 
@@ -304,16 +307,18 @@ class BuildEngine:
             for itemName in pack.itemNames:
                 parentName: str = MakeThingName(DataIndex.BIG_BUNDLE_ITEM, itemName)
                 parentThing: BuildThing = structure.FindAnyThing(parentName)
-                if not parentThing:
+                if parentThing == None:
                     parentName = MakeThingName(DataIndex.RAW_BUNDLE_ITEM, itemName)
                     parentThing = structure.FindAnyThing(parentName)
-                    assert parentThing != None
-                parentThing.childThings.append(newThing)
+                    assert(parentThing != None)
+
+                newThing.parentThing = parentThing
 
                 for parentFile in parentThing.files:
                     buildFile = BuildFile()
                     buildFile.absSource = parentFile.AbsTarget(parentThing.absParentDir)
                     buildFile.relTarget = parentFile.RelTarget()
+                    buildFile.parentFile = parentFile
                     newThing.files.append(buildFile)
 
             structure.AddThing(DataIndex.RAW_BUNDLE_PACK, newThing)
@@ -333,7 +338,8 @@ class BuildEngine:
             newThing.files = [BuildFile()]
             newThing.files[0].absSource = parentThing.absParentDir
             newThing.files[0].relTarget = pack.name + ".zip"
-            parentThing.childThings.append(newThing)
+            newThing.parentThing = parentThing
+
             structure.AddThing(DataIndex.ZIP_BUNDLE_PACK, newThing)
 
 
@@ -351,6 +357,7 @@ class BuildEngine:
                 newThing.name = MakeThingName(DataIndex.INSTALL_BUNDLE_PACK, pack.name)
                 newThing.absParentDir = runner.absGameRootDir
                 newThing.files = BuildFilesT()
+                newThing.parentThing = parentThing
 
                 for parentFile in parentThing.files:
                     if utils.HasAnyFileExt(parentFile.relTarget, runner.relevantGameDataFileTypes):
@@ -359,16 +366,17 @@ class BuildEngine:
                         newFile.relTarget = parentFile.relTarget
                         newThing.files.append(newFile)
 
-                parentThing.childThings.append(newThing)
                 structure.AddThing(DataIndex.INSTALL_BUNDLE_PACK, newThing)
 
 
     def __Build(self) -> bool:
         print("Do Build ...")
 
-        BuildEngine.__BuildWithData(self.structure.GetProcessData(DataIndex.RAW_BUNDLE_ITEM), self.setup)
-        BuildEngine.__BuildWithData(self.structure.GetProcessData(DataIndex.BIG_BUNDLE_ITEM), self.setup)
-        BuildEngine.__BuildWithData(self.structure.GetProcessData(DataIndex.RAW_BUNDLE_PACK), self.setup)
+        structure: BuildStructure = self.structure
+
+        BuildEngine.__BuildWithData(structure.GetProcessData(DataIndex.RAW_BUNDLE_ITEM), self.setup)
+        BuildEngine.__BuildWithData(structure.GetProcessData(DataIndex.BIG_BUNDLE_ITEM), self.setup)
+        BuildEngine.__BuildWithData(structure.GetProcessData(DataIndex.RAW_BUNDLE_PACK), self.setup)
 
         return True
 
@@ -423,6 +431,7 @@ class BuildEngine:
             absTarget = file.AbsTarget(thing.absParentDir)
             absTargetDirs: list[str] = utils.GetAllFileDirs(absTarget, thing.absParentDir)
             absTargetDir: str
+
             for absTargetDir in absTargetDirs:
                 if not infos.get(absTargetDir):
                     info = BuildFilePathInfo()
@@ -430,7 +439,6 @@ class BuildEngine:
                     info.md5 = ""
                     infos[absTargetDir] = info
 
-            absTarget = file.AbsTarget(thing.absParentDir)
             if not infos.get(absTarget):
                 info = BuildFilePathInfo()
                 info.ownerThingName = thing.name
@@ -449,9 +457,10 @@ class BuildEngine:
             print(f"Rehash files for {thing.name} ...")
 
             for file in thing.files:
-                if file.targetStatus != BuildFileStatus.UNCHANGED:
+                if file.RequiresRebuild():
                     absTarget: str = file.AbsTarget(thing.absParentDir)
                     targetInfo: BuildFilePathInfo = infos.get(absTarget)
+                    assert(targetInfo != None)
                     targetInfo.md5 = utils.GetFileMd5(absTarget)
 
 
@@ -462,28 +471,52 @@ class BuildEngine:
         for thing in things.values():
             print(f"Populate file status for {thing.name} ...")
 
-            BuildEngine.__PopulateBuildFileStatusInThing(thing, diff)
+            BuildEngine.__PopulateFileStatusInThing(thing, diff)
 
 
     @staticmethod
-    def __PopulateBuildFileStatusInThing(thing: BuildThing, diff: BuildDiff) -> None:
+    def __PopulateFileStatusInThing(thing: BuildThing, diff: BuildDiff) -> None:
         file: BuildFile
 
+        parentStatus: BuildFileStatus = None
+        parentThing: BuildThing = thing.parentThing
+        if parentThing != None:
+            parentStatus = parentThing.GetMostSignificantFileStatus()
+
         for file in thing.files:
-            absSource: str = file.AbsSource()
-            file.sourceStatus = BuildEngine.__PopulateBuildFileStatusInFile(absSource, diff)
+            parentFile: BuildFile = file.parentFile
+            parentStatus: BuildFileStatus = parentStatus if parentFile == None else parentFile.GetCombinedStatus()
+            absSource: str = file.absSource
+            absTarget: str = file.AbsTarget(thing.absParentDir)
+            file.sourceStatus = BuildEngine.__GetBuildFileStatus(absSource, parentStatus, diff)
+            file.targetStatus = BuildEngine.__GetBuildFileStatus(absTarget, None, diff)
+
+        for status in BuildFileStatus:
+            thing.fileCounts[status.value] = 0
+
+        for file in thing.files:
+            status: BuildFileStatus = file.GetCombinedStatus()
+            thing.fileCounts[status.value] += 1
+
+        for status in BuildFileStatus:
+            if status != BuildFileStatus.UNCHANGED:
+                count: int = thing.GetFileCount(status)
+                if count > 0:
+                    print(f"{thing.name} has {count} files {status.name}")
+
+        for file in thing.files:
             if file.sourceStatus != BuildFileStatus.UNCHANGED:
+                absSource: str = file.absSource
                 print(f"Source {absSource} is {file.sourceStatus.name}")
 
         for file in thing.files:
-            absTarget: str = file.AbsTarget(thing.absParentDir)
-            file.targetStatus = BuildEngine.__PopulateBuildFileStatusInFile(absTarget, diff)
-            if file.sourceStatus != BuildFileStatus.UNCHANGED:
+            if file.targetStatus != BuildFileStatus.UNCHANGED:
+                absTarget: str = file.AbsTarget(thing.absParentDir)
                 print(f"Target {absTarget} is {file.targetStatus.name}")
 
 
     @staticmethod
-    def __PopulateBuildFileStatusInFile(filePath: str,  diff: BuildDiff) -> BuildFileStatus:
+    def __GetBuildFileStatus(filePath: str, parentStatus: BuildFileStatus, diff: BuildDiff) -> BuildFileStatus:
         if os.path.exists(filePath):
             oldInfo: BuildFilePathInfo = diff.oldInfos.get(filePath)
 
@@ -496,16 +529,16 @@ class BuildEngine:
                 if newInfo.md5 != oldInfo.md5:
                     return BuildFileStatus.CHANGED
                 else:
-                    return BuildFileStatus.UNCHANGED
+                    if parentStatus != None and parentStatus != BuildFileStatus.UNKNOWN:
+                        return parentStatus
+                    else:
+                        return BuildFileStatus.UNCHANGED
         else:
             return BuildFileStatus.MISSING
 
 
     @staticmethod
     def __DeleteObsoleteFilesOfThings(things: BuildThingsT, diff: BuildDiff) -> None:
-        def SetParentHasDeletedFiles(thing: BuildThing) -> None:
-            thing.parentHasDeletedFiles = True
-
         thing: BuildThing
 
         for thing in things.values():
@@ -520,7 +553,7 @@ class BuildEngine:
                     if newInfo == None:
                         oldInfo: BuildFilePathInfo = diff.oldInfos.get(fileName)
                         if oldInfo != None:
-                            thing.ForEachChild(SetParentHasDeletedFiles)
+                            thing.fileCounts[BuildFileStatus.REMOVED.value] += 1
 
                         if utils.DeleteFileOrPath(fileName):
                             print("Deleted", fileName)

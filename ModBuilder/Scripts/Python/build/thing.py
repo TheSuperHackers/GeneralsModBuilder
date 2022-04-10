@@ -2,13 +2,14 @@ import os
 import enum
 from enum import Enum
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 from data.bundles import ParamsT
 
 
 class BuildFileStatus(Enum):
-    UNKNOWN = enum.auto()
+    UNKNOWN = 0
     UNCHANGED = enum.auto()
+    REMOVED = enum.auto()
     MISSING = enum.auto()
     ADDED = enum.auto()
     CHANGED = enum.auto()
@@ -18,11 +19,15 @@ class BuildFileStatus(Enum):
 class BuildFile:
     relTarget: str
     absSource: str
-    params: ParamsT
     targetStatus: BuildFileStatus
     sourceStatus: BuildFileStatus
+    parentFile: Any
+    params: ParamsT
 
     def __init__(self):
+        self.targetStatus = BuildFileStatus.UNKNOWN
+        self.sourceStatus = BuildFileStatus.UNKNOWN
+        self.parentFile = None
         self.params = dict()
 
     def RelTarget(self) -> str:
@@ -34,8 +39,16 @@ class BuildFile:
     def AbsSource(self) -> str:
         return self.absSource
 
-    def IsUnchanged(self) -> bool:
-        return self.targetStatus == BuildFileStatus.UNCHANGED and self.sourceStatus == BuildFileStatus.UNCHANGED
+    def GetCombinedStatus(self) -> BuildFileStatus:
+        maxValue: int = max(self.targetStatus.value, self.sourceStatus.value)
+        return BuildFileStatus(maxValue)
+
+    def RequiresRebuild(self) -> bool:
+        status: BuildFileStatus = self.GetCombinedStatus()
+        return (status == BuildFileStatus.REMOVED or
+                status == BuildFileStatus.MISSING or
+                status == BuildFileStatus.ADDED or
+                status == BuildFileStatus.CHANGED)
 
 
 BuildFilesT = list[BuildFile]
@@ -46,17 +59,24 @@ class BuildThing:
     name: str
     absParentDir: str
     files: BuildFilesT
-    childThings: list[Any]
-    parentHasDeletedFiles: bool
+    parentThing: Any
+    fileCounts: list[int]
 
     def __init__(self):
         self.childThings = list()
-        self.parentHasDeletedFiles = False
+        self.parentThing = None
+        self.fileCounts = [0] * len(BuildFileStatus)
 
-    def ForEachChild(self, function: Callable[[Any], None]) -> None:
-        child: BuildThing
-        for child in self.childThings:
-            function(child)
+    def GetFileCount(self, status: BuildFileStatus) -> int:
+        return self.fileCounts[status.value]
+
+    def GetMostSignificantFileStatus(self) -> BuildFileStatus:
+        retStatus: BuildFileStatus = BuildFileStatus.UNKNOWN
+        status: BuildFileStatus
+        for status in BuildFileStatus:
+            if self.GetFileCount(status) > 0:
+                retStatus = status
+        return retStatus
 
 
 BuildThingsT = dict[str, BuildThing]
