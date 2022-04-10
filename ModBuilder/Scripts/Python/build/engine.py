@@ -295,7 +295,7 @@ class BuildEngine:
             newThing.absParentDir = folders.absReleaseDir
             newThing.files = [BuildFile()]
             newThing.files[0].absSource = parentThing.absParentDir
-            newThing.files[0].relTarget = pack.name + ".zip"
+            newThing.files[0].relTarget = pack.namePrefix + pack.name + pack.nameSuffix + ".zip"
             newThing.parentThing = parentThing
 
             structure.AddThing(BuildIndex.RELEASE_BUNDLE_PACK, newThing)
