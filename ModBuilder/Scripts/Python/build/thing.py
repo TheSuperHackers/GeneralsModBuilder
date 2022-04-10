@@ -1,12 +1,11 @@
 import os
 import enum
-from enum import Enum
 from dataclasses import dataclass
 from typing import Any
 from data.bundles import ParamsT
 
 
-class BuildFileStatus(Enum):
+class BuildFileStatus(enum.Enum):
     UNKNOWN = 0
     UNCHANGED = enum.auto()
     REMOVED = enum.auto()
