@@ -1,4 +1,3 @@
-import copy
 import utils
 import os.path
 from glob import glob
@@ -56,44 +55,48 @@ class BundleItem:
             file.Normalize()
 
     def ResolveWildcards(self) -> None:
-        newBundleFiles: list[BundleFile] = []
-        bundleFile: BundleFile
+        newFiles: list[BundleFile] = []
+        curFile: BundleFile
 
-        for bundleFile in self.files:
-            file: str = bundleFile.absSourceFile
-            if not os.path.isfile(file) and "*" in file:
-                globFiles = glob(file, recursive=True)
-                utils.RelAssert(bool(globFiles), f"Wildcard '{file}' matches nothing")
+        for curFile in self.files:
+            if not os.path.isfile(curFile.absSourceFile) and "*" in curFile.absSourceFile:
+                globFiles = glob(curFile.absSourceFile, recursive=True)
+                utils.RelAssert(bool(globFiles), f"Wildcard '{curFile.absSourceFile}' matches nothing")
+
                 for globFile in globFiles:
-                    utils.RelAssert(os.path.isfile(globFile), f"Wildcard file '{globFile}' is not a file")
-                    newFile: BundleFile = copy.copy(bundleFile)
-                    newFile.absSourceFile = globFile
-                    newBundleFiles.append(newFile)
+                    if os.path.isfile(globFile):
+                        newFile = BundleFile()
+                        newFile.absSourceFile = globFile
+                        newFile.relTargetFile = curFile.relTargetFile
+                        newFile.params = curFile.params
+                        newFiles.append(newFile)
             else:
-                newBundleFiles.append(bundleFile)
+                newFiles.append(curFile)
 
-        for bundleFile in newBundleFiles:
-            bundleFile.relTargetFile = BundleItem.__ResolveTargetWildcard(bundleFile.absSourceFile, bundleFile.relTargetFile)
+        for curFile in newFiles:
+            curFile.relTargetFile = BundleItem.__ResolveTargetWildcard(curFile.absSourceFile, curFile.relTargetFile)
 
-        self.files = newBundleFiles
-        return newBundleFiles
+        self.files = newFiles
+        return newFiles
 
     @staticmethod
     def __ResolveTargetWildcard(source: str, target: str) -> str:
-        if utils.IsPathSyntax(target):
-            sourcePath, sourceFile = os.path.split(source)
-            newTarget = os.path.join(target, sourceFile)
-            return newTarget
+        sourcePath, sourceFile = os.path.split(source)
+        targetPath, targetFile = os.path.split(target)
+        sourceName, sourceExtn = os.path.splitext(sourceFile)
+        targetName, targetExtn = os.path.splitext(targetFile)
+
+        if targetFile == "*":
+            newName = sourceName
+            newExtn = sourceExtn
         else:
-            sourcePath, sourceFile = os.path.split(source)
-            targetPath, targetFile = os.path.split(target)
-            sourceName, sourceExtn = os.path.splitext(sourceFile)
-            targetName, targetExtn = os.path.splitext(targetFile)
             newName = sourceName if targetName == "*" else targetName
             newExtn = sourceExtn if targetExtn == ".*" else targetExtn
-            # TODO: Resolve wildcard folder too
-            newTarget = os.path.join(targetPath, newName + newExtn)
-            return newTarget
+
+        # TODO: Implement ** target folder support?
+
+        newTarget = os.path.join(targetPath, newName + newExtn)
+        return newTarget
 
 
 @dataclass(init=False)
@@ -262,8 +265,8 @@ def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> Bundles:
                     bundles.packs.append(bundlePack)
 
     bundles.VerifyTypes()
-    bundles.ResolveWildcards()
     bundles.Normalize()
+    bundles.ResolveWildcards()
     bundles.VerifyValues()
 
     return bundles

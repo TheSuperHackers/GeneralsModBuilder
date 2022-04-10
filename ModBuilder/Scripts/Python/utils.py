@@ -180,9 +180,3 @@ def GetFileHash(path, hashFunc: Callable) -> str:
         hashStr = hashObj.hexdigest()
         print(f"Hashed {path} as {hashStr}")
     return hashStr
-
-
-def IsPathSyntax(path: str) -> bool:
-    if path and isinstance(path, str) and (path.endswith("/") or path.endswith("\\")):
-        return True
-    return False

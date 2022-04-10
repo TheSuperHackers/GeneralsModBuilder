@@ -11,7 +11,7 @@
                         "sourceTargetList": [
                             [
                                 "Data/INI/*.ini",
-                                "Data/INI/"
+                                "Data/INI/*"
                             ],
                             [
                                 "Data/English/*.ini",

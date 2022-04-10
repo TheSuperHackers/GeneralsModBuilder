@@ -57,7 +57,7 @@ class Runner:
                 globFiles = glob(file, recursive=True)
                 utils.RelAssert(bool(globFiles), f"Wildcard '{file}' matches nothing")
                 for globFile in globFiles:
-                        utils.RelAssert(os.path.isfile(globFile), f"Wildcard file '{globFile}' is not a file")
+                    if os.path.isfile(globFile):
                         newFiles.append(globFile)
             else:
                 newFiles.append(file)
