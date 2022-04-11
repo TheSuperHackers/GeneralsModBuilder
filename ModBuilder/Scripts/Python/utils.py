@@ -170,6 +170,8 @@ def GetFileSha256(path: str) -> str:
     return GetFileHash(path, hashlib.sha256)
 
 
+g_fileHashCount: int = 0
+
 def GetFileHash(path, hashFunc: Callable) -> str:
     hashStr: str = ""
     if os.path.isfile(path):
@@ -178,5 +180,8 @@ def GetFileHash(path, hashFunc: Callable) -> str:
             for chunk in iter(lambda: rfile.read(4096), b""):
                 hashObj.update(chunk)
         hashStr = hashObj.hexdigest()
-        print(f"Hashed {path} as {hashStr}")
+
+        global g_fileHashCount
+        g_fileHashCount += 1
+        print(f"Hashed ({g_fileHashCount}) {path} as {hashStr}")
     return hashStr

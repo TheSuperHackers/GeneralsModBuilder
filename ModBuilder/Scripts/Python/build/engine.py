@@ -378,11 +378,20 @@ class BuildEngine:
         file: BuildFile
 
         for file in thing.files:
-            absSource = file.absSource
+            absRealSource = file.AbsRealSource()
+            absSource = file.AbsSource()
+
+            if not infos.get(absRealSource):
+                info = BuildFilePathInfo()
+                info.ownerThingName = thing.name
+                info.md5 = utils.GetFileMd5(absRealSource)
+                infos[absRealSource] = info
+
+            # Plain source will not be hashed as optimization.
             if not infos.get(absSource):
                 info = BuildFilePathInfo()
                 info.ownerThingName = thing.name
-                info.md5 = utils.GetFileMd5(absSource)
+                info.md5 = ""
                 infos[absSource] = info
 
         for file in thing.files:
@@ -397,10 +406,18 @@ class BuildEngine:
                     info.md5 = ""
                     infos[absTargetDir] = info
 
+            absRealTarget = file.AbsRealTarget(thing.absParentDir)
+            if not infos.get(absRealTarget):
+                info = BuildFilePathInfo()
+                info.ownerThingName = thing.name
+                info.md5 = utils.GetFileMd5(absRealTarget)
+                infos[absRealTarget] = info
+
+            # Plain target will not be hashed as optimization.
             if not infos.get(absTarget):
                 info = BuildFilePathInfo()
                 info.ownerThingName = thing.name
-                info.md5 = utils.GetFileMd5(absTarget)
+                info.md5 = ""
                 infos[absTarget] = info
 
         return infos
@@ -444,8 +461,8 @@ class BuildEngine:
         for file in thing.files:
             parentFile: BuildFile = file.parentFile
             parentStatus: BuildFileStatus = parentStatus if parentFile == None else parentFile.GetCombinedStatus()
-            absSource: str = file.absSource
-            absTarget: str = file.AbsTarget(thing.absParentDir)
+            absSource: str = file.AbsRealSource()
+            absTarget: str = file.AbsRealTarget(thing.absParentDir)
             file.sourceStatus = BuildEngine.__GetBuildFileStatus(absSource, parentStatus, diff)
             file.targetStatus = BuildEngine.__GetBuildFileStatus(absTarget, None, diff)
 
