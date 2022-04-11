@@ -32,14 +32,20 @@ class BundleFile:
 @dataclass(init=False)
 class BundleItem:
     name: str
+    namePrefix: str
+    nameSuffix: str
     isBig: bool
     files: list[BundleFile]
 
     def __init__(self):
+        self.namePrefix = ""
+        self.nameSuffix = ""
         self.isBig = True
 
     def VerifyTypes(self) -> None:
         utils.RelAssert(isinstance(self.name, str), "BundleItem.name has incorrect type")
+        utils.RelAssert(isinstance(self.namePrefix, str), "BundleItem.namePrefix has incorrect type")
+        utils.RelAssert(isinstance(self.nameSuffix, str), "BundleItem.nameSuffix has incorrect type")
         utils.RelAssert(isinstance(self.isBig, bool), "BundleItem.isBig has incorrect type")
         utils.RelAssert(isinstance(self.files, list), "BundleItem.files has incorrect type")
         for file in self.files:
@@ -246,11 +252,16 @@ def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> Bundles:
         jBundles: dict = jsonFile.data.get("bundles")
 
         if jBundles:
+            itemsPrefix: str = jBundles.get("itemsPrefix")
+            itemsSuffix: str = jBundles.get("itemsSuffix")
             jItems: dict = jBundles.get("items")
+
             if jItems:
                 jItem: dict
                 for jItem in jItems:
                     bundleItem: BundleItem = __MakeBundleItemFromDict(jItem, jsonDir)
+                    bundleItem.namePrefix = utils.GetSecondIfValid(bundleItem.namePrefix, itemsPrefix)
+                    bundleItem.nameSuffix = utils.GetSecondIfValid(bundleItem.nameSuffix, itemsSuffix)
                     bundles.items.append(bundleItem)
 
             packsPrefix: str = jBundles.get("packsPrefix")

@@ -234,7 +234,7 @@ class BuildEngine:
                 newThing.absParentDir = os.path.join(folders.absBuildDir, "BigBundleItems")
                 newThing.files = [BuildFile()]
                 newThing.files[0].absSource = parentThing.absParentDir
-                newThing.files[0].relTarget = item.name + ".big"
+                newThing.files[0].relTarget = item.namePrefix + item.name + item.nameSuffix + ".big"
                 newThing.parentThing = parentThing
 
                 structure.AddThing(BuildIndex.BIG_BUNDLE_ITEM, newThing)

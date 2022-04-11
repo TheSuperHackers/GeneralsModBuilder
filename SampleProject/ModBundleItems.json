@@ -1,6 +1,8 @@
 {
     "bundles": {
         "version": 1,
+        "itemsPrefix": "000_",
+        "itemsSuffix": "",
         "items": [
             {
                 "name": "SampleINI",
