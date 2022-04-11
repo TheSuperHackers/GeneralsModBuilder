@@ -4,6 +4,7 @@
         "list": [
             {
                 "name": "crunch",
+                "info": "Converts PSD,TGA to DDS,TGA,BMP",
                 "files": [
                     {
                         "url": "https://github.com/TheSuperHackers/GeneralsTools/raw/main/Tools/crunch/v1.04/crunch_x64.exe",
@@ -15,6 +16,7 @@
             },
             {
                 "name": "gametextcompiler",
+                "info": "Converts STR to CSF and vice versa",
                 "files": [
                     {
                         "url": "https://github.com/TheSuperHackers/GeneralsTools/raw/main/Tools/gametextcompiler/v1.0/gametextcompiler.exe",
@@ -26,6 +28,7 @@
             },
             {
                 "name": "generalsbigcreator",
+                "info": "Adds folders and files into BIG archive",
                 "files": [
                     {
                         "url": "https://github.com/TheSuperHackers/GeneralsTools/raw/main/Tools/generalsbigcreator/v1.3/generalsbigcreator.exe",
