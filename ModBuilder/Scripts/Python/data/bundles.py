@@ -209,9 +209,10 @@ def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
     if sourceTargetList:
         element: list[str]
         for element in sourceTargetList:
+            source2: str = element.get("source")
             bundleFile = BundleFile()
-            bundleFile.absSourceFile = os.path.join(parent, element[0])
-            bundleFile.relTargetFile = element[1]
+            bundleFile.absSourceFile = os.path.join(parent, source2)
+            bundleFile.relTargetFile = utils.GetSecondIfValid(source2, element.get("target"))
             bundleFile.params = params
             files.append(bundleFile)
 

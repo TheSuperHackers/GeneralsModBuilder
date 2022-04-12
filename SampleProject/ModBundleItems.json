@@ -11,14 +11,14 @@
                     {
                         "parent": "GameFilesEdited",
                         "sourceTargetList": [
-                            [
-                                "Data/INI/*.ini",
-                                "Data/INI/*"
-                            ],
-                            [
-                                "Data/English/*.ini",
-                                "Data/English/*.*"
-                            ]
+                            {
+                                "source": "Data/INI/*.ini",
+                                "target": "Data/INI/*"
+                            },
+                            {
+                                "source": "Data/English/*.ini",
+                                "target": "Data/English/*.*"
+                            }
                         ]
                     }
                 ]
@@ -68,10 +68,10 @@
                     {
                         "parent": "GameFilesEdited",
                         "sourceTargetList": [
-                            [
-                                "Art/*.psd",
-                                "Art/*.dds"
-                            ]
+                            {
+                                "source": "Art/*.psd",
+                                "target": "Art/*.dds"
+                            }
                         ],
                         "params": {
                             "-rescale": [
