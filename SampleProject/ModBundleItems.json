@@ -122,10 +122,8 @@
                 "files": [
                     {
                         "parent": "GameFilesEdited",
-                        "sourceList": [
-                            "Install_Final.bmp",
-                            "launcher.bmp"
-                        ]
+                        "source": "*.psd",
+                        "target": "*.bmp"
                     }
                 ]
             }
