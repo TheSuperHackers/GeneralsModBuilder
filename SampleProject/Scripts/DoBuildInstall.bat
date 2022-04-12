@@ -5,11 +5,11 @@ call "%ThisDir%\SetupFolders.bat"
 
 cd /D "%PythonDir%"
 
-call "%RunModBuilder%" --mod-build --mod-install ^
---mod-config="%ConfigDir%\ModBundleItems.json" ^
---mod-config="%ConfigDir%\ModBundlePacks.json" ^
---mod-config="%ConfigDir%\ModFolders.json" ^
---mod-config="%ConfigDir%\ModRunner.json"
+call "%RunModBuilder%" --build --install ^
+--config="%ConfigDir%\ModBundleItems.json" ^
+--config="%ConfigDir%\ModBundlePacks.json" ^
+--config="%ConfigDir%\ModFolders.json" ^
+--config="%ConfigDir%\ModRunner.json"
 
 cd /D "%ThisDir%"
 

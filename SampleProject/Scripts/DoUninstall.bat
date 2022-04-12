@@ -6,10 +6,10 @@ call "%ThisDir%\SetupFolders.bat"
 cd /D "%PythonDir%"
 
 call "%RunModBuilder%" --uninstall ^
---mod-config="%ConfigDir%\ModBundleItems.json" ^
---mod-config="%ConfigDir%\ModBundlePacks.json" ^
---mod-config="%ConfigDir%\ModFolders.json" ^
---mod-config="%ConfigDir%\ModRunner.json"
+--config="%ConfigDir%\ModBundleItems.json" ^
+--config="%ConfigDir%\ModBundlePacks.json" ^
+--config="%ConfigDir%\ModFolders.json" ^
+--config="%ConfigDir%\ModRunner.json"
 
 cd /D "%ThisDir%"
 

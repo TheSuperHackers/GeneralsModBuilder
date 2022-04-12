@@ -63,12 +63,12 @@ def RunWithConfig(configPaths: list[str],
 
 def Main(args=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--mod-config', type=str, action="append", help='Path to a configuration file (json). Multiples can be specified.')
-    parser.add_argument('-b', '--mod-build', action='store_true')
-    parser.add_argument('-rel', '--mod-release', action='store_true')
-    parser.add_argument('-i', '--mod-install', action='store_true')
-    parser.add_argument('-u', '--mod-uninstall', action='store_true')
-    parser.add_argument('-run', '--mod-run', action='store_true')
+    parser.add_argument('-c', '--config', type=str, action="append", help='Path to a configuration file (json). Multiples can be specified.')
+    parser.add_argument('-b', '--build', action='store_true')
+    parser.add_argument('-z', '--release', action='store_true')
+    parser.add_argument('-i', '--install', action='store_true')
+    parser.add_argument('-u', '--uninstall', action='store_true')
+    parser.add_argument('-r', '--run', action='store_true')
 
     args, unknownargs = parser.parse_known_args(args=args)
     utils.pprint(args)
@@ -82,16 +82,16 @@ def Main(args=None):
     configPaths.append(os.path.join(configPath, "DefaultTools.json"))
 
     # Add custom configurations last so readers can write over default configurations last.
-    if args.mod_config:
-        configPaths.extend(args.mod_config)
+    if args.config:
+        configPaths.extend(args.config)
 
     RunWithConfig(
         configPaths=configPaths,
-        build=bool(args.mod_build),
-        release=bool(args.mod_release),
-        install=bool(args.mod_install),
-        uninstall=bool(args.mod_uninstall),
-        run=bool(args.mod_run))
+        build=bool(args.build),
+        release=bool(args.release),
+        install=bool(args.install),
+        uninstall=bool(args.uninstall),
+        run=bool(args.run))
 
 
 if __name__ == "__main__":
