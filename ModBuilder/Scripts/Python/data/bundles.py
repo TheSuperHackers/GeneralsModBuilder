@@ -188,30 +188,31 @@ def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
         params = ParamsT()
 
     jSource: str = jFile.get("source")
+    jSourceList: list = jFile.get("sourceList")
+    jSourceTargetList: list = jFile.get("sourceTargetList")
+
     if jSource:
         bundleFile = BundleFile()
-        bundleFile.absSourceFile = os.path.join(parent, jSource)
+        bundleFile.absSourceFile = utils.JoinPathIfValid(None, parent, jSource)
         bundleFile.relTargetFile = utils.GetSecondIfValid(jSource, jFile.get("target"))
         bundleFile.params = params
         files.append(bundleFile)
 
-    jSourceList: list = jFile.get("sourceList")
     if jSourceList:
         jElement: str
         for jElement in jSourceList:
             bundleFile = BundleFile()
-            bundleFile.absSourceFile = os.path.join(parent, jElement)
+            bundleFile.absSourceFile = utils.JoinPathIfValid(None, parent, jElement)
             bundleFile.relTargetFile = jElement
             bundleFile.params = params
             files.append(bundleFile)
 
-    jSourceTargetList: list = jFile.get("sourceTargetList")
     if jSourceTargetList:
         jElement: dict[str, str]
         for jElement in jSourceTargetList:
             jElementSource: str = jElement.get("source")
             bundleFile = BundleFile()
-            bundleFile.absSourceFile = os.path.join(parent, jElementSource)
+            bundleFile.absSourceFile = utils.JoinPathIfValid(None, parent, jElementSource)
             bundleFile.relTargetFile = utils.GetSecondIfValid(jElementSource, jElement.get("target"))
             bundleFile.params = params
             files.append(bundleFile)
