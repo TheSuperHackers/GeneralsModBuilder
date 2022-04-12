@@ -187,32 +187,32 @@ def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
     if params == None:
         params = ParamsT()
 
-    source = jFile.get("source")
-    if source:
+    jSource: str = jFile.get("source")
+    if jSource:
         bundleFile = BundleFile()
-        bundleFile.absSourceFile = os.path.join(parent, source)
-        bundleFile.relTargetFile = utils.GetSecondIfValid(source, jFile.get("target"))
+        bundleFile.absSourceFile = os.path.join(parent, jSource)
+        bundleFile.relTargetFile = utils.GetSecondIfValid(jSource, jFile.get("target"))
         bundleFile.params = params
         files.append(bundleFile)
 
-    sourceList = jFile.get("sourceList")
-    if sourceList:
-        element: str
-        for element in sourceList:
+    jSourceList: list = jFile.get("sourceList")
+    if jSourceList:
+        jElement: str
+        for jElement in jSourceList:
             bundleFile = BundleFile()
-            bundleFile.absSourceFile = os.path.join(parent, element)
-            bundleFile.relTargetFile = element
+            bundleFile.absSourceFile = os.path.join(parent, jElement)
+            bundleFile.relTargetFile = jElement
             bundleFile.params = params
             files.append(bundleFile)
 
-    sourceTargetList = jFile.get("sourceTargetList")
-    if sourceTargetList:
-        element: list[str]
-        for element in sourceTargetList:
-            source2: str = element.get("source")
+    jSourceTargetList: list = jFile.get("sourceTargetList")
+    if jSourceTargetList:
+        jElement: dict[str, str]
+        for jElement in jSourceTargetList:
+            jElementSource: str = jElement.get("source")
             bundleFile = BundleFile()
-            bundleFile.absSourceFile = os.path.join(parent, source2)
-            bundleFile.relTargetFile = utils.GetSecondIfValid(source2, element.get("target"))
+            bundleFile.absSourceFile = os.path.join(parent, jElementSource)
+            bundleFile.relTargetFile = utils.GetSecondIfValid(jElementSource, jElement.get("target"))
             bundleFile.params = params
             files.append(bundleFile)
 
@@ -253,27 +253,27 @@ def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> Bundles:
         jBundles: dict = jsonFile.data.get("bundles")
 
         if jBundles:
-            itemsPrefix: str = jBundles.get("itemsPrefix")
-            itemsSuffix: str = jBundles.get("itemsSuffix")
+            jItemsPrefix: str = jBundles.get("itemsPrefix")
+            jItemsSuffix: str = jBundles.get("itemsSuffix")
             jItems: dict = jBundles.get("items")
 
             if jItems:
                 jItem: dict
                 for jItem in jItems:
                     bundleItem: BundleItem = __MakeBundleItemFromDict(jItem, jsonDir)
-                    bundleItem.namePrefix = utils.GetSecondIfValid(bundleItem.namePrefix, itemsPrefix)
-                    bundleItem.nameSuffix = utils.GetSecondIfValid(bundleItem.nameSuffix, itemsSuffix)
+                    bundleItem.namePrefix = utils.GetSecondIfValid(bundleItem.namePrefix, jItemsPrefix)
+                    bundleItem.nameSuffix = utils.GetSecondIfValid(bundleItem.nameSuffix, jItemsSuffix)
                     bundles.items.append(bundleItem)
 
-            packsPrefix: str = jBundles.get("packsPrefix")
-            packsSuffix: str = jBundles.get("packsSuffix")
+            jPacksPrefix: str = jBundles.get("packsPrefix")
+            jPacksSuffix: str = jBundles.get("packsSuffix")
             jPacks: dict = jBundles.get("packs")
             if jPacks:
                 jPack: dict
                 for jPack in jPacks:
                     bundlePack: BundlePack = __MakeBundlePackFromDict(jPack)
-                    bundlePack.namePrefix = utils.GetSecondIfValid(bundlePack.namePrefix, packsPrefix)
-                    bundlePack.nameSuffix = utils.GetSecondIfValid(bundlePack.nameSuffix, packsSuffix)
+                    bundlePack.namePrefix = utils.GetSecondIfValid(bundlePack.namePrefix, jPacksPrefix)
+                    bundlePack.nameSuffix = utils.GetSecondIfValid(bundlePack.nameSuffix, jPacksSuffix)
                     bundles.packs.append(bundlePack)
 
     bundles.VerifyTypes()
