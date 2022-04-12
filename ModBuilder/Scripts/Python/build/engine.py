@@ -523,7 +523,7 @@ class BuildEngine:
             fileName: str
 
             for fileName in fileNames:
-                if os.path.exists(fileName):
+                if os.path.lexists(fileName):
                     newInfo: BuildFilePathInfo = diff.newInfos.get(fileName)
                     if newInfo == None:
                         oldInfo: BuildFilePathInfo = diff.oldInfos.get(fileName)

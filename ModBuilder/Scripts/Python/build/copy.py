@@ -107,8 +107,7 @@ class BuildCopy:
         if self.options & BuildCopyOption.ENABLE_BACKUP:
             BuildCopy.__CreateBackup(target)
 
-        if os.path.isfile(target):
-            os.remove(target)
+        utils.DeleteFileOrPath(target)
 
         copyFunction: Callable = self.__GetCopyFunction(sourceType, targetType)
         success: bool = copyFunction(source, target, params)

@@ -126,6 +126,9 @@ def MakeDirsForFile(file: str) -> None:
 
 
 def DeleteFileOrPath(path: str) -> bool:
+    if os.path.islink(path):
+        os.unlink(path)
+        return True
     if os.path.isfile(path):
         os.remove(path)
         return True
