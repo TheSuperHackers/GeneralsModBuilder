@@ -8,6 +8,7 @@
                 "install": true,
                 "name": "SampleProjectTGA256",
                 "itemNames": [
+                    "SampleAudio",
                     "SampleINI",
                     "SampleLanguages",
                     "SampleTexturesTGA256",

@@ -5,6 +5,25 @@
         "itemsSuffix": "",
         "items": [
             {
+                "name": "SampleAudio",
+                "big": true,
+                "files": [
+                    {
+                        "parent": "GameFilesEdited",
+                        "sourceTargetList": [
+                            {
+                                "source": "Data/Audio/Sounds/English/*",
+                                "target": "Data/Audio/Sounds/English/*"
+                            },
+                            {
+                                "source": "Data/Audio/Sounds/*",
+                                "target": "Data/Audio/Sounds/*"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
                 "name": "SampleINI",
                 "big": true,
                 "files": [
