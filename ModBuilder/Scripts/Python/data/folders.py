@@ -18,9 +18,9 @@ class Folders:
         self.absBuildDir = utils.NormalizePath(self.absBuildDir)
 
     def VerifyTypes(self) -> None:
-        utils.RelAssert(isinstance(self.absReleaseUnpackedDir, str), "Folders.releaseUnpackedDir has incorrect type")
-        utils.RelAssert(isinstance(self.absReleaseDir, str), "Folders.releaseDir has incorrect type")
-        utils.RelAssert(isinstance(self.absBuildDir, str), "Folders.buildDir has incorrect type")
+        utils.RelAssertType(self.absReleaseUnpackedDir, str, "Folders.absReleaseUnpackedDir")
+        utils.RelAssertType(self.absReleaseDir, str, "Folders.absReleaseDir")
+        utils.RelAssertType(self.absBuildDir, str, "Folders.absBuildDir")
 
 
 def MakeFoldersFromJsons(jsonFiles: list[JsonFile]) -> Folders:

@@ -21,16 +21,16 @@ class ToolFile:
         self.absTarget = utils.NormalizePath(self.absTarget)
 
     def VerifyTypes(self) -> None:
-        utils.RelAssert(isinstance(self.url, str), "Tool.url has incorrect type")
-        utils.RelAssert(isinstance(self.md5, str), "Tool.md5 has incorrect type")
-        utils.RelAssert(isinstance(self.absTarget, str), "Tool.target has incorrect type")
-        utils.RelAssert(isinstance(self.runnable, bool), "Tool.runnable has incorrect type")
+        utils.RelAssertType(self.url, str, "ToolFile.url")
+        utils.RelAssertType(self.md5, str, "ToolFile.md5")
+        utils.RelAssertType(self.absTarget, str, "ToolFile.absTarget")
+        utils.RelAssertType(self.runnable, bool, "ToolFile.runnable")
 
     def VerifyInstall(self) -> None:
-        utils.RelAssert(os.path.isfile(self.absTarget), f"Tool.target file '{self.absTarget}' does not exist")
+        utils.RelAssert(os.path.isfile(self.absTarget), f"ToolFile.absTarget file '{self.absTarget}' does not exist")
         if self.md5:
             actualMd5 = utils.GetFileMd5(self.absTarget)
-            utils.RelAssert(self.md5 == actualMd5, f"Tool.md5 '{self.md5}' does not match md5 '{actualMd5}' of target file '{self.absTarget}'")
+            utils.RelAssert(self.md5 == actualMd5, f"ToolFile.md5 '{self.md5}' does not match md5 '{actualMd5}' of target file '{self.absTarget}'")
 
     def IsInstalled(self) -> bool:
         return os.path.isfile(self.absTarget) and (not self.md5 or utils.GetFileMd5(self.absTarget) == self.md5)
@@ -64,8 +64,8 @@ class Tool:
             file.Normalize()
 
     def Verify(self) -> None:
-        utils.RelAssert(isinstance(self.name, str), "Tool.name has incorrect type")
-        utils.RelAssert(isinstance(self.files, list), "Tool.files has incorrect type")
+        utils.RelAssertType(self.name, str, "Tool.name")
+        utils.RelAssertType(self.files, list, "Tool.files")
         for file in self.files:
             file.VerifyTypes()
         utils.RelAssert(self.GetExecutable() != None, "Tool.files contains no runnable file")

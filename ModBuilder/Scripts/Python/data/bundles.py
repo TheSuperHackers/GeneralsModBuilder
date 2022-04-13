@@ -16,8 +16,8 @@ class BundleFile:
         pass
 
     def VerifyTypes(self) -> None:
-        utils.RelAssert(isinstance(self.absSourceFile, str), "BundleFile.absSourceFile has incorrect type")
-        utils.RelAssert(isinstance(self.relTargetFile, str), "BundleFile.relTargetFile has incorrect type")
+        utils.RelAssertType(self.absSourceFile, str, "BundleFile.absSourceFile")
+        utils.RelAssertType(self.relTargetFile, str, "BundleFile.relTargetFile")
         VerifyParamsType(self.params, "BundleFile.params")
 
     def VerifyValues(self) -> None:
@@ -43,13 +43,13 @@ class BundleItem:
         self.isBig = True
 
     def VerifyTypes(self) -> None:
-        utils.RelAssert(isinstance(self.name, str), "BundleItem.name has incorrect type")
-        utils.RelAssert(isinstance(self.namePrefix, str), "BundleItem.namePrefix has incorrect type")
-        utils.RelAssert(isinstance(self.nameSuffix, str), "BundleItem.nameSuffix has incorrect type")
-        utils.RelAssert(isinstance(self.isBig, bool), "BundleItem.isBig has incorrect type")
-        utils.RelAssert(isinstance(self.files, list), "BundleItem.files has incorrect type")
+        utils.RelAssertType(self.name, str, "BundleItem.name")
+        utils.RelAssertType(self.namePrefix, str, "BundleItem.namePrefix")
+        utils.RelAssertType(self.nameSuffix, str, "BundleItem.nameSuffix")
+        utils.RelAssertType(self.isBig, bool, "BundleItem.isBig")
+        utils.RelAssertType(self.files, list, "BundleItem.files")
         for file in self.files:
-            utils.RelAssert(isinstance(file, BundleFile), "BundleItem.files has incorrect type")
+            utils.RelAssertType(file, BundleFile, "BundleItem.files.value")
             file.VerifyTypes()
 
     def VerifyValues(self) -> None:
@@ -119,13 +119,13 @@ class BundlePack:
         self.install = False
 
     def VerifyTypes(self) -> None:
-        utils.RelAssert(isinstance(self.name, str), "BundlePack.name has incorrect type")
-        utils.RelAssert(isinstance(self.namePrefix, str), "BundlePack.namePrefix has incorrect type")
-        utils.RelAssert(isinstance(self.nameSuffix, str), "BundlePack.nameSuffix has incorrect type")
-        utils.RelAssert(isinstance(self.install, bool), "BundlePack.install has incorrect type")
-        utils.RelAssert(isinstance(self.itemNames, list), "BundlePack.itemNames has incorrect type")
+        utils.RelAssertType(self.name, str, "BundlePack.name")
+        utils.RelAssertType(self.namePrefix, str, "BundlePack.namePrefix")
+        utils.RelAssertType(self.nameSuffix, str, "BundlePack.nameSuffix")
+        utils.RelAssertType(self.install, bool, "BundlePack.install")
+        utils.RelAssertType(self.itemNames, list, "BundlePack.itemNames")
         for itemName in self.itemNames:
-            utils.RelAssert(isinstance(itemName, str), "BundlePack.itemNames has incorrect type")
+            utils.RelAssertType(itemName, str, "BundlePack.itemNames.value")
 
 
 @dataclass(init=False)
@@ -137,13 +137,13 @@ class Bundles:
         pass
 
     def VerifyTypes(self) -> None:
-        utils.RelAssert(isinstance(self.items, list), "Bundles.items has incorrect type")
-        utils.RelAssert(isinstance(self.packs, list), "Bundles.packs has incorrect type")
+        utils.RelAssertType(self.items, list, "Bundles.items")
+        utils.RelAssertType(self.packs, list, "Bundles.packs")
         for item in self.items:
-            utils.RelAssert(isinstance(item, BundleItem), "Bundles.items has incorrect type")
+            utils.RelAssertType(item, BundleItem, "Bundles.items.value")
             item.VerifyTypes()
         for pack in self.packs:
-            utils.RelAssert(isinstance(pack, BundlePack), "Bundles.packs has incorrect type")
+            utils.RelAssertType(pack, BundlePack, "Bundles.packs.value")
             pack.VerifyTypes()
 
     def VerifyValues(self) -> None:

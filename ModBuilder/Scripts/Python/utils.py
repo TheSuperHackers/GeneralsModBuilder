@@ -1,4 +1,5 @@
 import os
+import types
 import winreg
 import json
 import hashlib
@@ -7,6 +8,16 @@ import shutil
 from copy import copy
 from typing import Any, Callable
 from beeprint import pp
+
+
+def RelAssert(condition: bool, message: str = "") -> None:
+    if not condition:
+        raise Exception(message)
+
+
+def RelAssertType(obj: object, expectedType: type | types.UnionType, objName: str) -> None:
+    if not isinstance(obj, expectedType):
+        raise Exception(f'Object "{objName}" is type:{type(obj).__name__} but should be type:{expectedType.__name__}')
 
 
 def pprint(obj: Any) -> None:
@@ -53,8 +64,8 @@ class JsonFile:
         self.VerifyTypes()
 
     def VerifyTypes(self) -> None:
-        RelAssert(isinstance(self.path, str), "JsonFile.path has incorrect type")
-        RelAssert(isinstance(self.data, dict), "JsonFile.data has incorrect type")
+        RelAssertType(self.path, str, "JsonFile.path")
+        RelAssertType(self.data, dict, "JsonFile.data")
 
 
 def GetKeyValueFromRegistry(pathStr: str, keyStr: str) -> str:
@@ -158,11 +169,6 @@ def NormalizePaths(paths: list[str]) -> list[str]:
     for i in range(len(paths)):
         paths[i] = os.path.normpath(paths[i])
     return paths
-
-
-def RelAssert(condition: bool, message: str = "") -> None:
-    if not condition:
-        raise Exception(message)
 
 
 def GetFileMd5(path: str) -> str:

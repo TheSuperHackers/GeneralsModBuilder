@@ -31,18 +31,15 @@ class Runner:
             self.absRegularGameDataFiles[i] = utils.NormalizePath(self.absRegularGameDataFiles[i])
 
     def VerifyTypes(self) -> None:
-        utils.RelAssert(isinstance(self.absGameRootDir, str), "Runner.gameRootDir has incorrect type")
-        utils.RelAssert(isinstance(self.relGameExeFile, str), "Runner.gameExeFile has incorrect type")
+        utils.RelAssertType(self.absGameRootDir, str, "Runner.absGameRootDir")
+        utils.RelAssertType(self.relGameExeFile, str, "Runner.relGameExeFile")
         VerifyParamsType(self.gameExeArgs, "Runner.gameExeArgs")
         VerifyStringListType(self.relevantGameDataFileTypes, "Runner.relevantGameDataFileTypes")
-        VerifyStringListType(self.absRegularGameDataFiles, "Runner.regularGameDataFiles has incorrect type")
+        VerifyStringListType(self.absRegularGameDataFiles, "Runner.absRegularGameDataFiles")
 
     def VerifyValues(self) -> None:
-        utils.RelAssert(os.path.isdir(self.absGameRootDir), f"Runner.gameRootDir '{self.absGameRootDir}' is not a valid path")
-        utils.RelAssert(os.path.isfile(self.AbsGameExeFile()), f"Runner.gameExeFile '{self.relGameExeFile}' is not a valid file")
-        file: str
-        for file in self.absRegularGameDataFiles:
-            utils.RelAssert(os.path.isfile(self.AbsGameExeFile()), f"Runner.regularGameDataFiles {file} is not a valid file")
+        utils.RelAssert(os.path.isdir(self.absGameRootDir), f"Runner.absGameRootDir '{self.absGameRootDir}' is not a valid path")
+        utils.RelAssert(os.path.isfile(self.AbsGameExeFile()), f"Runner.AbsGameExeFile() '{self.AbsGameExeFile()}' is not a valid file")
 
     def ResolveWildcards(self) -> None:
         self.absRegularGameDataFiles = Runner.ResolveWildcardsInFileList(self.absRegularGameDataFiles)

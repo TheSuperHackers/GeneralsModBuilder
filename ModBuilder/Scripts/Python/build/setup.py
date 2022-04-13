@@ -27,14 +27,14 @@ class BuildSetup:
     tools: ToolsT
 
     def VerifyTypes(self) -> None:
-        utils.RelAssert(isinstance(self.step, BuildStep), "BuildSetup.step has incorrect type")
-        utils.RelAssert(isinstance(self.folders, Folders), "BuildSetup.folders has incorrect type")
-        utils.RelAssert(isinstance(self.runner, Runner), "BuildSetup.runner has incorrect type")
-        utils.RelAssert(isinstance(self.bundles, Bundles), "BuildSetup.bundles has incorrect type")
-        utils.RelAssert(isinstance(self.tools, dict), "BuildSetup.tools has incorrect type")
+        utils.RelAssertType(self.step, BuildStep, "BuildSetup.step")
+        utils.RelAssertType(self.folders, Folders, "BuildSetup.folders")
+        utils.RelAssertType(self.runner, Runner, "BuildSetup.runner")
+        utils.RelAssertType(self.bundles, Bundles, "BuildSetup.bundles")
+        utils.RelAssertType(self.tools, dict, "BuildSetup.tools")
         for k,v in self.tools.items():
-            utils.RelAssert(isinstance(k, str), "BuildSetup.tools has incorrect type")
-            utils.RelAssert(isinstance(v, Tool), "BuildSetup.tools has incorrect type")
+            utils.RelAssertType(k, str, "BuildSetup.tools.key")
+            utils.RelAssertType(v, Tool, "BuildSetup.tools.value")
 
     def VerifyValues(self) -> None:
         utils.RelAssert(self.tools.get("crunch") != None, "BuildSetup.tools is missing a definition for 'crunch'")
