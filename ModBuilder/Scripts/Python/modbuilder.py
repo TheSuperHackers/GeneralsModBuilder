@@ -1,5 +1,5 @@
 import argparse
-import utils
+import util
 import os
 import data.folders
 import data.runner
@@ -12,13 +12,13 @@ from data.bundles import Bundles
 from data.folders import Folders
 from data.runner import Runner
 from data.tools import ToolsT
-from utils import JsonFile
+from util import JsonFile
 
 
 def __CreateJsonFiles(configPaths: list[str]) -> list[JsonFile]:
     jsonFiles: list[JsonFile] = []
     for configPath in configPaths:
-        if (utils.HasFileExt(configPath, "json")):
+        if (util.HasFileExt(configPath, "json")):
             jsonFiles.append(JsonFile(configPath))
 
     return jsonFiles
@@ -71,9 +71,9 @@ def Main(args=None):
     parser.add_argument('-r', '--run', action='store_true')
 
     args, unknownargs = parser.parse_known_args(args=args)
-    utils.pprint(args)
+    util.pprint(args)
 
-    thisDir = utils.GetFileDir(__file__)
+    thisDir = util.GetFileDir(__file__)
     configPaths: list[str] = []
 
     # Add default configurations first to list so readers can parse them first.

@@ -1,10 +1,10 @@
 import enum
-import utils
+import util
 import os.path
 from glob import glob
 from dataclasses import dataclass
 from data.common import ParamsT, VerifyParamsType
-from utils import JsonFile
+from util import JsonFile
 
 
 class BundleEventType(enum.Enum):
@@ -34,17 +34,17 @@ class BundleEvent:
         return name
 
     def VerifyTypes(self) -> None:
-        utils.RelAssertType(self.type, BundleEventType, "BundleEvent.type")
-        utils.RelAssertType(self.absScript, str, "BundleEvent.absScript")
-        utils.RelAssertType(self.funcName, str, "BundleEvent.functionName")
-        utils.RelAssertType(self.kwargs, dict, "BundleEvent.kwargs")
+        util.RelAssertType(self.type, BundleEventType, "BundleEvent.type")
+        util.RelAssertType(self.absScript, str, "BundleEvent.absScript")
+        util.RelAssertType(self.funcName, str, "BundleEvent.functionName")
+        util.RelAssertType(self.kwargs, dict, "BundleEvent.kwargs")
 
     def VerifyValues(self) -> None:
-        utils.RelAssert(os.path.isfile(self.absScript), f"BundleEvent.absScript '{self.absScript}' is not a valid file")
-        utils.RelAssert(len(self.funcName) > 0, f"BundleEvent.functionName cannot be empty")
+        util.RelAssert(os.path.isfile(self.absScript), f"BundleEvent.absScript '{self.absScript}' is not a valid file")
+        util.RelAssert(len(self.funcName) > 0, f"BundleEvent.functionName cannot be empty")
 
     def Normalize(self) -> None:
-        self.absScript = utils.NormalizePath(self.absScript)
+        self.absScript = util.NormalizePath(self.absScript)
 
 
 BundleEventsT = dict[BundleEventType, BundleEvent]
@@ -60,17 +60,17 @@ class BundleFile:
         pass
 
     def VerifyTypes(self) -> None:
-        utils.RelAssertType(self.absSourceFile, str, "BundleFile.absSourceFile")
-        utils.RelAssertType(self.relTargetFile, str, "BundleFile.relTargetFile")
+        util.RelAssertType(self.absSourceFile, str, "BundleFile.absSourceFile")
+        util.RelAssertType(self.relTargetFile, str, "BundleFile.relTargetFile")
         VerifyParamsType(self.params, "BundleFile.params")
 
     def VerifyValues(self) -> None:
-        utils.RelAssert(os.path.isfile(self.absSourceFile), f"BundleFile.absSourceFile '{self.absSourceFile}' is not a valid file")
-        utils.RelAssert(not os.path.isabs(self.relTargetFile), f"BundleFile.relTargetFile '{self.relTargetFile}' is not a relative path")
+        util.RelAssert(os.path.isfile(self.absSourceFile), f"BundleFile.absSourceFile '{self.absSourceFile}' is not a valid file")
+        util.RelAssert(not os.path.isabs(self.relTargetFile), f"BundleFile.relTargetFile '{self.relTargetFile}' is not a relative path")
 
     def Normalize(self) -> None:
-        self.absSourceFile = utils.NormalizePath(self.absSourceFile)
-        self.relTargetFile = utils.NormalizePath(self.relTargetFile)
+        self.absSourceFile = util.NormalizePath(self.absSourceFile)
+        self.relTargetFile = util.NormalizePath(self.relTargetFile)
 
 
 @dataclass(init=False)
@@ -89,18 +89,18 @@ class BundleItem:
         self.events = BundleEventsT()
 
     def VerifyTypes(self) -> None:
-        utils.RelAssertType(self.name, str, "BundleItem.name")
-        utils.RelAssertType(self.files, list, "BundleItem.files")
-        utils.RelAssertType(self.namePrefix, str, "BundleItem.namePrefix")
-        utils.RelAssertType(self.nameSuffix, str, "BundleItem.nameSuffix")
-        utils.RelAssertType(self.isBig, bool, "BundleItem.isBig")
-        utils.RelAssertType(self.events, dict, "BundleItem.events")
+        util.RelAssertType(self.name, str, "BundleItem.name")
+        util.RelAssertType(self.files, list, "BundleItem.files")
+        util.RelAssertType(self.namePrefix, str, "BundleItem.namePrefix")
+        util.RelAssertType(self.nameSuffix, str, "BundleItem.nameSuffix")
+        util.RelAssertType(self.isBig, bool, "BundleItem.isBig")
+        util.RelAssertType(self.events, dict, "BundleItem.events")
         for file in self.files:
-            utils.RelAssertType(file, BundleFile, "BundleItem.files.value")
+            util.RelAssertType(file, BundleFile, "BundleItem.files.value")
             file.VerifyTypes()
         for type,event in self.events.items():
-            utils.RelAssertType(type, BundleEventType, "BundleItem.events.key")
-            utils.RelAssertType(event, BundleEvent, "BundleItem.events.value")
+            util.RelAssertType(type, BundleEventType, "BundleItem.events.key")
+            util.RelAssertType(event, BundleEvent, "BundleItem.events.value")
             event.VerifyTypes()
 
     def VerifyValues(self) -> None:
@@ -122,7 +122,7 @@ class BundleItem:
         for curFile in self.files:
             if not os.path.isfile(curFile.absSourceFile) and "*" in curFile.absSourceFile:
                 globFiles = glob(curFile.absSourceFile, recursive=True)
-                utils.RelAssert(bool(globFiles), f"Wildcard '{curFile.absSourceFile}' matches nothing")
+                util.RelAssert(bool(globFiles), f"Wildcard '{curFile.absSourceFile}' matches nothing")
 
                 for globFile in globFiles:
                     if os.path.isfile(globFile):
@@ -176,17 +176,17 @@ class BundlePack:
         self.events = BundleEventsT()
 
     def VerifyTypes(self) -> None:
-        utils.RelAssertType(self.name, str, "BundlePack.name")
-        utils.RelAssertType(self.itemNames, list, "BundlePack.itemNames")
-        utils.RelAssertType(self.namePrefix, str, "BundlePack.namePrefix")
-        utils.RelAssertType(self.nameSuffix, str, "BundlePack.nameSuffix")
-        utils.RelAssertType(self.install, bool, "BundlePack.install")
-        utils.RelAssertType(self.events, dict, "BundlePack.events")
+        util.RelAssertType(self.name, str, "BundlePack.name")
+        util.RelAssertType(self.itemNames, list, "BundlePack.itemNames")
+        util.RelAssertType(self.namePrefix, str, "BundlePack.namePrefix")
+        util.RelAssertType(self.nameSuffix, str, "BundlePack.nameSuffix")
+        util.RelAssertType(self.install, bool, "BundlePack.install")
+        util.RelAssertType(self.events, dict, "BundlePack.events")
         for itemName in self.itemNames:
-            utils.RelAssertType(itemName, str, "BundlePack.itemNames.value")
+            util.RelAssertType(itemName, str, "BundlePack.itemNames.value")
         for type,event in self.events.items():
-            utils.RelAssertType(type, BundleEventType, "BundlePack.events.key")
-            utils.RelAssertType(event, BundleEvent, "BundlePack.events.value")
+            util.RelAssertType(type, BundleEventType, "BundlePack.events.key")
+            util.RelAssertType(event, BundleEvent, "BundlePack.events.value")
             event.VerifyTypes()
 
     def VerifyValues(self) -> None:
@@ -207,13 +207,13 @@ class Bundles:
         pass
 
     def VerifyTypes(self) -> None:
-        utils.RelAssertType(self.items, list, "Bundles.items")
-        utils.RelAssertType(self.packs, list, "Bundles.packs")
+        util.RelAssertType(self.items, list, "Bundles.items")
+        util.RelAssertType(self.packs, list, "Bundles.packs")
         for item in self.items:
-            utils.RelAssertType(item, BundleItem, "Bundles.items.value")
+            util.RelAssertType(item, BundleItem, "Bundles.items.value")
             item.VerifyTypes()
         for pack in self.packs:
-            utils.RelAssertType(pack, BundlePack, "Bundles.packs.value")
+            util.RelAssertType(pack, BundlePack, "Bundles.packs.value")
             pack.VerifyTypes()
 
     def VerifyValues(self) -> None:
@@ -230,7 +230,7 @@ class Bundles:
             for b in range(a + 1, itemLen):
                 nameA: str = self.items[a].name
                 nameB: str = self.items[b].name
-                utils.RelAssert(nameA != nameB, f"Bundles.items has items with duplicate name '{nameA}'")
+                util.RelAssert(nameA != nameB, f"Bundles.items has items with duplicate name '{nameA}'")
 
     def __VerifyKnownItemsInPacks(self) -> None:
         for pack in self.packs:
@@ -240,7 +240,7 @@ class Bundles:
                     if packItemName == item.name:
                         found = True
                         break
-                utils.RelAssert(found, f"Bundles.packs with pack '{pack.name}' references unknown bundle item '{packItemName}'")
+                util.RelAssert(found, f"Bundles.packs with pack '{pack.name}' references unknown bundle item '{packItemName}'")
 
     def Normalize(self) -> None:
         for item in self.items:
@@ -256,7 +256,7 @@ class Bundles:
 def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
     files: list[BundleFile] = list()
 
-    parent = utils.JoinPathIfValid(jsonDir, jsonDir, jFile.get("parent"))
+    parent = util.JoinPathIfValid(jsonDir, jsonDir, jFile.get("parent"))
     params: ParamsT = jFile.get("params")
     if params == None:
         params = ParamsT()
@@ -267,8 +267,8 @@ def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
 
     if jSource:
         bundleFile = BundleFile()
-        bundleFile.absSourceFile = utils.JoinPathIfValid(None, parent, jSource)
-        bundleFile.relTargetFile = utils.GetSecondIfValid(jSource, jFile.get("target"))
+        bundleFile.absSourceFile = util.JoinPathIfValid(None, parent, jSource)
+        bundleFile.relTargetFile = util.GetSecondIfValid(jSource, jFile.get("target"))
         bundleFile.params = params
         files.append(bundleFile)
 
@@ -276,7 +276,7 @@ def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
         jElement: str
         for jElement in jSourceList:
             bundleFile = BundleFile()
-            bundleFile.absSourceFile = utils.JoinPathIfValid(None, parent, jElement)
+            bundleFile.absSourceFile = util.JoinPathIfValid(None, parent, jElement)
             bundleFile.relTargetFile = jElement
             bundleFile.params = params
             files.append(bundleFile)
@@ -286,8 +286,8 @@ def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
         for jElement in jSourceTargetList:
             jElementSource: str = jElement.get("source")
             bundleFile = BundleFile()
-            bundleFile.absSourceFile = utils.JoinPathIfValid(None, parent, jElementSource)
-            bundleFile.relTargetFile = utils.GetSecondIfValid(jElementSource, jElement.get("target"))
+            bundleFile.absSourceFile = util.JoinPathIfValid(None, parent, jElementSource)
+            bundleFile.relTargetFile = util.GetSecondIfValid(jElementSource, jElement.get("target"))
             bundleFile.params = params
             files.append(bundleFile)
 
@@ -304,9 +304,9 @@ def __MakeBundleEventsFromDict(jThing: dict, jsonDir: str) -> BundleEventsT:
         if jEvent:
             event = BundleEvent()
             event.type = eventType
-            event.absScript = utils.JoinPathIfValid(None, jsonDir, jEvent.get("script"))
-            event.funcName = utils.GetSecondIfValid(event.funcName, jEvent.get("function"))
-            event.kwargs = utils.GetSecondIfValid(event.kwargs, jEvent.get("kwargs"))
+            event.absScript = util.JoinPathIfValid(None, jsonDir, jEvent.get("script"))
+            event.funcName = util.GetSecondIfValid(event.funcName, jEvent.get("function"))
+            event.kwargs = util.GetSecondIfValid(event.kwargs, jEvent.get("kwargs"))
             events[event.type] = event
 
     return events
@@ -314,8 +314,8 @@ def __MakeBundleEventsFromDict(jThing: dict, jsonDir: str) -> BundleEventsT:
 
 def __MakeBundleItemFromDict(jItem: dict, jsonDir: str) -> BundleItem:
     item = BundleItem()
-    item.name = utils.GetSecondIfValid("Undefined", jItem.get("name"))
-    item.isBig = utils.GetSecondIfValid(False, jItem.get("big"))
+    item.name = util.GetSecondIfValid("Undefined", jItem.get("name"))
+    item.isBig = util.GetSecondIfValid(False, jItem.get("big"))
     item.files = list()
 
     jFiles = jItem.get("files")
@@ -332,7 +332,7 @@ def __MakeBundleItemFromDict(jItem: dict, jsonDir: str) -> BundleItem:
 def __MakeBundlePackFromDict(jPack: dict, jsonDir: str) -> BundlePack:
     pack = BundlePack()
     pack.name = jPack.get("name")
-    pack.install = utils.GetSecondIfValid(pack.install, jPack.get("install"))
+    pack.install = util.GetSecondIfValid(pack.install, jPack.get("install"))
     pack.itemNames = jPack.get("itemNames")
     pack.events = __MakeBundleEventsFromDict(jPack, jsonDir)
 
@@ -345,7 +345,7 @@ def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> Bundles:
     bundles.packs = list()
 
     for jsonFile in jsonFiles:
-        jsonDir: str = utils.GetFileDir(jsonFile.path)
+        jsonDir: str = util.GetFileDir(jsonFile.path)
         jBundles: dict = jsonFile.data.get("bundles")
 
         if jBundles:
@@ -357,8 +357,8 @@ def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> Bundles:
                 jItem: dict
                 for jItem in jItems:
                     bundleItem: BundleItem = __MakeBundleItemFromDict(jItem, jsonDir)
-                    bundleItem.namePrefix = utils.GetSecondIfValid(bundleItem.namePrefix, jItemsPrefix)
-                    bundleItem.nameSuffix = utils.GetSecondIfValid(bundleItem.nameSuffix, jItemsSuffix)
+                    bundleItem.namePrefix = util.GetSecondIfValid(bundleItem.namePrefix, jItemsPrefix)
+                    bundleItem.nameSuffix = util.GetSecondIfValid(bundleItem.nameSuffix, jItemsSuffix)
                     bundles.items.append(bundleItem)
 
             jPacksPrefix: str = jBundles.get("packsPrefix")
@@ -368,8 +368,8 @@ def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> Bundles:
                 jPack: dict
                 for jPack in jPacks:
                     bundlePack: BundlePack = __MakeBundlePackFromDict(jPack, jsonDir)
-                    bundlePack.namePrefix = utils.GetSecondIfValid(bundlePack.namePrefix, jPacksPrefix)
-                    bundlePack.nameSuffix = utils.GetSecondIfValid(bundlePack.nameSuffix, jPacksSuffix)
+                    bundlePack.namePrefix = util.GetSecondIfValid(bundlePack.namePrefix, jPacksPrefix)
+                    bundlePack.nameSuffix = util.GetSecondIfValid(bundlePack.nameSuffix, jPacksSuffix)
                     bundles.packs.append(bundlePack)
 
     bundles.VerifyTypes()

@@ -1,7 +1,7 @@
 import importlib
 import subprocess
 import sys
-import utils
+import util
 import os
 import enum
 from dataclasses import dataclass
@@ -43,13 +43,13 @@ class BuildDiff:
 
     def TryLoadOldInfos(self) -> bool:
         try:
-            self.oldInfos = utils.LoadPickle(self.loadPath)
+            self.oldInfos = util.LoadPickle(self.loadPath)
             return True
         except:
             return False
 
     def SaveNewInfos(self) -> bool:
-        utils.SavePickle(self.loadPath, self.newInfos)
+        util.SavePickle(self.loadPath, self.newInfos)
         return True
 
 
@@ -144,10 +144,10 @@ class BuildEngine:
         self.setup.VerifyValues()
 
         print("Run Build with ...")
-        utils.pprint(self.setup.folders)
-        utils.pprint(self.setup.runner)
-        utils.pprint(self.setup.bundles)
-        utils.pprint(self.setup.tools)
+        util.pprint(self.setup.folders)
+        util.pprint(self.setup.runner)
+        util.pprint(self.setup.bundles)
+        util.pprint(self.setup.tools)
 
         if self.setup.step & (BuildStep.RELEASE):
             self.setup.step |= BuildStep.BUILD
@@ -299,7 +299,7 @@ class BuildEngine:
 
         releaseUnpackedDirWithWildcards = os.path.join(folders.absReleaseUnpackedDir, "**", "*.*")
         absReleaseFiles = glob(releaseUnpackedDirWithWildcards, recursive=True)
-        relReleaseFiles = utils.CreateRelPaths(absReleaseFiles, folders.absReleaseUnpackedDir)
+        relReleaseFiles = util.CreateRelPaths(absReleaseFiles, folders.absReleaseUnpackedDir)
 
         for pack in bundles.packs:
             newThing = BuildThing()
@@ -369,7 +369,7 @@ class BuildEngine:
                 newThing.parentThing = parentThing
 
                 for parentFile in parentThing.files:
-                    if utils.HasAnyFileExt(parentFile.relTarget, runner.relevantGameDataFileTypes):
+                    if util.HasAnyFileExt(parentFile.relTarget, runner.relevantGameDataFileTypes):
                         newFile = BuildFile()
                         newFile.absSource = parentFile.AbsTarget(parentThing.absParentDir)
                         newFile.relTarget = parentFile.relTarget
@@ -435,7 +435,7 @@ class BuildEngine:
             if not infos.get(absRealSource):
                 info = BuildFilePathInfo()
                 info.ownerThingName = thing.name
-                info.md5 = utils.GetFileMd5(absRealSource)
+                info.md5 = util.GetFileMd5(absRealSource)
                 infos[absRealSource] = info
 
             # Plain source will not be hashed as optimization.
@@ -447,7 +447,7 @@ class BuildEngine:
 
         for file in thing.files:
             absTarget = file.AbsTarget(thing.absParentDir)
-            absTargetDirs: list[str] = utils.GetAllFileDirs(absTarget, thing.absParentDir)
+            absTargetDirs: list[str] = util.GetAllFileDirs(absTarget, thing.absParentDir)
             absTargetDir: str
 
             for absTargetDir in absTargetDirs:
@@ -461,7 +461,7 @@ class BuildEngine:
             if not infos.get(absRealTarget):
                 info = BuildFilePathInfo()
                 info.ownerThingName = thing.name
-                info.md5 = utils.GetFileMd5(absRealTarget)
+                info.md5 = util.GetFileMd5(absRealTarget)
                 infos[absRealTarget] = info
 
             # Plain target will not be hashed as optimization.
@@ -487,7 +487,7 @@ class BuildEngine:
                     absTarget: str = file.AbsTarget(thing.absParentDir)
                     targetInfo: BuildFilePathInfo = infos.get(absTarget)
                     assert(targetInfo != None)
-                    targetInfo.md5 = utils.GetFileMd5(absTarget)
+                    targetInfo.md5 = util.GetFileMd5(absTarget)
 
 
     @staticmethod
@@ -550,7 +550,7 @@ class BuildEngine:
                 return BuildFileStatus.ADDED
             else:
                 newInfo: BuildFilePathInfo = diff.newInfos.get(filePath)
-                utils.RelAssert(newInfo != None, "Info must exist")
+                util.RelAssert(newInfo != None, "Info must exist")
 
                 if newInfo.md5 != oldInfo.md5:
                     return BuildFileStatus.CHANGED
@@ -581,7 +581,7 @@ class BuildEngine:
                         if oldInfo != None:
                             thing.fileCounts[BuildFileStatus.REMOVED.value] += 1
 
-                        if utils.DeleteFileOrPath(fileName):
+                        if util.DeleteFileOrPath(fileName):
                             print("Deleted", fileName)
 
 
@@ -650,7 +650,7 @@ class BuildEngine:
     def __CheckGameInstallFiles(installedFiles: list[str], runner: Runner) -> None:
         search: str = os.path.join(runner.absGameRootDir, "**", "*")
         allGameFiles: list[str] = glob(search, recursive=True)
-        gameDataFilesFilter = filter(lambda file: utils.HasAnyFileExt(file, runner.relevantGameDataFileTypes), allGameFiles)
+        gameDataFilesFilter = filter(lambda file: util.HasAnyFileExt(file, runner.relevantGameDataFileTypes), allGameFiles)
         relevantGameDataFiles = list[str](gameDataFilesFilter)
         expectedGameDataFiles = runner.absRegularGameDataFiles
         expectedGameDataFiles.extend(installedFiles)

@@ -1,7 +1,7 @@
 import os
 import subprocess
 import shutil
-import utils
+import util
 import enum
 from enum import Enum, Flag
 from typing import Callable
@@ -28,25 +28,25 @@ class BuildFileType(Enum):
 
 
 def GetFileType(filePath: str) -> BuildFileType:
-    if utils.HasFileExt(filePath, "csf"):
+    if util.HasFileExt(filePath, "csf"):
         return BuildFileType.CSF
-    if utils.HasFileExt(filePath, "str"):
+    if util.HasFileExt(filePath, "str"):
         return BuildFileType.STR
-    if utils.HasFileExt(filePath, "big"):
+    if util.HasFileExt(filePath, "big"):
         return BuildFileType.BIG
-    if utils.HasFileExt(filePath, "zip"):
+    if util.HasFileExt(filePath, "zip"):
         return BuildFileType.ZIP
-    if utils.HasFileExt(filePath, "tar"):
+    if util.HasFileExt(filePath, "tar"):
         return BuildFileType.TAR
-    if utils.HasFileExt(filePath, "gz"):
+    if util.HasFileExt(filePath, "gz"):
         return BuildFileType.GZTAR
-    if utils.HasFileExt(filePath, "psd"):
+    if util.HasFileExt(filePath, "psd"):
         return BuildFileType.PSD
-    if utils.HasFileExt(filePath, "bmp"):
+    if util.HasFileExt(filePath, "bmp"):
         return BuildFileType.BMP
-    if utils.HasFileExt(filePath, "tga"):
+    if util.HasFileExt(filePath, "tga"):
         return BuildFileType.TGA
-    if utils.HasFileExt(filePath, "dds"):
+    if util.HasFileExt(filePath, "dds"):
         return BuildFileType.DDS
     return BuildFileType.ANY
 
@@ -102,12 +102,12 @@ class BuildCopy:
         if targetType == BuildFileType.AUTO:
             targetType = GetFileType(target)
 
-        utils.MakeDirsForFile(target)
+        util.MakeDirsForFile(target)
 
         if self.options & BuildCopyOption.ENABLE_BACKUP:
             BuildCopy.__CreateBackup(target)
 
-        utils.DeleteFileOrPath(target)
+        util.DeleteFileOrPath(target)
 
         copyFunction: Callable = self.__GetCopyFunction(sourceType, targetType)
         success: bool = copyFunction(source, target, params)
@@ -272,21 +272,21 @@ class BuildCopy:
 
 
     def __CopyToZIP(self, source: str, target: str, params: ParamsT) -> bool:
-        shutil.make_archive(base_name=utils.GetFileDirAndName(target), format="zip", root_dir=source)
+        shutil.make_archive(base_name=util.GetFileDirAndName(target), format="zip", root_dir=source)
 
         BuildCopy.__PrintMakeResult(source, target)
         return True
 
 
     def __CopyToTAR(self, source: str, target: str, params: ParamsT) -> bool:
-        shutil.make_archive(base_name=utils.GetFileDirAndName(target), format="tar", root_dir=source)
+        shutil.make_archive(base_name=util.GetFileDirAndName(target), format="tar", root_dir=source)
 
         BuildCopy.__PrintMakeResult(source, target)
         return True
 
 
     def __CopyToGZTAR(self, source: str, target: str, params: ParamsT) -> bool:
-        shutil.make_archive(base_name=utils.GetFileDirAndName(target), format="gztar", root_dir=source)
+        shutil.make_archive(base_name=util.GetFileDirAndName(target), format="gztar", root_dir=source)
 
         BuildCopy.__PrintMakeResult(source, target)
         return True
