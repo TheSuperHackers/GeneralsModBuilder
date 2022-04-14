@@ -1,4 +1,6 @@
+import importlib
 import subprocess
+import sys
 import utils
 import os
 import enum
@@ -9,7 +11,7 @@ from build.common import ParamsToArgs
 from build.copy import BuildCopy, BuildCopyOption
 from build.thing import BuildFile, BuildFileStatus, BuildThing, BuildFilesT, BuildThingsT
 from build.setup import BuildSetup, BuildStep
-from data.bundles import Bundles, BundlePack, BundleItem, BundleFile
+from data.bundles import Bundles, BundlePack, BundleItem, BundleFile, BundleEvent, BundleEventType
 from data.folders import Folders
 from data.runner import Runner
 from data.tools import ToolsT
@@ -59,7 +61,7 @@ class BuildIndex(enum.Enum):
     INSTALL_BUNDLE_PACK = enum.auto()
 
 
-g_DataIndexNames: list[str] = [None] * len(BuildIndex)
+g_DataIndexNames: list[str] = [""] * len(BuildIndex)
 g_DataIndexNames[BuildIndex.RAW_BUNDLE_ITEM.value] = "RawBundleItem"
 g_DataIndexNames[BuildIndex.BIG_BUNDLE_ITEM.value] = "BigBundleItem"
 g_DataIndexNames[BuildIndex.RAW_BUNDLE_PACK.value] = "RawBundlePack"
@@ -179,6 +181,49 @@ class BuildEngine:
         return success
 
 
+    def __CallScript(event: BundleEvent, kwargs: dict) -> bool:
+        scriptPath: str = event.GetScriptDir()
+        scriptName: str = event.GetScriptName()
+
+        if not scriptPath in sys.path:
+            sys.path.append(scriptPath)
+
+        kwargs.update(event.kwargs)
+
+        importlib.import_module(scriptName)
+        scriptModule: object = sys.modules.get(scriptName)
+        scriptFunction = getattr(scriptModule, event.funcName)
+        scriptFunction(**kwargs)
+
+        return True
+
+
+    def __SendBundleEvents(bundles: Bundles, eventType: BundleEventType):
+        sent: bool = False
+        item: BundleItem
+        pack: BundlePack
+
+        for item in bundles.items:
+            event: BundleEvent = item.events.get(eventType)
+            if event != None:
+                kwargs = dict()
+                kwargs["BundleItem"] = item
+                sent |= BuildEngine.__CallScript(event, kwargs)
+                item.VerifyTypes()
+                item.Normalize()
+
+        for pack in bundles.packs:
+            event: BundleEvent = pack.events.get(eventType)
+            if event != None:
+                kwargs = dict()
+                kwargs["BundlePack"] = pack
+                sent |= BuildEngine.__CallScript(event, kwargs)
+                pack.VerifyTypes()
+                pack.Normalize()
+
+        return sent
+
+
     def __PreBuild(self) -> bool:
         print("Do Pre Build ...")
 
@@ -186,9 +231,15 @@ class BuildEngine:
         runner: Runner = self.setup.runner
         bundles: Bundles = self.setup.bundles
         tools: ToolsT = self.setup.tools
+
         options = BuildCopyOption.ENABLE_BACKUP | BuildCopyOption.ENABLE_SYMLINKS
         self.installCopy = BuildCopy(tools=tools, options=options)
         self.structure = BuildStructure()
+
+        sent: bool = BuildEngine.__SendBundleEvents(bundles, BundleEventType.PRE_BUILD)
+
+        if sent:
+            bundles.VerifyValues()
 
         BuildEngine.__PopulateStructureRawBundleItems(self.structure, bundles, folders)
         BuildEngine.__PopulateStructureBigBundleItems(self.structure, bundles, folders)

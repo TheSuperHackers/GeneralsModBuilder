@@ -14,7 +14,10 @@
                     "SampleTexturesTGA256",
                     "SampleWindow",
                     "Misc"
-                ]
+                ],
+                "onPreBuild": {
+                    "script": "Scripts/OnPreBuildPack.py"
+                }
             },
             {
                 "name": "SampleProjectDDS512",
