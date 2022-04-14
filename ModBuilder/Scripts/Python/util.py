@@ -102,6 +102,8 @@ def GetFileName(file: str) -> str:
 
 def GetFileExt(file: str) -> str:
     path, ext = os.path.splitext(file)
+    if ext and ext[0] == '.':
+        ext = ext[1:]
     return ext
 
 
@@ -112,8 +114,6 @@ def GetFileDirAndName(file: str) -> str:
 
 def HasFileExt(file: str, expectedExt: str) -> bool:
     fileExt: str = GetFileExt(file)
-    if fileExt and fileExt[0] == '.':
-        fileExt = fileExt[1:]
     return fileExt.lower() == expectedExt.lower()
 
 

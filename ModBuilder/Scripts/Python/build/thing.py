@@ -6,12 +6,12 @@ from data.bundles import ParamsT
 
 
 class BuildFileStatus(enum.Enum):
-    UNKNOWN = 0
-    UNCHANGED = enum.auto()
-    REMOVED = enum.auto()
-    MISSING = enum.auto()
-    ADDED = enum.auto()
-    CHANGED = enum.auto()
+    Unknown = 0
+    Unchanged = enum.auto()
+    Removed = enum.auto()
+    Missing = enum.auto()
+    Added = enum.auto()
+    Changed = enum.auto()
 
 
 @dataclass(init=False)
@@ -24,8 +24,8 @@ class BuildFile:
     params: ParamsT
 
     def __init__(self):
-        self.targetStatus = BuildFileStatus.UNKNOWN
-        self.sourceStatus = BuildFileStatus.UNKNOWN
+        self.targetStatus = BuildFileStatus.Unknown
+        self.sourceStatus = BuildFileStatus.Unknown
         self.parentFile = None
         self.params = dict()
 
@@ -52,10 +52,10 @@ class BuildFile:
 
     def RequiresRebuild(self) -> bool:
         status: BuildFileStatus = self.GetCombinedStatus()
-        return (status == BuildFileStatus.REMOVED or
-                status == BuildFileStatus.MISSING or
-                status == BuildFileStatus.ADDED or
-                status == BuildFileStatus.CHANGED)
+        return (status == BuildFileStatus.Removed or
+                status == BuildFileStatus.Missing or
+                status == BuildFileStatus.Added or
+                status == BuildFileStatus.Changed)
 
 
 BuildFilesT = list[BuildFile]
@@ -78,7 +78,7 @@ class BuildThing:
         return self.fileCounts[status.value]
 
     def GetMostSignificantFileStatus(self) -> BuildFileStatus:
-        retStatus: BuildFileStatus = BuildFileStatus.UNKNOWN
+        retStatus: BuildFileStatus = BuildFileStatus.Unknown
         status: BuildFileStatus
         for status in BuildFileStatus:
             if self.GetFileCount(status) > 0:

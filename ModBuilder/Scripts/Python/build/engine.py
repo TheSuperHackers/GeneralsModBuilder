@@ -54,23 +54,15 @@ class BuildDiff:
 
 
 class BuildIndex(enum.Enum):
-    RAW_BUNDLE_ITEM = 0
-    BIG_BUNDLE_ITEM = enum.auto()
-    RAW_BUNDLE_PACK = enum.auto()
-    RELEASE_BUNDLE_PACK = enum.auto()
-    INSTALL_BUNDLE_PACK = enum.auto()
-
-
-g_DataIndexNames: list[str] = [""] * len(BuildIndex)
-g_DataIndexNames[BuildIndex.RAW_BUNDLE_ITEM.value] = "RawBundleItem"
-g_DataIndexNames[BuildIndex.BIG_BUNDLE_ITEM.value] = "BigBundleItem"
-g_DataIndexNames[BuildIndex.RAW_BUNDLE_PACK.value] = "RawBundlePack"
-g_DataIndexNames[BuildIndex.RELEASE_BUNDLE_PACK.value] = "ReleaseBundlePack"
-g_DataIndexNames[BuildIndex.INSTALL_BUNDLE_PACK.value] = "InstallBundlePack"
+    RawBundleItem = 0
+    BigBundleItem = enum.auto()
+    RawBundlePack = enum.auto()
+    ReleaseBundlePack = enum.auto()
+    InstallBundlePack = enum.auto()
 
 
 def GetDataName(index: BuildIndex) -> str:
-    return g_DataIndexNames[index.value]
+    return index.name
 
 def MakeThingName(index: BuildIndex, thingName: str) -> str:
     return f"{GetDataName(index)}_{thingName}"
@@ -135,7 +127,7 @@ class BuildEngine:
 
 
     def Run(self, setup: BuildSetup) -> bool:
-        if setup.step == BuildStep.NONE:
+        if setup.step == BuildStep.Zero:
             warning("setup.step is NONE. Exiting.")
             return True
 
@@ -149,30 +141,30 @@ class BuildEngine:
         util.pprint(self.setup.bundles)
         util.pprint(self.setup.tools)
 
-        if self.setup.step & (BuildStep.RELEASE):
-            self.setup.step |= BuildStep.BUILD
+        if self.setup.step & (BuildStep.Release):
+            self.setup.step |= BuildStep.Build
 
-        if self.setup.step & (BuildStep.BUILD):
-            self.setup.step |= BuildStep.POST_BUILD
+        if self.setup.step & (BuildStep.Build):
+            self.setup.step |= BuildStep.PostBuild
 
-        if self.setup.step & (BuildStep.BUILD | BuildStep.INSTALL | BuildStep.UNINSTALL):
-            self.setup.step |= BuildStep.PRE_BUILD
+        if self.setup.step & (BuildStep.Build | BuildStep.Install | BuildStep.Uninstall):
+            self.setup.step |= BuildStep.PreBuild
 
         success = True
 
-        if success and self.setup.step & BuildStep.PRE_BUILD:
+        if success and self.setup.step & BuildStep.PreBuild:
             success &= self.__PreBuild()
-        if success and self.setup.step & BuildStep.BUILD:
+        if success and self.setup.step & BuildStep.Build:
             success &= self.__Build()
-        if success and self.setup.step & BuildStep.POST_BUILD:
+        if success and self.setup.step & BuildStep.PostBuild:
             success &= self.__PostBuild()
-        if success and self.setup.step & BuildStep.RELEASE:
+        if success and self.setup.step & BuildStep.Release:
             self.__BuildRelease()
-        if success and self.setup.step & BuildStep.INSTALL:
+        if success and self.setup.step & BuildStep.Install:
             success &= self.__Install()
-        if success and self.setup.step & BuildStep.RUN:
+        if success and self.setup.step & BuildStep.Run:
             self.__Run()
-        if success and self.setup.step & BuildStep.UNINSTALL:
+        if success and self.setup.step & BuildStep.Uninstall:
             success &= self.__Uninstall()
 
         self.setup = None
@@ -232,11 +224,11 @@ class BuildEngine:
         bundles: Bundles = self.setup.bundles
         tools: ToolsT = self.setup.tools
 
-        options = BuildCopyOption.ENABLE_BACKUP | BuildCopyOption.ENABLE_SYMLINKS
+        options = BuildCopyOption.EnableBackup | BuildCopyOption.EnableSymlinks
         self.installCopy = BuildCopy(tools=tools, options=options)
         self.structure = BuildStructure()
 
-        sent: bool = BuildEngine.__SendBundleEvents(bundles, BundleEventType.PRE_BUILD)
+        sent: bool = BuildEngine.__SendBundleEvents(bundles, BundleEventType.OnPreBuild)
 
         if sent:
             bundles.VerifyValues()
@@ -257,7 +249,7 @@ class BuildEngine:
 
         for item in bundles.items:
             newThing = BuildThing()
-            newThing.name = MakeThingName(BuildIndex.RAW_BUNDLE_ITEM, item.name)
+            newThing.name = MakeThingName(BuildIndex.RawBundleItem, item.name)
             newThing.absParentDir = os.path.join(folders.absBuildDir, "RawBundleItems", item.name)
             newThing.files = BuildFilesT()
 
@@ -268,7 +260,7 @@ class BuildEngine:
                 buildFile.params = itemFile.params
                 newThing.files.append(buildFile)
 
-            structure.AddThing(BuildIndex.RAW_BUNDLE_ITEM, newThing)
+            structure.AddThing(BuildIndex.RawBundleItem, newThing)
 
 
     @staticmethod
@@ -277,18 +269,18 @@ class BuildEngine:
 
         for item in bundles.items:
             if item.isBig:
-                parentName: str = MakeThingName(BuildIndex.RAW_BUNDLE_ITEM, item.name)
+                parentName: str = MakeThingName(BuildIndex.RawBundleItem, item.name)
                 parentThing: BuildThing = structure.FindAnyThing(parentName)
                 assert(parentThing != None)
                 newThing = BuildThing()
-                newThing.name = MakeThingName(BuildIndex.BIG_BUNDLE_ITEM, item.name)
+                newThing.name = MakeThingName(BuildIndex.BigBundleItem, item.name)
                 newThing.absParentDir = os.path.join(folders.absBuildDir, "BigBundleItems")
                 newThing.files = [BuildFile()]
                 newThing.files[0].absSource = parentThing.absParentDir
                 newThing.files[0].relTarget = item.namePrefix + item.name + item.nameSuffix + ".big"
                 newThing.parentThing = parentThing
 
-                structure.AddThing(BuildIndex.BIG_BUNDLE_ITEM, newThing)
+                structure.AddThing(BuildIndex.BigBundleItem, newThing)
 
 
     @staticmethod
@@ -303,7 +295,7 @@ class BuildEngine:
 
         for pack in bundles.packs:
             newThing = BuildThing()
-            newThing.name = MakeThingName(BuildIndex.RAW_BUNDLE_PACK, pack.name)
+            newThing.name = MakeThingName(BuildIndex.RawBundlePack, pack.name)
             newThing.absParentDir = os.path.join(folders.absBuildDir, "RawBundlePacks", pack.name)
             newThing.files = BuildFilesT()
 
@@ -314,10 +306,10 @@ class BuildEngine:
                 newThing.files.append(buildFile)
 
             for itemName in pack.itemNames:
-                parentName: str = MakeThingName(BuildIndex.BIG_BUNDLE_ITEM, itemName)
+                parentName: str = MakeThingName(BuildIndex.BigBundleItem, itemName)
                 parentThing: BuildThing = structure.FindAnyThing(parentName)
                 if parentThing == None:
-                    parentName = MakeThingName(BuildIndex.RAW_BUNDLE_ITEM, itemName)
+                    parentName = MakeThingName(BuildIndex.RawBundleItem, itemName)
                     parentThing = structure.FindAnyThing(parentName)
                     assert(parentThing != None)
 
@@ -330,7 +322,7 @@ class BuildEngine:
                     buildFile.parentFile = parentFile
                     newThing.files.append(buildFile)
 
-            structure.AddThing(BuildIndex.RAW_BUNDLE_PACK, newThing)
+            structure.AddThing(BuildIndex.RawBundlePack, newThing)
 
 
     @staticmethod
@@ -338,18 +330,18 @@ class BuildEngine:
         pack: BundlePack
 
         for pack in bundles.packs:
-            parentName: str = MakeThingName(BuildIndex.RAW_BUNDLE_PACK, pack.name)
+            parentName: str = MakeThingName(BuildIndex.RawBundlePack, pack.name)
             parentThing: BuildThing = structure.FindAnyThing(parentName)
             assert(parentThing != None)
             newThing = BuildThing()
-            newThing.name = MakeThingName(BuildIndex.RELEASE_BUNDLE_PACK, pack.name)
+            newThing.name = MakeThingName(BuildIndex.ReleaseBundlePack, pack.name)
             newThing.absParentDir = folders.absReleaseDir
             newThing.files = [BuildFile()]
             newThing.files[0].absSource = parentThing.absParentDir
             newThing.files[0].relTarget = pack.namePrefix + pack.name + pack.nameSuffix + ".zip"
             newThing.parentThing = parentThing
 
-            structure.AddThing(BuildIndex.RELEASE_BUNDLE_PACK, newThing)
+            structure.AddThing(BuildIndex.ReleaseBundlePack, newThing)
 
 
     @staticmethod
@@ -359,11 +351,11 @@ class BuildEngine:
 
         for pack in bundles.packs:
             if pack.install:
-                parentName: str = MakeThingName(BuildIndex.RAW_BUNDLE_PACK, pack.name)
+                parentName: str = MakeThingName(BuildIndex.RawBundlePack, pack.name)
                 parentThing: BuildThing = structure.FindAnyThing(parentName)
                 assert(parentThing != None)
                 newThing = BuildThing()
-                newThing.name = MakeThingName(BuildIndex.INSTALL_BUNDLE_PACK, pack.name)
+                newThing.name = MakeThingName(BuildIndex.InstallBundlePack, pack.name)
                 newThing.absParentDir = runner.absGameRootDir
                 newThing.files = BuildFilesT()
                 newThing.parentThing = parentThing
@@ -375,7 +367,7 @@ class BuildEngine:
                         newFile.relTarget = parentFile.relTarget
                         newThing.files.append(newFile)
 
-                structure.AddThing(BuildIndex.INSTALL_BUNDLE_PACK, newThing)
+                structure.AddThing(BuildIndex.InstallBundlePack, newThing)
 
 
     def __Build(self) -> bool:
@@ -383,11 +375,11 @@ class BuildEngine:
 
         structure: BuildStructure = self.structure
         tools: ToolsT = self.setup.tools
-        copy = BuildCopy(tools=tools, options=BuildCopyOption.ENABLE_SYMLINKS)
+        copy = BuildCopy(tools=tools, options=BuildCopyOption.EnableSymlinks)
 
-        BuildEngine.__BuildWithData(structure.GetProcessData(BuildIndex.RAW_BUNDLE_ITEM), copy, self.setup)
-        BuildEngine.__BuildWithData(structure.GetProcessData(BuildIndex.BIG_BUNDLE_ITEM), copy, self.setup)
-        BuildEngine.__BuildWithData(structure.GetProcessData(BuildIndex.RAW_BUNDLE_PACK), copy, self.setup)
+        BuildEngine.__BuildWithData(structure.GetProcessData(BuildIndex.RawBundleItem), copy, self.setup)
+        BuildEngine.__BuildWithData(structure.GetProcessData(BuildIndex.BigBundleItem), copy, self.setup)
+        BuildEngine.__BuildWithData(structure.GetProcessData(BuildIndex.RawBundlePack), copy, self.setup)
 
         return True
 
@@ -525,18 +517,18 @@ class BuildEngine:
             thing.fileCounts[status.value] += 1
 
         for status in BuildFileStatus:
-            if status != BuildFileStatus.UNCHANGED:
+            if status != BuildFileStatus.Unchanged:
                 count: int = thing.GetFileCount(status)
                 if count > 0:
                     print(f"{thing.name} has {count} files {status.name}")
 
         for file in thing.files:
-            if file.sourceStatus != BuildFileStatus.UNCHANGED:
+            if file.sourceStatus != BuildFileStatus.Unchanged:
                 absSource: str = file.absSource
                 print(f"Source {absSource} is {file.sourceStatus.name}")
 
         for file in thing.files:
-            if file.targetStatus != BuildFileStatus.UNCHANGED:
+            if file.targetStatus != BuildFileStatus.Unchanged:
                 absTarget: str = file.AbsTarget(thing.absParentDir)
                 print(f"Target {absTarget} is {file.targetStatus.name}")
 
@@ -547,20 +539,20 @@ class BuildEngine:
             oldInfo: BuildFilePathInfo = diff.oldInfos.get(filePath)
 
             if oldInfo == None:
-                return BuildFileStatus.ADDED
+                return BuildFileStatus.Added
             else:
                 newInfo: BuildFilePathInfo = diff.newInfos.get(filePath)
                 util.RelAssert(newInfo != None, "Info must exist")
 
                 if newInfo.md5 != oldInfo.md5:
-                    return BuildFileStatus.CHANGED
+                    return BuildFileStatus.Changed
                 else:
-                    if parentStatus != None and parentStatus != BuildFileStatus.UNKNOWN:
+                    if parentStatus != None and parentStatus != BuildFileStatus.Unknown:
                         return parentStatus
                     else:
-                        return BuildFileStatus.UNCHANGED
+                        return BuildFileStatus.Unchanged
         else:
-            return BuildFileStatus.MISSING
+            return BuildFileStatus.Missing
 
 
     @staticmethod
@@ -579,7 +571,7 @@ class BuildEngine:
                     if newInfo == None:
                         oldInfo: BuildFilePathInfo = diff.oldInfos.get(fileName)
                         if oldInfo != None:
-                            thing.fileCounts[BuildFileStatus.REMOVED.value] += 1
+                            thing.fileCounts[BuildFileStatus.Removed.value] += 1
 
                         if util.DeleteFileOrPath(fileName):
                             print("Deleted", fileName)
@@ -622,7 +614,7 @@ class BuildEngine:
         tools: ToolsT = self.setup.tools
         copy = BuildCopy(tools=tools)
 
-        BuildEngine.__BuildWithData(self.structure.GetProcessData(BuildIndex.RELEASE_BUNDLE_PACK), copy, self.setup)
+        BuildEngine.__BuildWithData(self.structure.GetProcessData(BuildIndex.ReleaseBundlePack), copy, self.setup)
 
         return True
 
@@ -631,7 +623,7 @@ class BuildEngine:
         print("Do Install ...")
 
         setup: BuildSetup = self.setup
-        data: BuildIndexData = self.structure.GetProcessData(BuildIndex.INSTALL_BUNDLE_PACK)
+        data: BuildIndexData = self.structure.GetProcessData(BuildIndex.InstallBundlePack)
 
         BuildEngine.__PopulateDiffFromThings(data, setup.folders)
         BuildEngine.__PopulateBuildFileStatusInThings(data.things, data.diff)
@@ -699,7 +691,7 @@ class BuildEngine:
     def __Uninstall(self) -> bool:
         print("Do Uninstall ...")
 
-        data: BuildIndexData = self.structure.GetProcessData(BuildIndex.INSTALL_BUNDLE_PACK)
+        data: BuildIndexData = self.structure.GetProcessData(BuildIndex.InstallBundlePack)
 
         BuildEngine.__UncopyFilesOfThings(data.things, self.installCopy)
 

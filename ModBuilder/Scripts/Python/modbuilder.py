@@ -25,17 +25,17 @@ def __CreateJsonFiles(configPaths: list[str]) -> list[JsonFile]:
 
 
 def __CreateBuildStep(build: bool, release: bool, install: bool, uninstall: bool, run: bool) -> BuildStep:
-    buildStep = BuildStep.NONE
+    buildStep = BuildStep.Zero
     if build:
-        buildStep |= BuildStep.BUILD
+        buildStep |= BuildStep.Build
     if release:
-        buildStep |= BuildStep.RELEASE
+        buildStep |= BuildStep.Release
     if install:
-        buildStep |= BuildStep.INSTALL
+        buildStep |= BuildStep.Install
     if uninstall:
-        buildStep |= BuildStep.UNINSTALL
+        buildStep |= BuildStep.Uninstall
     if run:
-        buildStep |= BuildStep.RUN
+        buildStep |= BuildStep.Run
 
     return buildStep
 

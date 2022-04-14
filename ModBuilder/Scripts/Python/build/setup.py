@@ -8,14 +8,14 @@ from data.tools import Tool, ToolsT
 
 
 class BuildStep(enum.Flag):
-    NONE = 0
-    PRE_BUILD = enum.auto()
-    BUILD = enum.auto()
-    POST_BUILD = enum.auto()
-    RELEASE = enum.auto()
-    INSTALL = enum.auto()
-    RUN = enum.auto()
-    UNINSTALL = enum.auto()
+    Zero = 0
+    PreBuild = enum.auto()
+    Build = enum.auto()
+    PostBuild = enum.auto()
+    Release = enum.auto()
+    Install = enum.auto()
+    Run = enum.auto()
+    Uninstall = enum.auto()
 
 
 @dataclass

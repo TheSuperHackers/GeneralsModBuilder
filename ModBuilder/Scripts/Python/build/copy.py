@@ -13,54 +13,39 @@ from build.common import ParamsToArgs
 
 
 class BuildFileType(Enum):
-    CSF = 0
-    STR = enum.auto()
-    BIG = enum.auto()
-    ZIP = enum.auto()
-    TAR = enum.auto()
-    GZTAR = enum.auto()
-    PSD = enum.auto()
-    BMP = enum.auto()
-    TGA = enum.auto()
-    DDS = enum.auto()
-    ANY = enum.auto()
-    AUTO = enum.auto()
+    csf = 0
+    str = enum.auto()
+    big = enum.auto()
+    zip = enum.auto()
+    tar = enum.auto()
+    gz = enum.auto()
+    psd = enum.auto()
+    bmp = enum.auto()
+    tga = enum.auto()
+    dds = enum.auto()
+    Any = enum.auto()
+    Auto = enum.auto()
 
 
 def GetFileType(filePath: str) -> BuildFileType:
-    if util.HasFileExt(filePath, "csf"):
-        return BuildFileType.CSF
-    if util.HasFileExt(filePath, "str"):
-        return BuildFileType.STR
-    if util.HasFileExt(filePath, "big"):
-        return BuildFileType.BIG
-    if util.HasFileExt(filePath, "zip"):
-        return BuildFileType.ZIP
-    if util.HasFileExt(filePath, "tar"):
-        return BuildFileType.TAR
-    if util.HasFileExt(filePath, "gz"):
-        return BuildFileType.GZTAR
-    if util.HasFileExt(filePath, "psd"):
-        return BuildFileType.PSD
-    if util.HasFileExt(filePath, "bmp"):
-        return BuildFileType.BMP
-    if util.HasFileExt(filePath, "tga"):
-        return BuildFileType.TGA
-    if util.HasFileExt(filePath, "dds"):
-        return BuildFileType.DDS
-    return BuildFileType.ANY
+    type: BuildFileType
+    ext: str = util.GetFileExt(filePath)
+    for type in BuildFileType:
+        if ext.lower() == type.name:
+            return type
+    return BuildFileType.Any
 
 
 class BuildCopyOption(Flag):
-    NONE = 0
-    ENABLE_BACKUP = enum.auto()
-    ENABLE_SYMLINKS = enum.auto()
+    Zero = 0
+    EnableBackup = enum.auto()
+    EnableSymlinks = enum.auto()
 
 
 @dataclass
 class BuildCopy:
     tools: ToolsT
-    options: BuildCopyOption = field(default=BuildCopyOption.NONE)
+    options: BuildCopyOption = field(default=BuildCopyOption.Zero)
 
 
     def CopyThing(self, thing: BuildThing) -> bool:
@@ -93,18 +78,18 @@ class BuildCopy:
             source: str,
             target: str,
             params: ParamsT = None,
-            sourceType = BuildFileType.AUTO,
-            targetType = BuildFileType.AUTO) -> bool:
+            sourceType = BuildFileType.Auto,
+            targetType = BuildFileType.Auto) -> bool:
 
-        if sourceType == BuildFileType.AUTO:
+        if sourceType == BuildFileType.Auto:
             sourceType = GetFileType(source)
 
-        if targetType == BuildFileType.AUTO:
+        if targetType == BuildFileType.Auto:
             targetType = GetFileType(target)
 
         util.MakeDirsForFile(target)
 
-        if self.options & BuildCopyOption.ENABLE_BACKUP:
+        if self.options & BuildCopyOption.EnableBackup:
             BuildCopy.__CreateBackup(target)
 
         util.DeleteFileOrPath(target)
@@ -122,7 +107,7 @@ class BuildCopy:
             os.remove(file)
             BuildCopy.__PrintUncopyResult(file)
 
-        if self.options & BuildCopyOption.ENABLE_BACKUP:
+        if self.options & BuildCopyOption.EnableBackup:
             success &= BuildCopy.__RevertBackup(file)
 
         return success
@@ -180,41 +165,41 @@ class BuildCopy:
 
 
     def __GetCopyFunction(self, sourceT: BuildFileType, targetT: BuildFileType) -> Callable:
-        if targetT == BuildFileType.ANY or sourceT == targetT:
+        if targetT == BuildFileType.Any or sourceT == targetT:
             return self.__CopyTo
 
-        if targetT == BuildFileType.CSF and sourceT == BuildFileType.STR:
+        if targetT == BuildFileType.csf and sourceT == BuildFileType.str:
             return self.__CopyToCSF
 
-        if targetT == BuildFileType.STR and sourceT == BuildFileType.CSF:
+        if targetT == BuildFileType.str and sourceT == BuildFileType.csf:
             return self.__CopyToSTR
 
-        if targetT == BuildFileType.BIG:
+        if targetT == BuildFileType.big:
             return self.__CopyToBIG
 
-        if targetT == BuildFileType.ZIP:
+        if targetT == BuildFileType.zip:
             return self.__CopyToZIP
 
-        if targetT == BuildFileType.TAR:
+        if targetT == BuildFileType.tar:
             return self.__CopyToTAR
 
-        if targetT == BuildFileType.GZTAR:
+        if targetT == BuildFileType.gz:
             return self.__CopyToGZTAR
 
-        if targetT == BuildFileType.BMP and (sourceT == BuildFileType.PSD or sourceT == BuildFileType.TGA):
+        if targetT == BuildFileType.bmp and (sourceT == BuildFileType.psd or sourceT == BuildFileType.tga):
             return self.__CopyToBMP
 
-        if targetT == BuildFileType.TGA and sourceT == BuildFileType.PSD:
+        if targetT == BuildFileType.tga and sourceT == BuildFileType.psd:
             return self.__CopyToTGA
 
-        if targetT == BuildFileType.DDS and (sourceT == BuildFileType.PSD or sourceT == BuildFileType.TGA):
+        if targetT == BuildFileType.dds and (sourceT == BuildFileType.psd or sourceT == BuildFileType.tga):
             return self.__CopyToDDS
 
         return self.__CopyTo
 
 
     def __CopyTo(self, source: str, target: str, params: ParamsT) -> bool:
-        if self.options & BuildCopyOption.ENABLE_SYMLINKS:
+        if self.options & BuildCopyOption.EnableSymlinks:
             try:
                 os.symlink(src=source, dst=target)
                 BuildCopy.__PrintLinkResult(source, target)

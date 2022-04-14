@@ -8,10 +8,10 @@ from util import JsonFile
 
 
 class BundleEventType(enum.Enum):
-    PRE_BUILD = 0
+    OnPreBuild = 0
 
-g_jsonBundleEventNames: list[str] = [""] * len(BundleEventType)
-g_jsonBundleEventNames[BundleEventType.PRE_BUILD.value] = "onPreBuild"
+def GetJsonBundleEventName(type: BundleEventType) -> str:
+    return type.name[:1].lower() + type.name[1:]
 
 
 @dataclass(init=False)
@@ -299,7 +299,7 @@ def __MakeBundleEventsFromDict(jThing: dict, jsonDir: str) -> BundleEventsT:
     eventType: BundleEventType
 
     for eventType in BundleEventType:
-        eventName: str = g_jsonBundleEventNames[eventType.value]
+        eventName: str = GetJsonBundleEventName(eventType)
         jEvent: dict = jThing.get(eventName)
         if jEvent:
             event = BundleEvent()
