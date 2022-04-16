@@ -13,6 +13,7 @@ from data.folders import Folders
 from data.runner import Runner
 from data.tools import ToolsT
 from util import JsonFile
+from __version__ import __version__
 
 
 def __CreateJsonFiles(configPaths: list[str]) -> list[JsonFile]:
@@ -62,7 +63,7 @@ def RunWithConfig(configPaths: list[str],
 
 
 def Main(args=None):
-    print("Generals Mod Builder v1.0 by The Super Hackers")
+    print(f"Generals Mod Builder v{__version__} by The Super Hackers")
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', type=str, action="append", help='Path to a configuration file (json). Multiples can be specified.')
@@ -79,13 +80,16 @@ def Main(args=None):
     configPaths: list[str] = []
 
     # Add default configurations first to list so readers can parse them first.
-    configPath: str = os.path.join(thisDir, "..", "..")
+    configPath: str = os.path.join(thisDir, "..", "config")
     configPaths.append(os.path.join(configPath, "DefaultRunner.json"))
     configPaths.append(os.path.join(configPath, "DefaultTools.json"))
 
     # Add custom configurations last so readers can write over default configurations last.
     if args.config:
         configPaths.extend(args.config)
+
+    for i in range(len(configPaths)):
+        configPaths[i] = os.path.abspath(configPaths[i])
 
     RunWithConfig(
         configPaths=configPaths,
