@@ -33,7 +33,8 @@ def pprint(obj: Any) -> None:
             dict_ordered_key_enable=False,
             instance_repr_enable=False,
             list_in_line=False,
-            tuple_in_line=False)
+            tuple_in_line=False,
+            width=0)
 
 
 def LoadPickle(path: str) -> Any:
