@@ -7,7 +7,6 @@ import pickle
 import shutil
 from copy import copy
 from typing import Any, Callable
-from beeprint import pp
 
 
 def RelAssert(condition: bool, message: str = "") -> None:
@@ -21,13 +20,19 @@ def RelAssertType(obj: object, expectedType: type | types.UnionType, objName: st
 
 
 def pprint(obj: Any) -> None:
-    pp(
-        obj,
-        max_depth=10,
-        dict_ordered_key_enable=False,
-        instance_repr_enable=False,
-        list_in_line=False,
-        tuple_in_line=False)
+    try:
+        beeprintpp: function = None
+        from beeprint import pp as beeprintpp
+    except ImportError:
+        pass
+    if beeprintpp != None:
+        beeprintpp(
+            obj,
+            max_depth=10,
+            dict_ordered_key_enable=False,
+            instance_repr_enable=False,
+            list_in_line=False,
+            tuple_in_line=False)
 
 
 def LoadPickle(path: str) -> Any:
