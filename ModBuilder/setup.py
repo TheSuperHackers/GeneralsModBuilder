@@ -7,18 +7,19 @@
 import io
 import os
 import sys
+import distutils.command.sdist
+import distutils.command.build
 from shutil import rmtree
-
 from setuptools import find_packages, setup, Command
 
 # Package meta-data.
-NAME = 'mypackage'
-DESCRIPTION = 'My short description for my project.'
-URL = 'https://github.com/me/myproject'
+NAME = 'generalsmodbuilder'
+DESCRIPTION = 'Builds Mods from game source files for C&C Generals: Zero Hour'
+URL = 'https://github.com/TheSuperHackers'
 EMAIL = 'me@example.com'
-AUTHOR = 'Awesome Soul'
-REQUIRES_PYTHON = '>=3.6.0'
-VERSION = '0.1.0'
+AUTHOR = 'The Super Hackers'
+REQUIRES_PYTHON = '>=3.10.0'
+VERSION = ''
 
 # What packages are required for this module to be executed?
 REQUIRED = [
@@ -27,7 +28,7 @@ REQUIRED = [
 
 # What packages are optional?
 EXTRAS = {
-    # 'fancy feature': ['django'],
+    'dev': ['beeprint']
 }
 
 # The rest you shouldn't have to touch too much :)
@@ -92,6 +93,18 @@ class UploadCommand(Command):
         sys.exit()
 
 
+class BuildCommand(distutils.command.build.build):
+    def initialize_options(self):
+        distutils.command.build.build.initialize_options(self)
+        self.build_base = '.build'
+
+
+class SdistCommand(distutils.command.sdist.sdist):
+    def initialize_options(self):
+        distutils.command.sdist.sdist.initialize_options(self)
+        self.dist_dir = '.dist'
+
+
 # Where the magic happens:
 setup(
     name=NAME,
@@ -127,5 +140,7 @@ setup(
     # $ setup.py publish support.
     cmdclass={
         'upload': UploadCommand,
-    },
+        'build': BuildCommand,
+        'sdist': SdistCommand
+    }
 )
