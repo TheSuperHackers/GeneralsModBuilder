@@ -125,7 +125,7 @@ def MakeToolsFromJsons(jsonFiles: list[JsonFile]) -> ToolsT:
     tool: Tool
 
     for jsonFile in jsonFiles:
-        jsonDir: str = util.GetAbsFileDir(jsonFile.path)
+        jsonDir: str = util.GetAbsSmartFileDir(jsonFile.path)
         jTools: dict = jsonFile.data.get("tools")
         if jTools:
             jList: dict = jTools.get("list")

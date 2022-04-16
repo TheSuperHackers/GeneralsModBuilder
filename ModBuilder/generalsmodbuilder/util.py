@@ -1,4 +1,5 @@
 import os
+import sys
 import types
 import winreg
 import json
@@ -90,6 +91,18 @@ def GetAbsFileDir(file: str) -> str:
     dir = os.path.dirname(file)
     dir = os.path.abspath(dir)
     return dir
+
+
+g_isFrozen: bool = getattr(sys, 'frozen', False)
+
+def GetAbsSmartFileDir(file: str) -> str:
+    # If this code is frozen and the given file is part of it, then use the executable file dir.
+    fileDir: str = GetAbsFileDir(file)
+    if g_isFrozen:
+        thisDir = os.path.dirname(__file__)
+        if fileDir.startswith(thisDir):
+            return os.path.dirname(sys.executable)
+    return fileDir
 
 
 def GetAbsFileDirs(file: str, absStopPath: str = "") -> list[str]:
