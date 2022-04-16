@@ -80,15 +80,19 @@ def GetKeyValueFromRegistry(pathStr: str, keyStr: str) -> str:
         return None
 
 
-def GetFileDir(file: str) -> str:
-    return os.path.dirname(file)
+def GetAbsFileDir(file: str) -> str:
+    dir: str
+    dir = os.path.dirname(file)
+    dir = os.path.abspath(dir)
+    return dir
 
 
-def GetAllFileDirs(file: str, stopPath: str = "") -> list[str]:
+def GetAbsFileDirs(file: str, absStopPath: str = "") -> list[str]:
+    absStopPath = os.path.normpath(absStopPath)
     paths: list[str] = list()
-    path1: str = os.path.dirname(file)
+    path1: str = GetAbsFileDir(file)
     path2: str = ""
-    while path1 != stopPath and path2 != path1:
+    while path1 != absStopPath and path2 != path1:
         path2 = path1
         paths.append(path2)
         path1 = os.path.normpath(os.path.join(path2, ".."))
@@ -133,7 +137,7 @@ def CreateRelPaths(paths: list[str], start: str) -> list[str]:
 
 
 def MakeDirsForFile(file: str) -> None:
-    os.makedirs(GetFileDir(file), exist_ok=True)
+    os.makedirs(GetAbsFileDir(file), exist_ok=True)
 
 
 def DeleteFileOrPath(path: str) -> bool:

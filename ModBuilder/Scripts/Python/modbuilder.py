@@ -73,7 +73,7 @@ def Main(args=None):
     args, unknownargs = parser.parse_known_args(args=args)
     util.pprint(args)
 
-    thisDir = util.GetFileDir(__file__)
+    thisDir = util.GetAbsFileDir(__file__)
     configPaths: list[str] = []
 
     # Add default configurations first to list so readers can parse them first.

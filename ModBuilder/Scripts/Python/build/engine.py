@@ -439,7 +439,7 @@ class BuildEngine:
 
         for file in thing.files:
             absTarget = file.AbsTarget(thing.absParentDir)
-            absTargetDirs: list[str] = util.GetAllFileDirs(absTarget, thing.absParentDir)
+            absTargetDirs: list[str] = util.GetAbsFileDirs(absTarget, thing.absParentDir)
             absTargetDir: str
 
             for absTargetDir in absTargetDirs:

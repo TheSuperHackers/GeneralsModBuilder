@@ -30,7 +30,7 @@ def MakeFoldersFromJsons(jsonFiles: list[JsonFile]) -> Folders:
     folders.absBuildDir = None
 
     for jsonFile in jsonFiles:
-        jsonDir: str = util.GetFileDir(jsonFile.path)
+        jsonDir: str = util.GetAbsFileDir(jsonFile.path)
         jFolders: dict = jsonFile.data.get("folders")
 
         if jFolders:

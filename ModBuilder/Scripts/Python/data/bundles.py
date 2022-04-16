@@ -345,7 +345,7 @@ def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> Bundles:
     bundles.packs = list()
 
     for jsonFile in jsonFiles:
-        jsonDir: str = util.GetFileDir(jsonFile.path)
+        jsonDir: str = util.GetAbsFileDir(jsonFile.path)
         jBundles: dict = jsonFile.data.get("bundles")
 
         if jBundles:
