@@ -1,7 +1,7 @@
 setlocal
 
 set ThisDir=%~dp0.
-set ModBuilderPythonDir=%ThisDir%\..\Python
+set ModBuilderPythonDir=%ThisDir%\..\generalsmodbuilder
 
 call "%ThisDir%\RunPython.bat" "%ModBuilderPythonDir%\main.py" %*
 
