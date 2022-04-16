@@ -80,9 +80,8 @@ def Main(args=None):
     configPaths: list[str] = []
 
     # Add default configurations first to list so readers can parse them first.
-    configPath: str = os.path.join(thisDir, "..", "config")
-    configPaths.append(os.path.join(configPath, "DefaultRunner.json"))
-    configPaths.append(os.path.join(configPath, "DefaultTools.json"))
+    configPaths.append(os.path.join(thisDir, "config", "DefaultRunner.json"))
+    configPaths.append(os.path.join(thisDir, "config", "DefaultTools.json"))
 
     # Add custom configurations last so readers can write over default configurations last.
     if args.config:

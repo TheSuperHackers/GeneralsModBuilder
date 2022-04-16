@@ -1,9 +1,6 @@
-set VenvDir=.Venv
-set VenvExe=%VenvDir%\Scripts\python.exe
-set VenvActivate=%VenvDir%\Scripts\activate.bat
-
-set PythonDir=.Tools\python-3.10.4-amd64
-set PythonExe=%PythonDir%\python.exe
-set PythonUrl="https://github.com/TheSuperHackers/GeneralsTools/raw/main/Tools/Python/python-3.10.4-amd64.zip"
-
-set PythonRequirements="py-requirements.txt"
+set WorkDir=%cd%
+set ProjDir=%~dp0..
+set CodeDir=%ProjDir%\generalsmodbuilder
+set VenvDir=%ProjDir%\.venv
+set VenvExe=%VenvDir%\Scripts\python
+set PythonExe=python
