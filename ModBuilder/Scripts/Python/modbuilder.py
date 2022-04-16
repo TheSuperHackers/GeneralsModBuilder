@@ -62,6 +62,8 @@ def RunWithConfig(configPaths: list[str],
 
 
 def Main(args=None):
+    print("Generals Mod Builder v1.0 by The Super Hackers")
+
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', type=str, action="append", help='Path to a configuration file (json). Multiples can be specified.')
     parser.add_argument('-b', '--build', action='store_true')
