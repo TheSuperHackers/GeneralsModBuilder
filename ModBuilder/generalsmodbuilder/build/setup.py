@@ -25,6 +25,7 @@ class BuildSetup:
     runner: Runner
     bundles: Bundles
     tools: ToolsT
+    printConfig: bool
 
     def VerifyTypes(self) -> None:
         util.RelAssertType(self.step, BuildStep, "BuildSetup.step")
@@ -32,6 +33,7 @@ class BuildSetup:
         util.RelAssertType(self.runner, Runner, "BuildSetup.runner")
         util.RelAssertType(self.bundles, Bundles, "BuildSetup.bundles")
         util.RelAssertType(self.tools, dict, "BuildSetup.tools")
+        util.RelAssertType(self.printConfig, bool, "BuildSetup.printConfig")
         for k,v in self.tools.items():
             util.RelAssertType(k, str, "BuildSetup.tools.key")
             util.RelAssertType(v, Tool, "BuildSetup.tools.value")

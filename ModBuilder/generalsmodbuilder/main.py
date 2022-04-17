@@ -46,7 +46,8 @@ def RunWithConfig(configPaths: list[str],
         release: bool=False,
         install: bool=False,
         uninstall: bool=False,
-        run: bool=False) -> None:
+        run: bool=False,
+        printConfig: bool=False) -> None:
 
     jsonFiles: list[JsonFile] = __CreateJsonFiles(configPaths)
     buildStep: BuildStep = __CreateBuildStep(build, release, install, uninstall, run)
@@ -56,7 +57,13 @@ def RunWithConfig(configPaths: list[str],
     bundles: Bundles = data.bundles.MakeBundlesFromJsons(jsonFiles)
     tools: ToolsT = data.tools.MakeToolsFromJsons(jsonFiles)
 
-    setup = BuildSetup(step=buildStep, folders=folders, runner=runner, bundles=bundles, tools=tools)
+    setup = BuildSetup(
+        step=buildStep,
+        folders=folders,
+        runner=runner,
+        bundles=bundles,
+        tools=tools,
+        printConfig=printConfig)
 
     engine = BuildEngine()
     engine.Run(setup)
@@ -72,6 +79,7 @@ def Main(args=None):
     parser.add_argument('-i', '--install', action='store_true')
     parser.add_argument('-u', '--uninstall', action='store_true')
     parser.add_argument('-r', '--run', action='store_true')
+    parser.add_argument('--print-config', action='store_true')
 
     args, unknownargs = parser.parse_known_args(args=args)
     util.pprint(args)
@@ -96,7 +104,8 @@ def Main(args=None):
         release=bool(args.release),
         install=bool(args.install),
         uninstall=bool(args.uninstall),
-        run=bool(args.run))
+        run=bool(args.run),
+        printConfig=bool(args.print_config))
 
 
 if __name__ == "__main__":

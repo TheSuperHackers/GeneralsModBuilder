@@ -123,10 +123,11 @@ class BuildEngine:
     def __init__(self):
         self.setup = None
         self.structure = None
-        pass
 
 
     def Run(self, setup: BuildSetup) -> bool:
+        print("Run Build ...")
+
         if setup.step == BuildStep.Zero:
             warning("setup.step is NONE. Exiting.")
             return True
@@ -135,11 +136,11 @@ class BuildEngine:
         self.setup.VerifyTypes()
         self.setup.VerifyValues()
 
-        print("Run Build with ...")
-        util.pprint(self.setup.folders)
-        util.pprint(self.setup.runner)
-        util.pprint(self.setup.bundles)
-        util.pprint(self.setup.tools)
+        if self.setup.printConfig:
+            util.pprint(self.setup.folders)
+            util.pprint(self.setup.runner)
+            util.pprint(self.setup.bundles)
+            util.pprint(self.setup.tools)
 
         if self.setup.step & (BuildStep.Release):
             self.setup.step |= BuildStep.Build
@@ -658,7 +659,7 @@ class BuildEngine:
         if len(unexpectedGameFiles) > 0:
             warning(f"The installed Mod may not work correctly. {len(unexpectedGameFiles)} unexpected file(s) were found:")
             for file in unexpectedGameFiles:
-                print("Unexpected:", file)
+                warning(file)
 
 
     @staticmethod

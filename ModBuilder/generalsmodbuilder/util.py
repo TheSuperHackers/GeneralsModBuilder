@@ -34,7 +34,7 @@ def pprint(obj: Any) -> None:
             instance_repr_enable=False,
             list_in_line=False,
             tuple_in_line=False,
-            width=0)
+            string_break_enable=False)
 
 
 def LoadPickle(path: str) -> Any:
