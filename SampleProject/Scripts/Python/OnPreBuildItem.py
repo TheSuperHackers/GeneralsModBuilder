@@ -3,10 +3,11 @@
 def OnPreBuild(**kwargs) -> None:
     print("OnPreBuildItem.py called ...")
 
-    bundleItem = kwargs.get("BundleItem")
-    if bundleItem != None:
-        print(bundleItem)
+    if False:
+        bundleItem = kwargs.get("BundleItem")
+        if bundleItem != None:
+            print(bundleItem)
 
-    info = kwargs.get("Info")
-    if info != None:
-        print(info)
+        info = kwargs.get("Info")
+        if info != None:
+            print(info)
