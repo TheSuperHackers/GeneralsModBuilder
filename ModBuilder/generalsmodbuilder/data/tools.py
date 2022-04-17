@@ -53,10 +53,11 @@ class ToolFile:
 @dataclass(init=False)
 class Tool:
     name: str
+    version: float
     files: list[ToolFile]
 
     def __init__(self):
-        pass
+        self.version = 0.0
 
     def Normalize(self) -> None:
         for file in self.files:
@@ -64,6 +65,7 @@ class Tool:
 
     def Verify(self) -> None:
         util.RelAssertType(self.name, str, "Tool.name")
+        util.RelAssertType(self.version, float, "Tool.version")
         util.RelAssertType(self.files, list, "Tool.files")
         for file in self.files:
             file.VerifyTypes()
@@ -109,6 +111,7 @@ def __MakeToolFileFromDict(jFile: dict, jsonDir: str) -> ToolFile:
 def __MakeToolFromDict(jTool: dict, jsonDir: str) -> Tool:
     tool = Tool()
     tool.name = jTool.get("name")
+    tool.version = util.GetSecondIfValid(tool.version, jTool.get("version"))
     tool.files = list()
     jFiles: dict = jTool.get("files")
     if jFiles:

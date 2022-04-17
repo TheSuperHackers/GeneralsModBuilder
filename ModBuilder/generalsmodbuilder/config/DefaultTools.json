@@ -4,6 +4,7 @@
         "list": [
             {
                 "name": "crunch",
+                "version": 1.04,
                 "info": "Converts PSD,TGA to DDS,TGA,BMP",
                 "files": [
                     {
@@ -16,6 +17,7 @@
             },
             {
                 "name": "gametextcompiler",
+                "version": 1.0,
                 "info": "Converts STR to CSF and vice versa",
                 "files": [
                     {
@@ -28,6 +30,7 @@
             },
             {
                 "name": "generalsbigcreator",
+                "version": 1.3,
                 "info": "Adds folders and files into BIG archive",
                 "files": [
                     {
