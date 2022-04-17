@@ -16,7 +16,7 @@
                     "Misc"
                 ],
                 "onPreBuild": {
-                    "script": "Scripts/OnPreBuildPack.py"
+                    "script": "Scripts/Python/OnPreBuildPack.py"
                 }
             },
             {

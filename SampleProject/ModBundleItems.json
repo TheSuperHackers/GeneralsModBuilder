@@ -64,7 +64,7 @@
                     }
                 ],
                 "onPreBuild": {
-                    "script": "Scripts/OnPreBuildItem.py",
+                    "script": "Scripts/Python/OnPreBuildItem.py",
                     "function": "OnPreBuild",
                     "kwargs": {
                         "Info": "Arbitrary data passed to script"
