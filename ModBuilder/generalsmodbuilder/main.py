@@ -74,6 +74,7 @@ def Main(args=None):
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', type=str, action="append", help='Path to a configuration file (json). Multiples can be specified.')
+    parser.add_argument('-l', '--config-list', type=str, nargs="*", help='Paths to any amount of configuration files (json).')
     parser.add_argument('-b', '--build', action='store_true')
     parser.add_argument('-z', '--release', action='store_true')
     parser.add_argument('-i', '--install', action='store_true')
@@ -94,6 +95,8 @@ def Main(args=None):
     # Add custom configurations last so readers can write over default configurations last.
     if args.config:
         configPaths.extend(args.config)
+    if args.config_list:
+        configPaths.extend(args.config_list)
 
     for i in range(len(configPaths)):
         configPaths[i] = os.path.abspath(configPaths[i])
