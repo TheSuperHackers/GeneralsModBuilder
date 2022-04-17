@@ -5,7 +5,7 @@ set ThisDir=%~dp0.
 call "%ThisDir%\setupfolders.bat"
 
 %PythonExe% -m venv "%VenvDir%"
-%VenvExe% -m pip install pyinstaller
+%VenvExe% -m pip install pyinstaller==4.10
 %VenvExe% -m pip install -r "%ProjDir%\requirements.txt"
 %VenvExe% -m pip install -r "%ProjDir%\requirements-dev.txt"
 
