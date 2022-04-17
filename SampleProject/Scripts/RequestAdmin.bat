@@ -17,7 +17,7 @@ if %errorlevel% NEQ 0 (
 
     "%temp%\getadmin.vbs"
     del "%temp%\getadmin.vbs"
-    exit /B 123
+    exit /B 111
 
 :gotAdmin
     pushd "%CD%"

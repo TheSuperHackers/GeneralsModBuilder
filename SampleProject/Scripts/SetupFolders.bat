@@ -1,15 +1,31 @@
 @echo off
 
-set __ThisDir=%~dp0.
+set ScriptDir=%~dp0.
 
-:: Mod configuration folder (json)
-set ConfigDir=%__ThisDir%\..
-
-:: Generals Mod Builder tool
-set ModBuilderDir=%__ThisDir%\.generalsmodbuilder\v1.0
+set ModBuilderVer=1.0
+set ModBuilderDir=%ScriptDir%\.generalsmodbuilder\v%ModBuilderVer%
 set ModBuilderExe=%ModBuilderDir%\generalsmodbuilder.exe
+set ModBuilderUrl=https://github.com/TheSuperHackers/GeneralsTools/raw/main/Tools/generalsmodbuilder/v%ModBuilderVer%/generalsmodbuilder.exe
+set ModBuilderSha256=4a212a70e646b8604d254f7849a1cb5088fa615bc60503b03ed10b9933b77381
 
-:: Log Folder
-set LogDir=%__ThisDir%\.log
+set ConfigDir=%ScriptDir%\..
+set ConfigFiles=^
+    "%ConfigDir%\ModBundleItems.json" ^
+    "%ConfigDir%\ModBundlePacks.json" ^
+    "%ConfigDir%\ModFolders.json" ^
+    "%ConfigDir%\ModRunner.json"
 
-if not exist "%LogDir%" mkdir "%LogDir%"
+set LogDir=%ScriptDir%\.log
+
+if [%~1]==[print] (
+    echo SETUP. Using Generals Mod Builder:
+    echo ver... %ModBuilderVer%
+    echo dir... %ModBuilderDir%
+    echo exe... %ModBuilderExe%
+    echo sha256 %ModBuilderSha256%
+    echo url... %ModBuilderUrl%
+    for %%f in (%ConfigFiles%) do (
+        echo config %%f
+    )
+    echo SETUP END.
+)

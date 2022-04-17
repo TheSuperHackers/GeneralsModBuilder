@@ -1,20 +1,23 @@
+@echo off
+
 setlocal
 
 set ThisDir=%~dp0.
 
 call "%ThisDir%\RequestAdmin.bat" "%~s0" %*
 
-if %errorlevel% EQU 123 (
-    exit /B
+if %errorlevel% EQU 111 (
+    exit /B %errorlevel%
 )
 
-call "%ThisDir%\SetupFolders.bat"
+call "%ThisDir%\InstallModBuilder.bat"
 
-call "%ModBuilderExe%" --build --install ^
-    --config "%ConfigDir%\ModBundleItems.json" ^
-    --config "%ConfigDir%\ModBundlePacks.json" ^
-    --config "%ConfigDir%\ModFolders.json" ^
-    --config "%ConfigDir%\ModRunner.json" ^
-    > "%LogDir%\%~n0.log"
+if %errorlevel% EQU 222 (
+    exit /B %errorlevel%
+)
+
+call "%ThisDir%\SetupFolders.bat" print
+
+call "%ModBuilderExe%" --build --install --config-list %ConfigFiles%
 
 endlocal
