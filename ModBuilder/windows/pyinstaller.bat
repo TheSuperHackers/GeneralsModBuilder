@@ -9,7 +9,7 @@ call "%ThisDir%\setupfolders.bat"
 %VenvExe% -m pip install -r "%ProjDir%\requirements.txt"
 %VenvExe% -m pip install -r "%ProjDir%\requirements-dev.txt"
 
-cd "%CodeDir%"
+cd /D "%CodeDir%"
 
 %VenvExe% -m PyInstaller "main.py" ^
     --name generalsmodbuilder ^
@@ -21,6 +21,6 @@ cd "%CodeDir%"
     --onefile ^
     --noconfirm
 
-cd "%WorkDir%"
+cd /D "%WorkDir%"
 
 endlocal

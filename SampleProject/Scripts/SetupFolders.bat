@@ -1,11 +1,15 @@
+@echo off
+
 set __ThisDir=%~dp0.
 
-:: Directory to where python is or will be installed
-set PythonDir=%__ThisDir%\..\..
-
-:: Directory to Mod configuration files (json)
+:: Mod configuration folder (json)
 set ConfigDir=%__ThisDir%\..
 
-:: Directory to the Mod Builder tool
-set ModBuilderDir=%__ThisDir%\..\..\ModBuilder
-set RunModBuilder=%ModBuilderDir%\Scripts\Windows\RunBuilder.bat
+:: Generals Mod Builder tool
+set ModBuilderDir=%__ThisDir%\.generalsmodbuilder\v1.0
+set ModBuilderExe=%ModBuilderDir%\generalsmodbuilder.exe
+
+:: Log Folder
+set LogDir=%__ThisDir%\.log
+
+if not exist "%LogDir%" mkdir "%LogDir%"

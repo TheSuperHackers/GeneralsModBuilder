@@ -9,10 +9,10 @@ call "%ThisDir%\setupfolders.bat"
 %VenvExe% -m pip install -r "%ProjDir%\requirements.txt"
 %VenvExe% -m pip install -r "%ProjDir%\requirements-dev.txt"
 
-cd "%ProjDir%"
+cd /D "%ProjDir%"
 
 %VenvExe% "setup.py" sdist bdist_wheel --dist-dir ".dist"
 
-cd "%WorkDir%"
+cd /D "%WorkDir%"
 
 endlocal

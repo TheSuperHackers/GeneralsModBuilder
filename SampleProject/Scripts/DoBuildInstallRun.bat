@@ -1,16 +1,20 @@
 setlocal
+
 set ThisDir=%~dp0.
+
+call "%ThisDir%\RequestAdmin.bat" "%~s0" %*
+
+if %errorlevel% EQU 123 (
+    exit /B
+)
 
 call "%ThisDir%\SetupFolders.bat"
 
-cd /D "%PythonDir%"
-
-call "%RunModBuilder%" --build --install --run --uninstall ^
---config="%ConfigDir%\ModBundleItems.json" ^
---config="%ConfigDir%\ModBundlePacks.json" ^
---config="%ConfigDir%\ModFolders.json" ^
---config="%ConfigDir%\ModRunner.json"
-
-cd /D "%ThisDir%"
+call "%ModBuilderExe%" --build --install --run --uninstall ^
+    --config "%ConfigDir%\ModBundleItems.json" ^
+    --config "%ConfigDir%\ModBundlePacks.json" ^
+    --config "%ConfigDir%\ModFolders.json" ^
+    --config "%ConfigDir%\ModRunner.json" ^
+    > "%LogDir%\%~n0.log"
 
 endlocal

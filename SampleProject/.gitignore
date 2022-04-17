@@ -1,2 +1,5 @@
-.*
-!.gitignore
+.Build/
+.Release/
+.generalsmodbuilder/
+.log/
+__pycache__/
