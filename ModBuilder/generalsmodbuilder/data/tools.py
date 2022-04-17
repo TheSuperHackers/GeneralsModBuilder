@@ -36,9 +36,8 @@ class ToolFile:
         return os.path.isfile(self.absTarget) and (not self.md5 or util.GetFileMd5(self.absTarget) == self.md5)
 
     def Install(self) -> bool:
-        success = True
-        if not self.IsInstalled():
-            success = False
+        success = self.IsInstalled()
+        if not success:
             if self.url:
                 response: http.client.HTTPResponse = urllib.request.urlopen(self.url)
                 if response.code == 200:
@@ -139,7 +138,6 @@ def MakeToolsFromJsons(jsonFiles: list[JsonFile]) -> ToolsT:
         tool.Verify()
         tool.Normalize()
         tool.Install()
-        tool.VerifyInstall()
 
     return tools
 
