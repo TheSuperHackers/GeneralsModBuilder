@@ -3,7 +3,7 @@ setlocal
 set ThisDir=%~dp0.
 set WasInstalled=0
 
-call "%ThisDir%\SetupFolders.bat"
+call "%ThisDir%\Setup.bat"
 
 echo Hashing Generals Mod Builder ...
 Certutil -hashfile %ModBuilderExe% SHA256 | findstr /c:%ModBuilderSha256%
