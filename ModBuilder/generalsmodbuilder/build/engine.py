@@ -656,7 +656,7 @@ class BuildEngine:
 
         print(f"Checking game install at {runner.absGameRootDir} ...")
         if len(unexpectedGameFiles) > 0:
-            print(f"WARNING: The installed Mod may not work correctly. {len(unexpectedGameFiles)} unexpected file(s) were found:")
+            warning(f"The installed Mod may not work correctly. {len(unexpectedGameFiles)} unexpected file(s) were found:")
             for file in unexpectedGameFiles:
                 print("Unexpected:", file)
 

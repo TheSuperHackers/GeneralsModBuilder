@@ -341,8 +341,8 @@ def __MakeBundlePackFromDict(jPack: dict, jsonDir: str) -> BundlePack:
 
 def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> Bundles:
     bundles = Bundles()
-    bundles.items = list()
-    bundles.packs = list()
+    bundles.items = list[BundleItem]()
+    bundles.packs = list[BundlePack]()
 
     for jsonFile in jsonFiles:
         jsonDir: str = util.GetAbsSmartFileDir(jsonFile.path)

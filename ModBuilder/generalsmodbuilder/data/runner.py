@@ -85,24 +85,26 @@ def MakeRunnerFromJsons(jsonFiles: list[JsonFile]) -> Runner:
         jRunner: dict = jsonFile.data.get("runner")
 
         if jRunner:
-            runner.absGameRootDir = util.GetSecondIfValid(runner.absGameRootDir, jRunner.get("gameRootDir"))
             runner.relGameExeFile = util.GetSecondIfValid(runner.relGameExeFile, jRunner.get("gameExeFile"))
             runner.gameExeArgs = util.GetSecondIfValid(runner.gameExeArgs, jRunner.get("gameExeArgs"))
             runner.relevantGameDataFileTypes = util.GetSecondIfValid(runner.relevantGameDataFileTypes, jRunner.get("relevantGameDataFileTypes"))
             runner.absRegularGameDataFiles = util.GetSecondIfValid(runner.absRegularGameDataFiles, jRunner.get("regularGameDataFiles"))
 
-            if runner.absGameRootDir != None:
-                if IsRegistryToken(runner.absGameRootDir):
-                    runner.absGameRootDir = ResolveRegistryToken(runner.absGameRootDir)
+            gameRootDir: str = jRunner.get("gameRootDir")
+            if isinstance(gameRootDir, str):
+                if IsRegistryToken(gameRootDir):
+                    runner.absGameRootDir = ResolveRegistryToken(gameRootDir)
                 else:
-                    runner.absGameRootDir = os.path.join(jsonDir, runner.absGameRootDir)
+                    runner.absGameRootDir = os.path.join(jsonDir, gameRootDir)
 
-            if runner.absRegularGameDataFiles != None:
-                for i in range(len(runner.absRegularGameDataFiles)):
-                    runner.absRegularGameDataFiles[i] = os.path.join(runner.absGameRootDir, runner.absRegularGameDataFiles[i])
+
 
     runner.VerifyTypes()
     runner.Normalize()
+
+    for i in range(len(runner.absRegularGameDataFiles)):
+        runner.absRegularGameDataFiles[i] = os.path.join(runner.absGameRootDir, runner.absRegularGameDataFiles[i])
+
     runner.ResolveWildcards()
     runner.VerifyValues()
     return runner

@@ -123,7 +123,7 @@ def __MakeToolFromDict(jTool: dict, jsonDir: str) -> Tool:
 
 
 def MakeToolsFromJsons(jsonFiles: list[JsonFile]) -> ToolsT:
-    tools = dict()
+    tools = ToolsT()
     tool: Tool
 
     for jsonFile in jsonFiles:
