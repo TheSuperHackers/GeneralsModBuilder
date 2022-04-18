@@ -194,6 +194,10 @@ def NormalizePaths(paths: list[str]) -> list[str]:
     return paths
 
 
+def GetFileSize(path: str) -> str:
+    return os.path.getsize(path)
+
+
 def GetFileMd5(path: str) -> str:
     return GetFileHash(path, hashlib.md5)
 
