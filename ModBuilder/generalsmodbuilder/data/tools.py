@@ -12,11 +12,13 @@ class ToolFile:
     url: str
     absTarget: str
     md5: str
+    sha256: str
     size: str
     runnable: bool
 
     def __init__(self):
         self.md5 = ""
+        self.sha256 = ""
         self.size = -1
         self.runnable = False
 
@@ -27,20 +29,26 @@ class ToolFile:
         util.RelAssertType(self.url, str, "ToolFile.url")
         util.RelAssertType(self.absTarget, str, "ToolFile.absTarget")
         util.RelAssertType(self.md5, str, "ToolFile.md5")
+        util.RelAssertType(self.sha256, str, "ToolFile.sha256")
         util.RelAssertType(self.size, int, "ToolFile.size")
         util.RelAssertType(self.runnable, bool, "ToolFile.runnable")
 
     def VerifyInstall(self) -> None:
         util.RelAssert(os.path.isfile(self.absTarget), f"ToolFile.absTarget file '{self.absTarget}' does not exist")
         if self.md5:
-            actualMd5: str = util.GetFileMd5(self.absTarget)
-            util.RelAssert(self.md5 == actualMd5, f"ToolFile.md5 '{self.md5}' does not match md5 '{actualMd5}' of target file '{self.absTarget}'")
+            actual: str = util.GetFileMd5(self.absTarget)
+            util.RelAssert(self.md5 == actual, f"ToolFile.md5 '{self.md5}' does not match md5 '{actual}' of target file '{self.absTarget}'")
+        if self.sha256:
+            actual: str = util.GetFileSha256(self.absTarget)
+            util.RelAssert(self.md5 == actual, f"ToolFile.sha256 '{self.md5}' does not match sha256 '{actual}' of target file '{self.absTarget}'")
         if self.size >= 0:
-            actualSize: int = util.GetFileSize(self.absTarget)
-            util.RelAssert(self.size == actualSize, f"ToolFile.size '{self.size}' does not match size '{actualSize}' of target file '{self.absTarget}'")
+            actual: int = util.GetFileSize(self.absTarget)
+            util.RelAssert(self.size == actual, f"ToolFile.size '{self.size}' does not match size '{actual}' of target file '{self.absTarget}'")
 
     def HashOk(self) -> bool:
-        return not self.md5 or self.md5 == util.GetFileMd5(self.absTarget)
+        md5Ok = (not self.md5 or self.md5 == util.GetFileMd5(self.absTarget))
+        shaOk = (not self.sha256 or self.sha256 == util.GetFileSha256(self.absTarget))
+        return md5Ok and shaOk
     
     def SizeOk(self) -> bool:
         return self.size < 0 or self.size == util.GetFileSize(self.absTarget)
@@ -124,6 +132,7 @@ def __MakeToolFileFromDict(jFile: dict, jsonDir: str) -> ToolFile:
     toolFile.url = jFile.get("url")
     toolFile.absTarget = util.JoinPathIfValid(None, jsonDir, jFile.get("target"))
     toolFile.md5 = util.GetSecondIfValid(toolFile.md5, jFile.get("md5"))
+    toolFile.sha256 = util.GetSecondIfValid(toolFile.sha256, jFile.get("sha256"))
     toolFile.size = util.GetSecondIfValid(toolFile.size, jFile.get("size"))
     toolFile.runnable = util.GetSecondIfValid(toolFile.runnable, jFile.get("runnable"))
     return toolFile

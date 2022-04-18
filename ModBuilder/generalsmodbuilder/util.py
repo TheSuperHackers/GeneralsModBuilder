@@ -208,7 +208,7 @@ def GetFileSha256(path: str) -> str:
 
 g_fileHashCount: int = 0
 
-def GetFileHash(path, hashFunc: Callable) -> str:
+def GetFileHash(path: str, hashFunc: Callable) -> str:
     hashStr: str = ""
     if os.path.isfile(path):
         hashObj: hashlib._Hash = hashFunc()

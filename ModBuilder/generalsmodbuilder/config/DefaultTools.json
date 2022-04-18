@@ -10,7 +10,7 @@
                     {
                         "url": "https://github.com/TheSuperHackers/GeneralsTools/raw/main/Tools/crunch/v1.04/crunch_x64.exe",
                         "target": ".tools/crunch_x64.exe",
-                        "md5": "0eb41e20af4be0204febf893e6c2b84c",
+                        "sha256": "8ae949bfc3e3e4a1717dca8845ce8ed480638de68cbf1d7cbe912e99e35ce06f",
                         "size": 1028096,
                         "runnable": true
                     }
@@ -24,7 +24,7 @@
                     {
                         "url": "https://github.com/TheSuperHackers/GeneralsTools/raw/main/Tools/gametextcompiler/v1.0/gametextcompiler.exe",
                         "target": ".tools/gametextcompiler.exe",
-                        "md5": "d56dde78d0e486ad1bfedcb707e76da8",
+                        "sha256": "8924d7c4353a21f5e9a9de8567362a0f49087b99f46ca71d08263dba032a7eb1",
                         "size": 793088,
                         "runnable": true
                     }
@@ -38,7 +38,7 @@
                     {
                         "url": "https://github.com/TheSuperHackers/GeneralsTools/raw/main/Tools/generalsbigcreator/v1.3/generalsbigcreator.exe",
                         "target": ".tools/generalsbigcreator.exe",
-                        "md5": "dc1e1be41accf5082ff3dd4319ffe70f",
+                        "sha256": "213ce479a033db949f19012a7e4270cf6c83a79282c1b1941f625b825c1451ed",
                         "size": 68608,
                         "runnable": true
                     }
