@@ -1,6 +1,7 @@
 import os
 import subprocess
 import shutil
+import sys
 import util
 import enum
 from enum import Enum, Flag
@@ -332,10 +333,11 @@ class BuildCopy:
     def __HasAlphaChannel(self, source: str) -> bool:
         exec: str = self.__GetToolExePath("crunch")
         args: list[str] = [exec, "-file", source, "-info"]
-        output: str = subprocess.run(args=args, check=True, capture_output=True).stdout
-        upper: str = output.upper()
+        outputBytes: bytes = subprocess.run(args=args, check=True, capture_output=True).stdout
+        outputStr: str = outputBytes.decode(sys.getdefaultencoding())
+        upper: str = outputStr.upper()
         hasAlpha: bool = False
-        if (b"FORMAT: A8L8" in upper) or (b"FORMAT: A8R8G8B8" in upper):
+        if ("FORMAT: A8L8" in upper) or ("FORMAT: A8R8G8B8" in upper):
             hasAlpha = True
         return hasAlpha
 
