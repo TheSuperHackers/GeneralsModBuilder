@@ -12,15 +12,21 @@ call "%ThisDir%\setupfolders.bat"
 cd /D "%CodeDir%"
 
 %VenvExe% -m PyInstaller "main.py" ^
-    --name generalsmodbuilder ^
-    --distpath "%ProjDir%\.dist" ^
-    --workpath "%ProjDir%\.build" ^
+    --name %ProjName% ^
+    --distpath "%PyInstallerDir%" ^
+    --workpath "%BuildDir%" ^
     --specpath "%ProjDir%" ^
-    --add-data "%CodeDir%\config\*.json";config ^
+    --add-data "%CodeDir%\config\*.json";"config" ^
     --clean ^
-    --onefile ^
+    --onedir ^
     --noconfirm
 
 cd /D "%WorkDir%"
+
+if not exist %ReleaseDir% (
+    mkdir %ReleaseDir%
+)
+
+tar.exe -a -c -C "%PyInstallerDir%" -f "%ReleaseDir%\%ProjName%.zip" *.*
 
 endlocal
