@@ -6,6 +6,7 @@ import json
 import hashlib
 import pickle
 import shutil
+import errno
 from copy import copy
 from typing import Any, Callable
 
@@ -221,3 +222,72 @@ def GetFileHash(path: str, hashFunc: Callable) -> str:
         g_fileHashCount += 1
         print(f"Hashed ({g_fileHashCount}) {path} as {hashStr}")
     return hashStr
+
+
+# Windows-specific error code indicating an invalid pathname.
+# https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes--0-499-
+ERROR_INVALID_NAME = 123
+
+def IsValidPathName(pathname: str) -> bool:
+    '''
+    `True` if the passed pathname is a valid pathname for the current OS;
+    `False` otherwise.
+    '''
+    if not isinstance(pathname, str) or not pathname:
+        return False
+
+    try:
+        # Strip this pathname's Windows-specific drive specifier (e.g., `C:\`)
+        # if any. Since Windows prohibits path components from containing `:`
+        # characters, failing to strip this `:`-suffixed prefix would
+        # erroneously invalidate all valid absolute Windows pathnames.
+        _, pathname = os.path.splitdrive(pathname)
+
+        # Directory guaranteed to exist. If the current OS is Windows, this is
+        # the drive to which Windows was installed (e.g., the "%HOMEDRIVE%"
+        # environment variable); else, the typical root directory.
+        if sys.platform == 'win32':
+            rootDir = os.environ.get('HOMEDRIVE', 'C:')
+        else:
+            rootDir = os.path.sep
+
+        assert os.path.isdir(rootDir)
+
+        # Append a path separator to this directory if needed.
+        rootDir = rootDir.rstrip(os.path.sep) + os.path.sep
+
+        # Test whether each path component split from this pathname is valid or
+        # not, ignoring non-existent and non-readable path components.
+        for pathnamePart in pathname.split(os.path.sep):
+            try:
+                os.lstat(rootDir + pathnamePart)
+            # If an OS-specific exception is raised, its error code
+            # indicates whether this pathname is valid or not. Unless this
+            # is the case, this exception implies an ignorable kernel or
+            # filesystem complaint (e.g., path not found or inaccessible).
+            #
+            # Only the following exceptions indicate invalid pathnames:
+            #
+            # * Instances of the Windows-specific "WindowsError" class
+            #   defining the "winerror" attribute whose value is
+            #   "ERROR_INVALID_NAME". Under Windows, "winerror" is more
+            #   fine-grained and hence useful than the generic "errno"
+            #   attribute. When a too-long pathname is passed, for example,
+            #   "errno" is "ENOENT" (i.e., no such file or directory) rather
+            #   than "ENAMETOOLONG" (i.e., file name too long).
+            # * Instances of the cross-platform "OSError" class defining the
+            #   generic "errno" attribute whose value is either:
+            #   * Under most POSIX-compatible OSes, "ENAMETOOLONG".
+            #   * Under some edge-case OSes (e.g., SunOS, *BSD), "ERANGE".
+            except OSError as exc:
+                if hasattr(exc, 'winerror'):
+                    if exc.winerror == ERROR_INVALID_NAME:
+                        return False
+                elif exc.errno in {errno.ENAMETOOLONG, errno.ERANGE}:
+                    return False
+    # If a "TypeError" exception was raised, it almost certainly has the
+    # error message "embedded NUL character" indicating an invalid pathname.
+    except TypeError as exc:
+        return False
+    else:
+        return True

@@ -22,6 +22,10 @@ class Folders:
         util.RelAssertType(self.absReleaseDir, str, "Folders.absReleaseDir")
         util.RelAssertType(self.absBuildDir, str, "Folders.absBuildDir")
 
+    def VerifyValues(self) -> None:
+        util.RelAssert(util.IsValidPathName(self.absReleaseUnpackedDir), f"Folders.absReleaseUnpackedDir '{self.absReleaseUnpackedDir}' is not a valid path name")
+        util.RelAssert(util.IsValidPathName(self.absReleaseDir), f"Folders.absReleaseDir '{self.absReleaseDir}' is not a valid path name")
+        util.RelAssert(util.IsValidPathName(self.absBuildDir), f"Folders.absBuildDir '{self.absBuildDir}' is not a valid path name")
 
 def MakeFoldersFromJsons(jsonFiles: list[JsonFile]) -> Folders:
     folders = Folders()
@@ -40,4 +44,5 @@ def MakeFoldersFromJsons(jsonFiles: list[JsonFile]) -> Folders:
 
     folders.VerifyTypes()
     folders.Normalize()
+    folders.VerifyValues()
     return folders

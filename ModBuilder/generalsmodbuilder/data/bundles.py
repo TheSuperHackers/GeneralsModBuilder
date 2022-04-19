@@ -66,6 +66,7 @@ class BundleFile:
 
     def VerifyValues(self) -> None:
         util.RelAssert(os.path.isfile(self.absSourceFile), f"BundleFile.absSourceFile '{self.absSourceFile}' is not a valid file")
+        util.RelAssert(util.IsValidPathName(self.relTargetFile), f"BundleFile.relTargetFile '{self.relTargetFile}' is not a valid file name")
         util.RelAssert(not os.path.isabs(self.relTargetFile), f"BundleFile.relTargetFile '{self.relTargetFile}' is not a relative path")
 
     def Normalize(self) -> None:
@@ -104,6 +105,9 @@ class BundleItem:
             event.VerifyTypes()
 
     def VerifyValues(self) -> None:
+        util.RelAssert(util.IsValidPathName(self.name), f"BundleItem.name '{self.name}' has invalid name")
+        util.RelAssert(not self.namePrefix or util.IsValidPathName(self.namePrefix), f"BundleItem.namePrefix '{self.namePrefix}' has invalid name")
+        util.RelAssert(not self.nameSuffix or util.IsValidPathName(self.nameSuffix), f"BundleItem.nameSuffix '{self.nameSuffix}' has invalid name")
         for file in self.files:
             file.VerifyValues()
         for event in self.events.values():
@@ -190,6 +194,9 @@ class BundlePack:
             event.VerifyTypes()
 
     def VerifyValues(self) -> None:
+        util.RelAssert(util.IsValidPathName(self.name), f"BundlePack.name '{self.name}' has invalid name")
+        util.RelAssert(not self.namePrefix or util.IsValidPathName(self.namePrefix), f"BundlePack.namePrefix '{self.namePrefix}' has invalid name")
+        util.RelAssert(not self.nameSuffix or util.IsValidPathName(self.nameSuffix), f"BundlePack.nameSuffix '{self.nameSuffix}' has invalid name")
         for event in self.events.values():
             event.VerifyValues()
 

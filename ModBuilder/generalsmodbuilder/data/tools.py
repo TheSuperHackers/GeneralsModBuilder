@@ -33,6 +33,10 @@ class ToolFile:
         util.RelAssertType(self.size, int, "ToolFile.size")
         util.RelAssertType(self.runnable, bool, "ToolFile.runnable")
 
+    def VerifyValues(self) -> None:
+        # TODO Verify url format?
+        util.RelAssert(util.IsValidPathName(self.absTarget), f"ToolFile.absTarget '{self.absTarget}' is not a valid file name")
+
     def VerifyInstall(self) -> None:
         util.RelAssert(os.path.isfile(self.absTarget), f"ToolFile.absTarget file '{self.absTarget}' does not exist")
         if self.md5:
@@ -91,13 +95,17 @@ class Tool:
         for file in self.files:
             file.Normalize()
 
-    def Verify(self) -> None:
+    def VerifyTypes(self) -> None:
         util.RelAssertType(self.name, str, "Tool.name")
         util.RelAssertType(self.version, float, "Tool.version")
         util.RelAssertType(self.files, list, "Tool.files")
         for file in self.files:
             file.VerifyTypes()
+
+    def VerifyValues(self) -> None:
         util.RelAssert(self.GetExecutable() != None, "Tool.files contains no runnable file")
+        for file in self.files:
+            file.VerifyValues()
 
     def VerifyInstall(self) -> None:
         for file in self.files:
@@ -170,8 +178,9 @@ def MakeToolsFromJsons(jsonFiles: list[JsonFile]) -> ToolsT:
                     tools[tool.name] = tool
 
     for tool in tools.values():
-        tool.Verify()
+        tool.VerifyTypes()
         tool.Normalize()
+        tool.VerifyValues()
         tool.Install()
 
     return tools
