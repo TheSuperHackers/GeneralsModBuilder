@@ -2,7 +2,7 @@ setlocal
 
 set ThisDir=%~dp0.
 
-call "%ThisDir%\setupfolders.bat"
+call "%ThisDir%\setup.bat"
 
 %PythonExe% -m venv "%VenvDir%"
 %VenvExe% -m pip install wheel==0.37.1
