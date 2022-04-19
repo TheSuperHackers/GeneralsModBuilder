@@ -591,6 +591,8 @@ class BuildEngine:
         for thing in things.values():
             print(f"Copy files for {thing.name} ...")
 
+            os.makedirs(thing.absParentDir, exist_ok=True)
+
             copy.CopyThing(thing)
 
 

@@ -5,6 +5,11 @@
         "itemsSuffix": "",
         "items": [
             {
+                "name": "SampleEmpty",
+                "big": true,
+                "files": []
+            },
+            {
                 "name": "SampleAudio",
                 "big": true,
                 "files": [
