@@ -357,7 +357,7 @@ class BuildEngine:
                 assert(parentThing != None)
                 newThing = BuildThing()
                 newThing.name = MakeThingName(BuildIndex.InstallBundlePack, pack.name)
-                newThing.absParentDir = runner.absGameRootDir
+                newThing.absParentDir = runner.absGameInstallDir
                 newThing.files = BuildFilesT()
                 newThing.parentThing = parentThing
 
@@ -643,7 +643,7 @@ class BuildEngine:
 
     @staticmethod
     def __CheckGameInstallFiles(installedFiles: list[str], runner: Runner) -> None:
-        search: str = os.path.join(runner.absGameRootDir, "**", "*")
+        search: str = os.path.join(runner.absGameInstallDir, "**", "*")
         allGameFiles: list[str] = glob(search, recursive=True)
         gameDataFilesFilter = filter(lambda file: util.HasAnyFileExt(file, runner.relevantGameDataFileTypes), allGameFiles)
         relevantGameDataFiles = list[str](gameDataFilesFilter)
@@ -657,7 +657,7 @@ class BuildEngine:
             if expectedGameDataFilesDict.get(file) == None:
                 unexpectedGameFiles.append(file)
 
-        print(f"Checking game install at {runner.absGameRootDir} ...")
+        print(f"Checking game install at {runner.absGameInstallDir} ...")
         if len(unexpectedGameFiles) > 0:
             warning(f"The installed Mod may not work correctly. {len(unexpectedGameFiles)} unexpected file(s) were found:")
             for file in unexpectedGameFiles:

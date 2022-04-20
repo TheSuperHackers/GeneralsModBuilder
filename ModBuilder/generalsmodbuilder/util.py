@@ -8,7 +8,7 @@ import pickle
 import shutil
 import errno
 from copy import copy
-from typing import Any, Callable
+from typing import Any, Callable, Union
 
 
 def RelAssert(condition: bool, message: str = "") -> None:
@@ -76,14 +76,15 @@ class JsonFile:
         RelAssertType(self.data, dict, "JsonFile.data")
 
 
-def GetKeyValueFromRegistry(pathStr: str, keyStr: str) -> str:
+def GetRegKeyValue(path, root=winreg.HKEY_LOCAL_MACHINE) -> Union[int, str, None]:
+    path, name = str.split(path, sep=':')
     try:
-        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, pathStr, 0, winreg.KEY_READ)
-        if key:
-            value = winreg.QueryValueEx(key, keyStr)
-            key.Close()
-            if value and len(value) > 0:
-                return value[0]
+        with winreg.OpenKey(root, path, 0, winreg.KEY_READ) as key:
+            valuePair = winreg.QueryValueEx(key, name)
+            if valuePair:
+                return valuePair[0]
+            else:
+                return None
     except OSError:
         return None
 

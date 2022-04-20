@@ -27,6 +27,7 @@ class Folders:
         util.RelAssert(util.IsValidPathName(self.absReleaseDir), f"Folders.absReleaseDir '{self.absReleaseDir}' is not a valid path name")
         util.RelAssert(util.IsValidPathName(self.absBuildDir), f"Folders.absBuildDir '{self.absBuildDir}' is not a valid path name")
 
+
 def MakeFoldersFromJsons(jsonFiles: list[JsonFile]) -> Folders:
     folders = Folders()
     folders.absReleaseUnpackedDir = None
