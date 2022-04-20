@@ -89,6 +89,25 @@ def GetRegKeyValue(path, root=winreg.HKEY_LOCAL_MACHINE) -> Union[int, str, None
         return None
 
 
+def SetRegKeyValue(path: str, value: Union[int, str], root=winreg.HKEY_LOCAL_MACHINE, regtype=None) -> bool:
+    try:
+        path, name = str.split(path, sep=':')
+        with winreg.OpenKey(root, path, 0, winreg.KEY_WRITE|winreg.KEY_READ) as key:
+            if regtype == None:
+                regtype = winreg.QueryValueEx(key, name)[1]
+            if regtype == None:
+                if isinstance(value, int):
+                    regtype = winreg.REG_DWORD
+                else:
+                    regtype = winreg.REG_SZ
+            if regtype == winreg.REG_SZ:
+                value = str(value)
+            winreg.SetValueEx(key, name, 0, regtype, value)
+            return True
+    except OSError:
+        return False
+
+
 def GetAbsFileDir(file: str) -> str:
     dir: str
     dir = os.path.dirname(file)

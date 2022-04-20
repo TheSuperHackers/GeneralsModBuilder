@@ -6,6 +6,7 @@
         "packs": [
             {
                 "install": true,
+                "setGameLanguageOnInstall": "English",
                 "name": "SampleProjectTGA256",
                 "itemNames": [
                     "SampleAudio",

@@ -118,11 +118,14 @@ class BuildEngine:
     setup: BuildSetup
     structure: BuildStructure
     installCopy: BuildCopy
+    installLanguagePicklePath: str
 
 
     def __init__(self):
         self.setup = None
         self.structure = None
+        self.installCopy = None
+        self.installLanguagePicklePath = None
 
 
     def Run(self, setup: BuildSetup) -> bool:
@@ -170,6 +173,8 @@ class BuildEngine:
 
         self.setup = None
         self.structure = None
+        self.installCopy = None
+        self.installLanguagePicklePath = None
 
         return success
 
@@ -226,8 +231,9 @@ class BuildEngine:
         tools: ToolsT = self.setup.tools
 
         options = BuildCopyOption.EnableBackup | BuildCopyOption.EnableSymlinks
-        self.installCopy = BuildCopy(tools=tools, options=options)
         self.structure = BuildStructure()
+        self.installCopy = BuildCopy(tools=tools, options=options)
+        self.installLanguagePicklePath = os.path.join(folders.absBuildDir, "GameLanguage.pickle")
 
         sent: bool = BuildEngine.__SendBundleEvents(bundles, BundleEventType.OnPreBuild)
 
@@ -360,6 +366,7 @@ class BuildEngine:
                 newThing.absParentDir = runner.absGameInstallDir
                 newThing.files = BuildFilesT()
                 newThing.parentThing = parentThing
+                newThing.setGameLanguageOnInstall = pack.setGameLanguageOnInstall
 
                 for parentFile in parentThing.files:
                     if util.HasAnyFileExt(parentFile.relTarget, runner.relevantGameDataFileTypes):
@@ -638,6 +645,11 @@ class BuildEngine:
         installedFiles: list[str] = BuildEngine.__GetAllTargetFilesFromThings(data.things)
         BuildEngine.__CheckGameInstallFiles(installedFiles, self.setup.runner)
 
+        thing: BuildThing
+        for thing in data.things.values():
+            if thing.setGameLanguageOnInstall:
+                BuildEngine.__SetGameLanguage(thing.setGameLanguageOnInstall, setup)
+
         return True
 
 
@@ -698,4 +710,37 @@ class BuildEngine:
 
         BuildEngine.__UncopyFilesOfThings(data.things, self.installCopy)
 
+        BuildEngine.__RestoreGameLanguage(self.setup)
+
         return True
+
+
+    @staticmethod
+    def __MakeLanguagePicklePath(folders: Folders) -> str:
+        return os.path.join(folders.absBuildDir, "GameLanguage.pickle")
+
+
+    @staticmethod
+    def __SetGameLanguage(language: str, setup: BuildSetup) -> None:
+        regKey: str = setup.runner.gameLanguageRegKey
+        curLanguage: str = util.GetRegKeyValue(regKey)
+
+        if language.lower() != curLanguage.lower():
+            picklePath: str = BuildEngine.__MakeLanguagePicklePath(setup.folders)
+
+            if not os.path.isfile(picklePath):
+                
+                util.SavePickle(picklePath, curLanguage)
+
+            util.SetRegKeyValue(regKey, language)
+
+
+    @staticmethod
+    def __RestoreGameLanguage(setup: BuildSetup) -> None:
+        picklePath: str = BuildEngine.__MakeLanguagePicklePath(setup.folders)
+
+        if os.path.isfile(picklePath):
+            language: str = util.LoadPickle(picklePath)
+            regKey: str = setup.runner.gameLanguageRegKey
+            util.SetRegKeyValue(regKey, language)
+            os.remove(picklePath)

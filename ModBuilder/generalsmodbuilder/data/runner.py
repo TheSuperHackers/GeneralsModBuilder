@@ -13,11 +13,13 @@ class Runner:
     gameExeArgs: ParamsT
     relevantGameDataFileTypes: list[str]
     absRegularGameDataFiles: list[str]
+    gameLanguageRegKey: str
 
     def __init__(self):
         self.gameExeArgs = ParamsT()
         self.relevantGameDataFileTypes = list[str]()
         self.absRegularGameDataFiles = list[str]()
+        self.gameLanguageRegKey = ""
 
     def AbsGameExeFile(self) -> str:
         return os.path.join(self.absGameInstallDir, self.relGameExeFile)
@@ -74,6 +76,7 @@ def MakeRunnerFromJsons(jsonFiles: list[JsonFile]) -> Runner:
             runner.gameExeArgs = util.GetSecondIfValid(runner.gameExeArgs, jRunner.get("gameExeArgs"))
             runner.relevantGameDataFileTypes = util.GetSecondIfValid(runner.relevantGameDataFileTypes, jRunner.get("relevantGameDataFileTypes"))
             runner.absRegularGameDataFiles = util.GetSecondIfValid(runner.absRegularGameDataFiles, jRunner.get("regularGameDataFiles"))
+            runner.gameLanguageRegKey = jRunner.get("gameLanguageRegKey")
 
             gameInstallDir: str = jRunner.get("gameInstallPath")
             gameInstallRegKey: str = jRunner.get("gameInstallRegKey")

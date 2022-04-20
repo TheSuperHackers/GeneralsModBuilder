@@ -66,11 +66,13 @@ class BuildThing:
     files: BuildFilesT
     parentThing: Any
     fileCounts: list[int]
+    setGameLanguageOnInstall: str
 
     def __init__(self):
         self.childThings = list()
         self.parentThing = None
         self.fileCounts = [0] * len(BuildFileStatus)
+        self.setGameLanguageOnInstall = None
 
     def GetFileCount(self, status: BuildFileStatus) -> int:
         return self.fileCounts[status.value]

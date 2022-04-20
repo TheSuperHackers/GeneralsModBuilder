@@ -171,12 +171,14 @@ class BundlePack:
     namePrefix: str
     nameSuffix: str
     install: bool
+    setGameLanguageOnInstall: str
     events: BundleEventsT
 
     def __init__(self):
         self.namePrefix = ""
         self.nameSuffix = ""
         self.install = False
+        self.setGameLanguageOnInstall = ""
         self.events = BundleEventsT()
 
     def VerifyTypes(self) -> None:
@@ -185,6 +187,7 @@ class BundlePack:
         util.RelAssertType(self.namePrefix, str, "BundlePack.namePrefix")
         util.RelAssertType(self.nameSuffix, str, "BundlePack.nameSuffix")
         util.RelAssertType(self.install, bool, "BundlePack.install")
+        util.RelAssertType(self.setGameLanguageOnInstall, str, "BundlePack.setGameLanguageOnInstall")
         util.RelAssertType(self.events, dict, "BundlePack.events")
         for itemName in self.itemNames:
             util.RelAssertType(itemName, str, "BundlePack.itemNames.value")
@@ -340,6 +343,7 @@ def __MakeBundlePackFromDict(jPack: dict, jsonDir: str) -> BundlePack:
     pack = BundlePack()
     pack.name = jPack.get("name")
     pack.install = util.GetSecondIfValid(pack.install, jPack.get("install"))
+    pack.setGameLanguageOnInstall = util.GetSecondIfValid(pack.setGameLanguageOnInstall, jPack.get("setGameLanguageOnInstall"))
     pack.itemNames = jPack.get("itemNames")
     pack.events = __MakeBundleEventsFromDict(jPack, jsonDir)
 
