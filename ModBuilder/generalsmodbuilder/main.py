@@ -93,10 +93,10 @@ def Main(args=None):
     configPaths.append(os.path.join(thisDir, "config", "DefaultTools.json"))
 
     # Add custom configurations last so readers can write over default configurations last.
-    if args.config:
-        configPaths.extend(args.config)
     if args.config_list:
         configPaths.extend(args.config_list)
+    if args.config:
+        configPaths.extend(args.config)
 
     for i in range(len(configPaths)):
         configPaths[i] = os.path.abspath(configPaths[i])
