@@ -22,6 +22,8 @@ class BundleEvent:
     kwargs: dict
 
     def __init__(self):
+        self.type = None
+        self.absScript = None
         self.funcName = "OnEvent"
         self.kwargs = dict()
 
@@ -57,7 +59,9 @@ class BundleFile:
     params: ParamsT
 
     def __init__(self):
-        pass
+        self.absSourceFile = None
+        self.relTargetFile = None
+        self.params = ParamsT()
 
     def VerifyTypes(self) -> None:
         util.RelAssertType(self.absSourceFile, str, "BundleFile.absSourceFile")
@@ -84,6 +88,8 @@ class BundleItem:
     events: BundleEventsT
 
     def __init__(self):
+        self.name = None
+        self.files = list[BundleFile]()
         self.namePrefix = ""
         self.nameSuffix = ""
         self.isBig = True
@@ -175,6 +181,8 @@ class BundlePack:
     events: BundleEventsT
 
     def __init__(self):
+        self.name = None
+        self.itemNames = list[str]()
         self.namePrefix = ""
         self.nameSuffix = ""
         self.install = False
@@ -214,7 +222,8 @@ class Bundles:
     packs: list[BundlePack]
 
     def __init__(self):
-        pass
+        self.items = list[BundleItem]()
+        self.packs = list[BundlePack]()
 
     def VerifyTypes(self) -> None:
         util.RelAssertType(self.items, list, "Bundles.items")
@@ -342,9 +351,9 @@ def __MakeBundleItemFromDict(jItem: dict, jsonDir: str) -> BundleItem:
 def __MakeBundlePackFromDict(jPack: dict, jsonDir: str) -> BundlePack:
     pack = BundlePack()
     pack.name = jPack.get("name")
+    pack.itemNames = jPack.get("itemNames")
     pack.install = util.GetSecondIfValid(pack.install, jPack.get("install"))
     pack.setGameLanguageOnInstall = util.GetSecondIfValid(pack.setGameLanguageOnInstall, jPack.get("setGameLanguageOnInstall"))
-    pack.itemNames = jPack.get("itemNames")
     pack.events = __MakeBundleEventsFromDict(jPack, jsonDir)
 
     return pack
@@ -352,8 +361,6 @@ def __MakeBundlePackFromDict(jPack: dict, jsonDir: str) -> BundlePack:
 
 def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> Bundles:
     bundles = Bundles()
-    bundles.items = list[BundleItem]()
-    bundles.packs = list[BundlePack]()
 
     for jsonFile in jsonFiles:
         jsonDir: str = util.GetAbsSmartFileDir(jsonFile.path)

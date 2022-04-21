@@ -10,7 +10,9 @@ class Folders:
     absBuildDir: str
 
     def __init__(self):
-        pass
+        self.absReleaseUnpackedDir = None
+        self.absReleaseDir = None
+        self.absBuildDir = None
 
     def Normalize(self) -> None:
         self.absReleaseUnpackedDir = util.NormalizePath(self.absReleaseUnpackedDir)
@@ -30,9 +32,6 @@ class Folders:
 
 def MakeFoldersFromJsons(jsonFiles: list[JsonFile]) -> Folders:
     folders = Folders()
-    folders.absReleaseUnpackedDir = None
-    folders.absReleaseDir = None
-    folders.absBuildDir = None
 
     for jsonFile in jsonFiles:
         jsonDir: str = util.GetAbsSmartFileDir(jsonFile.path)

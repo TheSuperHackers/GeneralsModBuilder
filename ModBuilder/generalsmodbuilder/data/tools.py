@@ -17,6 +17,8 @@ class ToolFile:
     runnable: bool
 
     def __init__(self):
+        self.url = None
+        self.absTarget = None
         self.md5 = ""
         self.sha256 = ""
         self.size = -1
@@ -89,6 +91,8 @@ class Tool:
     version: float
 
     def __init__(self):
+        self.name = None
+        self.files = list[ToolFile]()
         self.version = 0.0
 
     def Normalize(self) -> None:
@@ -149,7 +153,6 @@ def __MakeToolFileFromDict(jFile: dict, jsonDir: str) -> ToolFile:
 def __MakeToolFromDict(jTool: dict, jsonDir: str) -> Tool:
     tool = Tool()
     tool.name = jTool.get("name")
-    tool.files = list()
     tool.version = util.GetSecondIfValid(tool.version, jTool.get("version"))
 
     jFiles: dict = jTool.get("files")

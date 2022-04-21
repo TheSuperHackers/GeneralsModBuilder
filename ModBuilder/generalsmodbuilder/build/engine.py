@@ -23,7 +23,8 @@ class BuildFilePathInfo:
     md5: str
 
     def __init__(self):
-        pass
+        self.ownerThingName = None
+        self.md5 = None
 
 
 BuildFilePathInfosT = dict[str, BuildFilePathInfo]
@@ -80,6 +81,7 @@ class BuildIndexData:
     def __init__(self, index: BuildIndex):
         self.index = index
         self.things = BuildThingsT()
+        self.diff = None
 
 
 @dataclass(init=False)
@@ -122,6 +124,10 @@ class BuildEngine:
 
 
     def __init__(self):
+        self.__Reset()
+
+
+    def __Reset(self):
         self.setup = None
         self.structure = None
         self.installCopy = None
@@ -171,10 +177,7 @@ class BuildEngine:
         if success and self.setup.step & BuildStep.Uninstall:
             success &= self.__Uninstall()
 
-        self.setup = None
-        self.structure = None
-        self.installCopy = None
-        self.installLanguagePicklePath = None
+        self.__Reset()
 
         return success
 

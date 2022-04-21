@@ -16,6 +16,8 @@ class Runner:
     gameLanguageRegKey: str
 
     def __init__(self):
+        self.absGameInstallDir = None
+        self.relGameExeFile = None
         self.gameExeArgs = ParamsT()
         self.relevantGameDataFileTypes = list[str]()
         self.absRegularGameDataFiles = list[str]()
@@ -64,8 +66,6 @@ class Runner:
 
 def MakeRunnerFromJsons(jsonFiles: list[JsonFile]) -> Runner:
     runner = Runner()
-    runner.absGameInstallDir = None
-    runner.relGameExeFile = None
 
     for jsonFile in jsonFiles:
         jsonDir: str = util.GetAbsSmartFileDir(jsonFile.path)

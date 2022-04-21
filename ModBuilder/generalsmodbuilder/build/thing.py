@@ -24,6 +24,8 @@ class BuildFile:
     params: ParamsT
 
     def __init__(self):
+        self.relTarget = None
+        self.absSource = None
         self.targetStatus = BuildFileStatus.Unknown
         self.sourceStatus = BuildFileStatus.Unknown
         self.parentFile = None
@@ -69,7 +71,9 @@ class BuildThing:
     setGameLanguageOnInstall: str
 
     def __init__(self):
-        self.childThings = list()
+        self.name = None
+        self.absParentDir = None
+        self.files = None
         self.parentThing = None
         self.fileCounts = [0] * len(BuildFileStatus)
         self.setGameLanguageOnInstall = None
