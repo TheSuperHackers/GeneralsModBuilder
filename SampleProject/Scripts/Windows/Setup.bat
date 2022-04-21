@@ -7,8 +7,8 @@ set ModBuilderDir=%SetupDir%\.GeneralsModBuilder\v%ModBuilderVer%
 set ModBuilderExe=%ModBuilderDir%\generalsmodbuilder.exe
 set ModBuilderZip=%ModBuilderDir%\generalsmodbuilder.zip
 set ModBuilderZipUrl=https://github.com/TheSuperHackers/GeneralsTools/raw/main/Tools/generalsmodbuilder/v%ModBuilderVer%/generalsmodbuilder_v%ModBuilderVer%.zip
-set ModBuilderZipSha256=8d6338bfb41d7d4761c7c4bbac424bad7875a92a3af82492bf02b1d8ac036acc
-set ModBuilderZipSize=7885084
+set ModBuilderZipSha256=4381dc52af1d03ac239da01368be0e976527caffd5d2261b56eb80100e5cd9d1
+set ModBuilderZipSize=7884988
 
 set ConfigDir=%SetupDir%\..\..
 set ConfigFiles=^
