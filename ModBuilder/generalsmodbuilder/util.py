@@ -195,7 +195,7 @@ def DeleteFileOrPath(path: str) -> bool:
 
 
 def GetSecondIfValid(first: Any, second: Any) -> Any:
-    return second if second else first
+    return second if second != None else first
 
 
 def JoinPathIfValid(default: Any, *paths: str) -> Any:
