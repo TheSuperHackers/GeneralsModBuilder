@@ -25,7 +25,7 @@ class ToolFile:
         self.runnable = False
 
     def Normalize(self) -> None:
-        self.absTarget = util.NormalizePath(self.absTarget)
+        self.absTarget = os.path.normpath(self.absTarget)
 
     def VerifyTypes(self) -> None:
         util.RelAssertType(self.url, str, "ToolFile.url")

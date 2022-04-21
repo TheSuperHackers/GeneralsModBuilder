@@ -27,10 +27,10 @@ class Runner:
         return os.path.join(self.absGameInstallDir, self.relGameExeFile)
 
     def Normalize(self) -> None:
-        self.absGameInstallDir = util.NormalizePath(self.absGameInstallDir)
-        self.relGameExeFile = util.NormalizePath(self.relGameExeFile)
+        self.absGameInstallDir = os.path.normpath(self.absGameInstallDir)
+        self.relGameExeFile = os.path.normpath(self.relGameExeFile)
         for i in range(len(self.absRegularGameDataFiles)):
-            self.absRegularGameDataFiles[i] = util.NormalizePath(self.absRegularGameDataFiles[i])
+            self.absRegularGameDataFiles[i] = os.path.normpath(self.absRegularGameDataFiles[i])
 
     def VerifyTypes(self) -> None:
         util.RelAssertType(self.absGameInstallDir, str, "Runner.absGameRootDir")

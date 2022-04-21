@@ -46,7 +46,7 @@ class BundleEvent:
         util.RelAssert(len(self.funcName) > 0, f"BundleEvent.functionName cannot be empty")
 
     def Normalize(self) -> None:
-        self.absScript = util.NormalizePath(self.absScript)
+        self.absScript = os.path.normpath(self.absScript)
 
 
 BundleEventsT = dict[BundleEventType, BundleEvent]
@@ -74,8 +74,8 @@ class BundleFile:
         util.RelAssert(not os.path.isabs(self.relTargetFile), f"BundleFile.relTargetFile '{self.relTargetFile}' is not a relative path")
 
     def Normalize(self) -> None:
-        self.absSourceFile = util.NormalizePath(self.absSourceFile)
-        self.relTargetFile = util.NormalizePath(self.relTargetFile)
+        self.absSourceFile = os.path.normpath(self.absSourceFile)
+        self.relTargetFile = os.path.normpath(self.relTargetFile)
 
 
 @dataclass(init=False)

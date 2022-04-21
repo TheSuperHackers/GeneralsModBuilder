@@ -1,3 +1,4 @@
+import os.path
 import util
 from util import JsonFile
 from dataclasses import dataclass
@@ -15,9 +16,9 @@ class Folders:
         self.absBuildDir = None
 
     def Normalize(self) -> None:
-        self.absReleaseUnpackedDir = util.NormalizePath(self.absReleaseUnpackedDir)
-        self.absReleaseDir = util.NormalizePath(self.absReleaseDir)
-        self.absBuildDir = util.NormalizePath(self.absBuildDir)
+        self.absReleaseUnpackedDir = os.path.normpath(self.absReleaseUnpackedDir)
+        self.absReleaseDir = os.path.normpath(self.absReleaseDir)
+        self.absBuildDir = os.path.normpath(self.absBuildDir)
 
     def VerifyTypes(self) -> None:
         util.RelAssertType(self.absReleaseUnpackedDir, str, "Folders.absReleaseUnpackedDir")

@@ -205,16 +205,6 @@ def JoinPathIfValid(default: Any, *paths: str) -> Any:
     return os.path.join(*paths)
 
 
-def NormalizePath(path: str) -> str:
-    return os.path.normpath(path)
-
-
-def NormalizePaths(paths: list[str]) -> list[str]:
-    for i in range(len(paths)):
-        paths[i] = os.path.normpath(paths[i])
-    return paths
-
-
 def GetFileSize(path: str) -> str:
     return os.path.getsize(path)
 
