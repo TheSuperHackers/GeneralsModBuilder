@@ -50,6 +50,7 @@
             {
                 "name": "SampleLanguages",
                 "big": true,
+                "setGameLanguageOnInstall": "English",
                 "files": [
                     {
                         "parent": "GameFilesEdited",

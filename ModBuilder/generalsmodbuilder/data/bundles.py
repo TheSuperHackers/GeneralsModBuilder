@@ -85,6 +85,7 @@ class BundleItem:
     namePrefix: str
     nameSuffix: str
     isBig: bool
+    setGameLanguageOnInstall: str
     events: BundleEventsT
 
     def __init__(self):
@@ -93,6 +94,7 @@ class BundleItem:
         self.namePrefix = ""
         self.nameSuffix = ""
         self.isBig = True
+        self.setGameLanguageOnInstall = ""
         self.events = BundleEventsT()
 
     def VerifyTypes(self) -> None:
@@ -101,6 +103,7 @@ class BundleItem:
         util.RelAssertType(self.namePrefix, str, "BundleItem.namePrefix")
         util.RelAssertType(self.nameSuffix, str, "BundleItem.nameSuffix")
         util.RelAssertType(self.isBig, bool, "BundleItem.isBig")
+        util.RelAssertType(self.setGameLanguageOnInstall, str, "BundleItem.setGameLanguageOnInstall")
         util.RelAssertType(self.events, dict, "BundleItem.events")
         for file in self.files:
             util.RelAssertType(file, BundleFile, "BundleItem.files.value")
@@ -225,6 +228,36 @@ class Bundles:
         self.items = list[BundleItem]()
         self.packs = list[BundlePack]()
 
+    def FindItemByName(self, name: str) -> BundleItem:
+        item: BundleItem
+        for item in self.items:
+            if item.name == name:
+                return item
+        return None
+
+    def FindPackByName(self, name: str) -> BundlePack:
+        pack: BundlePack
+        for pack in self.packs:
+            if pack.name == name:
+                return pack
+        return None
+
+    def FindFirstGameLanguageForInstall(self, name: str) -> str:
+        item: BundleItem = self.FindItemByName(name)
+        if item != None:
+            return item.setGameLanguageOnInstall
+
+        pack: BundlePack = self.FindPackByName(name)
+        if pack != None:
+            itemName: str
+            for itemName in pack.itemNames:
+                item = self.FindItemByName(itemName)
+                assert(item != None)
+                if item.setGameLanguageOnInstall:
+                    return item.setGameLanguageOnInstall
+
+        return ""
+
     def VerifyTypes(self) -> None:
         util.RelAssertType(self.items, list, "Bundles.items")
         util.RelAssertType(self.packs, list, "Bundles.packs")
@@ -333,9 +366,9 @@ def __MakeBundleEventsFromDict(jThing: dict, jsonDir: str) -> BundleEventsT:
 
 def __MakeBundleItemFromDict(jItem: dict, jsonDir: str) -> BundleItem:
     item = BundleItem()
-    item.name = util.GetSecondIfValid("Undefined", jItem.get("name"))
-    item.isBig = util.GetSecondIfValid(False, jItem.get("big"))
-    item.files = list()
+    item.name = jItem.get("name")
+    item.isBig = util.GetSecondIfValid(item.isBig, jItem.get("big"))
+    item.setGameLanguageOnInstall = util.GetSecondIfValid(item.setGameLanguageOnInstall, jItem.get("setGameLanguageOnInstall"))
 
     jFiles = jItem.get("files")
     if jFiles:
