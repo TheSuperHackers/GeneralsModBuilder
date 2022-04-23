@@ -85,6 +85,7 @@ class BundleItem:
     namePrefix: str
     nameSuffix: str
     isBig: bool
+    bigSuffix: str
     setGameLanguageOnInstall: str
     events: BundleEventsT
 
@@ -94,6 +95,7 @@ class BundleItem:
         self.namePrefix = ""
         self.nameSuffix = ""
         self.isBig = True
+        self.bigSuffix = ""
         self.setGameLanguageOnInstall = ""
         self.events = BundleEventsT()
 
@@ -103,6 +105,7 @@ class BundleItem:
         util.RelAssertType(self.namePrefix, str, "BundleItem.namePrefix")
         util.RelAssertType(self.nameSuffix, str, "BundleItem.nameSuffix")
         util.RelAssertType(self.isBig, bool, "BundleItem.isBig")
+        util.RelAssertType(self.bigSuffix, str, "BundleItem.bigSuffix")
         util.RelAssertType(self.setGameLanguageOnInstall, str, "BundleItem.setGameLanguageOnInstall")
         util.RelAssertType(self.events, dict, "BundleItem.events")
         for file in self.files:
@@ -117,6 +120,7 @@ class BundleItem:
         util.RelAssert(util.IsValidPathName(self.name), f"BundleItem.name '{self.name}' has invalid name")
         util.RelAssert(not self.namePrefix or util.IsValidPathName(self.namePrefix), f"BundleItem.namePrefix '{self.namePrefix}' has invalid name")
         util.RelAssert(not self.nameSuffix or util.IsValidPathName(self.nameSuffix), f"BundleItem.nameSuffix '{self.nameSuffix}' has invalid name")
+        util.RelAssert(not self.bigSuffix or util.IsValidPathName(self.bigSuffix), f"BundleItem.bigSuffix '{self.bigSuffix}' has invalid name")
         for file in self.files:
             file.VerifyValues()
         for event in self.events.values():
@@ -370,6 +374,7 @@ def __MakeBundleItemFromDict(jItem: dict, jsonDir: str) -> BundleItem:
     item.namePrefix = jItem.get("namePrefix", item.namePrefix)
     item.nameSuffix = jItem.get("nameSuffix", item.nameSuffix)
     item.isBig = jItem.get("big", item.isBig)
+    item.bigSuffix = jItem.get("bigSuffix", item.bigSuffix)
     item.setGameLanguageOnInstall = jItem.get("setGameLanguageOnInstall", item.setGameLanguageOnInstall)
 
     jFiles = jItem.get("files")

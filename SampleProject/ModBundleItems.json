@@ -9,6 +9,7 @@
                 "namePrefix": "001_",
                 "nameSuffix": "",
                 "big": true,
+                "bigSuffix": ".bak",
                 "files": []
             },
             {

@@ -318,6 +318,9 @@ class BuildEngine:
             for itemName in pack.itemNames:
                 parentName: str = MakeThingName(BuildIndex.BigBundleItem, itemName)
                 parentThing: BuildThing = structure.FindAnyThing(parentName)
+                isBigFile: bool = parentThing != None
+                item: BundleItem = bundles.FindItemByName(itemName)
+
                 if parentThing == None:
                     parentName = MakeThingName(BuildIndex.RawBundleItem, itemName)
                     parentThing = structure.FindAnyThing(parentName)
@@ -330,6 +333,10 @@ class BuildEngine:
                     buildFile.absSource = parentFile.AbsTarget(parentThing.absParentDir)
                     buildFile.relTarget = parentFile.RelTarget()
                     buildFile.parentFile = parentFile
+
+                    if isBigFile:
+                        buildFile.relTarget += item.bigSuffix
+
                     newThing.files.append(buildFile)
 
             structure.AddThing(BuildIndex.RawBundlePack, newThing)
