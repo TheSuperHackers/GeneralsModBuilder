@@ -379,11 +379,12 @@ class BuildEngine:
                 newThing.setGameLanguageOnInstall = bundles.FindFirstGameLanguageForInstall(pack.name)
 
                 for parentFile in parentThing.files:
-                    if util.HasAnyFileExt(parentFile.relTarget, runner.relevantGameDataFileTypes):
-                        newFile = BuildFile()
-                        newFile.absSource = parentFile.AbsTarget(parentThing.absParentDir)
-                        newFile.relTarget = parentFile.relTarget
-                        newThing.files.append(newFile)
+                    # if util.HasAnyFileExt(parentFile.relTarget, runner.relevantGameDataFileTypes):
+                    #     continue
+                    newFile = BuildFile()
+                    newFile.absSource = parentFile.AbsTarget(parentThing.absParentDir)
+                    newFile.relTarget = parentFile.relTarget
+                    newThing.files.append(newFile)
 
                 structure.AddThing(BuildIndex.InstallBundlePack, newThing)
 
