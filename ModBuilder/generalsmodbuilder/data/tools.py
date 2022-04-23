@@ -143,17 +143,17 @@ def __MakeToolFileFromDict(jFile: dict, jsonDir: str) -> ToolFile:
     toolFile = ToolFile()
     toolFile.url = jFile.get("url")
     toolFile.absTarget = util.JoinPathIfValid(None, jsonDir, jFile.get("target"))
-    toolFile.md5 = util.GetSecondIfValid(toolFile.md5, jFile.get("md5"))
-    toolFile.sha256 = util.GetSecondIfValid(toolFile.sha256, jFile.get("sha256"))
-    toolFile.size = util.GetSecondIfValid(toolFile.size, jFile.get("size"))
-    toolFile.runnable = util.GetSecondIfValid(toolFile.runnable, jFile.get("runnable"))
+    toolFile.md5 = jFile.get("md5", toolFile.md5)
+    toolFile.sha256 = jFile.get("sha256", toolFile.sha256)
+    toolFile.size = jFile.get("size", toolFile.size)
+    toolFile.runnable = jFile.get("runnable", toolFile.runnable)
     return toolFile
 
 
 def __MakeToolFromDict(jTool: dict, jsonDir: str) -> Tool:
     tool = Tool()
     tool.name = jTool.get("name")
-    tool.version = util.GetSecondIfValid(tool.version, jTool.get("version"))
+    tool.version = jTool.get("version", tool.version)
 
     jFiles: dict = jTool.get("files")
     if jFiles:

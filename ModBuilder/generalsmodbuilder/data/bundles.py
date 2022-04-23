@@ -320,7 +320,7 @@ def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
     if jSource:
         bundleFile = BundleFile()
         bundleFile.absSourceFile = util.JoinPathIfValid(None, parent, jSource)
-        bundleFile.relTargetFile = util.GetSecondIfValid(jSource, jFile.get("target"))
+        bundleFile.relTargetFile = jFile.get("target", jSource)
         bundleFile.params = params
         files.append(bundleFile)
 
@@ -339,7 +339,7 @@ def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
             jElementSource: str = jElement.get("source")
             bundleFile = BundleFile()
             bundleFile.absSourceFile = util.JoinPathIfValid(None, parent, jElementSource)
-            bundleFile.relTargetFile = util.GetSecondIfValid(jElementSource, jElement.get("target"))
+            bundleFile.relTargetFile = jElement.get("target", jElementSource)
             bundleFile.params = params
             files.append(bundleFile)
 
@@ -357,8 +357,8 @@ def __MakeBundleEventsFromDict(jThing: dict, jsonDir: str) -> BundleEventsT:
             event = BundleEvent()
             event.type = eventType
             event.absScript = util.JoinPathIfValid(None, jsonDir, jEvent.get("script"))
-            event.funcName = util.GetSecondIfValid(event.funcName, jEvent.get("function"))
-            event.kwargs = util.GetSecondIfValid(event.kwargs, jEvent.get("kwargs"))
+            event.funcName = jEvent.get("function", event.funcName)
+            event.kwargs = jEvent.get("kwargs", event.kwargs)
             events[event.type] = event
 
     return events
@@ -367,8 +367,8 @@ def __MakeBundleEventsFromDict(jThing: dict, jsonDir: str) -> BundleEventsT:
 def __MakeBundleItemFromDict(jItem: dict, jsonDir: str) -> BundleItem:
     item = BundleItem()
     item.name = jItem.get("name")
-    item.isBig = util.GetSecondIfValid(item.isBig, jItem.get("big"))
-    item.setGameLanguageOnInstall = util.GetSecondIfValid(item.setGameLanguageOnInstall, jItem.get("setGameLanguageOnInstall"))
+    item.isBig = jItem.get("big", item.isBig)
+    item.setGameLanguageOnInstall = jItem.get("setGameLanguageOnInstall", item.setGameLanguageOnInstall)
 
     jFiles = jItem.get("files")
     if jFiles:
@@ -385,8 +385,8 @@ def __MakeBundlePackFromDict(jPack: dict, jsonDir: str) -> BundlePack:
     pack = BundlePack()
     pack.name = jPack.get("name")
     pack.itemNames = jPack.get("itemNames")
-    pack.install = util.GetSecondIfValid(pack.install, jPack.get("install"))
-    pack.setGameLanguageOnInstall = util.GetSecondIfValid(pack.setGameLanguageOnInstall, jPack.get("setGameLanguageOnInstall"))
+    pack.install = jPack.get("install", pack.install)
+    pack.setGameLanguageOnInstall = jPack.get("setGameLanguageOnInstall", pack.setGameLanguageOnInstall)
     pack.events = __MakeBundleEventsFromDict(jPack, jsonDir)
 
     return pack

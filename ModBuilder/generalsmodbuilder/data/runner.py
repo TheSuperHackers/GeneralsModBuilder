@@ -72,11 +72,11 @@ def MakeRunnerFromJsons(jsonFiles: list[JsonFile]) -> Runner:
         jRunner: dict = jsonFile.data.get("runner")
 
         if jRunner:
-            runner.relGameExeFile = util.GetSecondIfValid(runner.relGameExeFile, jRunner.get("gameExeFile"))
-            runner.gameExeArgs = util.GetSecondIfValid(runner.gameExeArgs, jRunner.get("gameExeArgs"))
-            runner.relevantGameDataFileTypes = util.GetSecondIfValid(runner.relevantGameDataFileTypes, jRunner.get("relevantGameDataFileTypes"))
-            runner.absRegularGameDataFiles = util.GetSecondIfValid(runner.absRegularGameDataFiles, jRunner.get("regularGameDataFiles"))
-            runner.gameLanguageRegKey = util.GetSecondIfValid(runner.gameLanguageRegKey, jRunner.get("gameLanguageRegKey"))
+            runner.relGameExeFile = jRunner.get("gameExeFile", runner.relGameExeFile)
+            runner.gameExeArgs = jRunner.get("gameExeArgs", runner.gameExeArgs)
+            runner.relevantGameDataFileTypes = jRunner.get("relevantGameDataFileTypes", runner.relevantGameDataFileTypes)
+            runner.absRegularGameDataFiles = jRunner.get("regularGameDataFiles", runner.absRegularGameDataFiles)
+            runner.gameLanguageRegKey = jRunner.get("gameLanguageRegKey", runner.gameLanguageRegKey)
 
             gameInstallDir: str = jRunner.get("gameInstallPath")
             gameInstallRegKey: str = jRunner.get("gameInstallRegKey")
