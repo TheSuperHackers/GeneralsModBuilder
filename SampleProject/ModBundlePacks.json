@@ -10,6 +10,7 @@
                 "name": "SampleProjectTGA256",
                 "itemNames": [
                     "SampleAudio",
+                    "SampleEmpty",
                     "SampleINI",
                     "SampleLanguages",
                     "SampleTexturesTGA256",

@@ -367,6 +367,8 @@ def __MakeBundleEventsFromDict(jThing: dict, jsonDir: str) -> BundleEventsT:
 def __MakeBundleItemFromDict(jItem: dict, jsonDir: str) -> BundleItem:
     item = BundleItem()
     item.name = jItem.get("name")
+    item.namePrefix = jItem.get("namePrefix", item.namePrefix)
+    item.nameSuffix = jItem.get("nameSuffix", item.nameSuffix)
     item.isBig = jItem.get("big", item.isBig)
     item.setGameLanguageOnInstall = jItem.get("setGameLanguageOnInstall", item.setGameLanguageOnInstall)
 
@@ -384,6 +386,8 @@ def __MakeBundleItemFromDict(jItem: dict, jsonDir: str) -> BundleItem:
 def __MakeBundlePackFromDict(jPack: dict, jsonDir: str) -> BundlePack:
     pack = BundlePack()
     pack.name = jPack.get("name")
+    pack.namePrefix = jPack.get("namePrefix", pack.namePrefix)
+    pack.nameSuffix = jPack.get("nameSuffix", pack.nameSuffix)
     pack.itemNames = jPack.get("itemNames")
     pack.install = jPack.get("install", pack.install)
     pack.setGameLanguageOnInstall = jPack.get("setGameLanguageOnInstall", pack.setGameLanguageOnInstall)
@@ -408,8 +412,12 @@ def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> Bundles:
                 jItem: dict
                 for jItem in jItems:
                     bundleItem: BundleItem = __MakeBundleItemFromDict(jItem, jsonDir)
-                    bundleItem.namePrefix = util.GetSecondIfValid(bundleItem.namePrefix, jItemsPrefix)
-                    bundleItem.nameSuffix = util.GetSecondIfValid(bundleItem.nameSuffix, jItemsSuffix)
+
+                    if not bundleItem.namePrefix and jItemsPrefix != None:
+                        bundleItem.namePrefix = jItemsPrefix
+                    if not bundleItem.nameSuffix and jItemsSuffix != None:
+                        bundleItem.nameSuffix = jItemsSuffix
+
                     bundles.items.append(bundleItem)
 
             jPacksPrefix: str = jBundles.get("packsPrefix")
@@ -419,8 +427,12 @@ def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> Bundles:
                 jPack: dict
                 for jPack in jPacks:
                     bundlePack: BundlePack = __MakeBundlePackFromDict(jPack, jsonDir)
-                    bundlePack.namePrefix = util.GetSecondIfValid(bundlePack.namePrefix, jPacksPrefix)
-                    bundlePack.nameSuffix = util.GetSecondIfValid(bundlePack.nameSuffix, jPacksSuffix)
+
+                    if not bundlePack.namePrefix and jPacksPrefix != None:
+                        bundlePack.namePrefix = jPacksPrefix
+                    if not bundlePack.nameSuffix and jPacksSuffix != None:
+                        bundlePack.nameSuffix = jPacksSuffix
+
                     bundles.packs.append(bundlePack)
 
     bundles.VerifyTypes()

@@ -194,10 +194,6 @@ def DeleteFileOrPath(path: str) -> bool:
         return False
 
 
-def GetSecondIfValid(first: Any, second: Any) -> Any:
-    return second if second != None else first
-
-
 def JoinPathIfValid(default: Any, *paths: str) -> Any:
     for path in paths:
         if not path or not isinstance(path, str):
