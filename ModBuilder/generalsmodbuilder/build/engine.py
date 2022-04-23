@@ -733,6 +733,8 @@ class BuildEngine:
 
     @staticmethod
     def __SetGameLanguage(language: str, setup: BuildSetup) -> None:
+        print(f"Set Game Language to '{language}' ...")
+
         regKey: str = setup.runner.gameLanguageRegKey
         curLanguage: str = util.GetRegKeyValue(regKey)
 
@@ -748,6 +750,8 @@ class BuildEngine:
 
     @staticmethod
     def __RestoreGameLanguage(setup: BuildSetup) -> None:
+        print(f"Restore Game Language ...")
+
         picklePath: str = BuildEngine.__MakeLanguagePicklePath(setup.folders)
 
         if os.path.isfile(picklePath):

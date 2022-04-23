@@ -82,6 +82,7 @@ def GetRegKeyValue(path, root=winreg.HKEY_LOCAL_MACHINE) -> Union[int, str, None
         with winreg.OpenKey(root, path, 0, winreg.KEY_READ) as key:
             valuePair = winreg.QueryValueEx(key, name)
             if valuePair:
+                print(f"Get registry key {path} : {name} as '{valuePair[0]}'")
                 return valuePair[0]
             else:
                 return None
@@ -103,6 +104,7 @@ def SetRegKeyValue(path: str, value: Union[int, str], root=winreg.HKEY_LOCAL_MAC
             if regtype == winreg.REG_SZ:
                 value = str(value)
             winreg.SetValueEx(key, name, 0, regtype, value)
+            print(f"Set registry key {path} : {name} to '{value}'")
             return True
     except OSError:
         return False
