@@ -3,11 +3,6 @@
 def OnEvent(**kwargs) -> None:
     print("OnPreBuildPack.py called ...")
 
-    if False:
-        bundlePack = kwargs.get("BundlePack")
-        if bundlePack != None:
-            print(bundlePack)
+    bundlePack = kwargs.get("_bundlePack")
 
-        info = kwargs.get("Info")
-        if info != None:
-            print(info)
+    assert(bundlePack != None, "_bundlePack kwargs not found")

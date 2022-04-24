@@ -199,7 +199,7 @@ class BuildEngine:
         return True
 
 
-    def __SendBundleEvents(bundles: Bundles, eventType: BundleEventType):
+    def __SendBundleEvents(bundles: Bundles, folders: Folders, eventType: BundleEventType):
         sent: bool = False
         item: BundleItem
         pack: BundlePack
@@ -208,7 +208,10 @@ class BuildEngine:
             event: BundleEvent = item.events.get(eventType)
             if event != None:
                 kwargs = dict()
-                kwargs["BundleItem"] = item
+                kwargs["_bundleItem"] = item
+                kwargs["_absBuildDir"] = folders.absBuildDir
+                kwargs["_absReleaseDir"] = folders.absReleaseDir
+                kwargs["_absReleaseUnpackedDir"] = folders.absReleaseUnpackedDir
                 sent |= BuildEngine.__CallScript(event, kwargs)
                 item.VerifyTypes()
                 item.Normalize()
@@ -217,7 +220,10 @@ class BuildEngine:
             event: BundleEvent = pack.events.get(eventType)
             if event != None:
                 kwargs = dict()
-                kwargs["BundlePack"] = pack
+                kwargs["_bundlePack"] = pack
+                kwargs["_absBuildDir"] = folders.absBuildDir
+                kwargs["_absReleaseDir"] = folders.absReleaseDir
+                kwargs["_absReleaseUnpackedDir"] = folders.absReleaseUnpackedDir
                 sent |= BuildEngine.__CallScript(event, kwargs)
                 pack.VerifyTypes()
                 pack.Normalize()
@@ -238,7 +244,7 @@ class BuildEngine:
         self.installCopy = BuildCopy(tools=tools, options=options)
         self.installLanguagePicklePath = os.path.join(folders.absBuildDir, "GameLanguage.pickle")
 
-        sent: bool = BuildEngine.__SendBundleEvents(bundles, BundleEventType.OnPreBuild)
+        sent: bool = BuildEngine.__SendBundleEvents(bundles, folders, BundleEventType.OnPreBuild)
 
         if sent:
             bundles.VerifyValues()
