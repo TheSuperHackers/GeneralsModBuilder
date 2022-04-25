@@ -106,13 +106,18 @@
                             {
                                 "source": "Art/*.psd",
                                 "target": "Art/*.dds"
+                            },
+                            {
+                                "source": "Art/*.tga",
+                                "target": "Art/*.dds"
                             }
                         ],
                         "params": {
-                            "-rescale": [
-                                512,
-                                512
+                            "rescale": [
+                                2.0,
+                                2.0
                             ],
+                            "resampling": "BOX",
                             "-quality": 255,
                             "-mipmode": "None"
                         }

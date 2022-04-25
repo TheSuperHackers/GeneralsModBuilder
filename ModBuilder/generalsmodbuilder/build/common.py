@@ -1,9 +1,22 @@
 from data.common import ParamT, ParamsT
 
 
-def ParamsToArgs(params: ParamsT) -> list[str]:
+def ParamsToArgs(params: ParamsT, includeRegex: str = None, excludeRegex: str = None) -> list[str]:
+    from re import search, Match
     args = list()
+
     for key,value in params.items():
+
+        if includeRegex:
+            reKey: Match = search(includeRegex, key)
+            if reKey == None:
+                continue
+
+        if excludeRegex:
+            reKey: Match = search(includeRegex, key)
+            if reKey != None:
+                continue
+
         __AppendParamToArgs(args, key)
 
         if isinstance(value, list):

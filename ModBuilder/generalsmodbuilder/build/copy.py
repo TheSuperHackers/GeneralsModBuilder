@@ -1,11 +1,15 @@
 import os
 import subprocess
 import shutil
-import sys
 import util
 import enum
 from enum import Enum, Flag
 from typing import Callable
+from numpy import ndarray, uint8
+from psd_tools import PSDImage
+from PIL.Image import Image as PILImage
+from PIL.Image import Resampling
+from PIL import Image
 from dataclasses import dataclass, field
 from data.bundles import ParamsT
 from data.tools import ToolsT
@@ -279,66 +283,131 @@ class BuildCopy:
 
 
     def __CopyToBMP(self, source: str, target: str, params: ParamsT) -> bool:
-        exec: str = self.__GetToolExePath("crunch")
-
-        argsRun: list[str] = [exec,
-            "-file", source,
-            "-out", target,
-            "-fileformat", "bmp"]
-
-        argsRun.extend(ParamsToArgs(params))
-
-        subprocess.run(args=argsRun, check=True)
-
-        BuildCopy.__PrintMakeResult(source, target)
-        return True
+        return BuildCopy.__CopyToImage(source, target, params)
 
 
     def __CopyToTGA(self, source: str, target: str, params: ParamsT) -> bool:
-        hasAlpha: bool = self.__HasAlphaChannel(source)
+        return BuildCopy.__CopyToImage(source, target, params)
 
-        exec: str = self.__GetToolExePath("crunch")
-        args: list[str] = [exec,
-            "-file", source,
-            "-out", target,
-            "-fileformat", "tga"]
 
-        args.extend(ParamsToArgs(params))
-        args.append("-A8R8G8B8" if hasAlpha else "-R8G8B8")
+    @staticmethod
+    def __CopyToImage(source: str, target: str, params: ParamsT) -> bool:
+        success: bool = False
 
-        subprocess.run(args=args, check=True)
+        img: PILImage = None
 
-        BuildCopy.__PrintMakeResult(source, target)
-        return True
+        if util.HasFileExt(source, "psd"):
+            psd: PSDImage = PSDImage.open(fp=source)
+            chf: ndarray = psd.numpy()
+            ch8: uint8 = uint8(chf * 255)
+            img = Image.fromarray(obj=ch8)
+
+        elif util.HasFileExt(source, ["bmp", "dds", "tga"]):
+            img: PILImage = Image.open(fp=source)
+
+        if img != None:
+            img = BuildCopy.__ResizeImageWithParams(img, params)
+            img.save(target)
+            BuildCopy.__PrintMakeResult(source, target)
+            success = True
+
+        return success
 
 
     def __CopyToDDS(self, source: str, target: str, params: ParamsT) -> bool:
-        hasAlpha: bool = self.__HasAlphaChannel(source)
+        tmpSource: str = source
+
+        if util.HasFileExt(source, "psd"):
+            # Crunch does not handle large PSD files well.
+            # 1. With a texture of size 4096x1024 it discards the Alpha Channel.
+            # 2. When halving source image resolution it introduces unnecessary visual glitches.
+            # Therefore, PSD or scaled texture is converted to TGA first, and then passed to crunch tool afterwards.
+            tmpSource = target + ".tga"
+            copyOk: bool = self.__CopyToTGA(source, tmpSource, params)
+            assert copyOk == True
+
+        hasAlpha: bool = BuildCopy.__HasAlphaChannel(tmpSource)
 
         exec: str = self.__GetToolExePath("crunch")
         args: list[str] = [exec,
-            "-file", source,
+            "-file", tmpSource,
             "-out", target,
             "-fileformat", "dds"]
 
-        args.extend(ParamsToArgs(params))
+        args.extend(ParamsToArgs(params, includeRegex="^-"))
         args.append("-DXT5" if hasAlpha else "-DXT1")
 
         subprocess.run(args=args, check=True)
 
-        BuildCopy.__PrintMakeResult(source, target)
+        if tmpSource != source:
+            if os.path.isfile(tmpSource):
+                os.remove(tmpSource)
+
+        BuildCopy.__PrintMakeResult(tmpSource, target)
         return True
 
 
-    def __HasAlphaChannel(self, source: str) -> bool:
-        exec: str = self.__GetToolExePath("crunch")
-        args: list[str] = [exec, "-file", source, "-info"]
-        outputBytes: bytes = subprocess.run(args=args, check=True, capture_output=True).stdout
-        outputStr: str = outputBytes.decode(sys.getdefaultencoding())
-        upper: str = outputStr.upper()
+    @staticmethod
+    def __ResizeImageWithParams(img: PILImage, params: ParamsT) -> PILImage:
+        size: tuple[int, int] = img.size
+
+        # Resize, for example 512 512 to 1024 1024
+
+        resize: list[int, int] = params.get("resize")
+        if isinstance(resize, list):
+            if len(resize) == 1:
+                size = (int(resize[0]), int(resize[0]))
+            elif len(resize) == 2:
+                size = (int(resize[0]), int(resize[1]))
+        elif isinstance(resize, (float, int)):
+            size = (int(resize), int(resize))
+
+        # Rescale, for example 512*2 512*2
+
+        rescale: list[float, float] = params.get("rescale")
+        if isinstance(rescale, list):
+            if len(rescale) == 1:
+                size = (int(rescale[0] * size[0]), int(rescale[0] * size[1]))
+            elif len(rescale) == 2:
+                size = (int(rescale[0] * size[0]), int(rescale[1] * size[1]))
+        elif isinstance(rescale, (float, int)):
+            size = (int(rescale * size[0]), int(rescale * size[1]))
+
+        # Resampling mode. Options:
+        # NEAREST
+        # BOX
+        # BILINEAR
+        # HAMMING
+        # BICUBIC
+        # LANCZOS
+
+        resample = Resampling.BILINEAR
+        resampling: str = params.get("resampling")
+        if isinstance(resampling, str):
+            resampling = resampling.lower()
+            for option in Resampling:
+                if option.name.lower() == resampling:
+                    resample = option
+                    break
+
+        if size != img.size:
+            img = img.resize(size=size, resample=resample)
+
+        return img
+
+
+    @staticmethod
+    def __HasAlphaChannel(source: str) -> bool:
         hasAlpha: bool = False
-        if ("FORMAT: A8L8" in upper) or ("FORMAT: A8R8G8B8" in upper):
-            hasAlpha = True
+
+        if util.HasFileExt(source, "psd"):
+            psd: PSDImage = PSDImage.open(fp=source)
+            hasAlpha = psd.channels > 3
+
+        elif util.HasAnyFileExt(source, ["dds", "tga"]):
+            img: PILImage = Image.open(fp=source)
+            hasAlpha = img.mode == "RGBA"
+
         return hasAlpha
 
 
