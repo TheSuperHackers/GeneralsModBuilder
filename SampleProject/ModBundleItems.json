@@ -86,13 +86,18 @@
                 "files": [
                     {
                         "parent": "GameFilesEdited",
-                        "source": "Art/TextureWithAlpha.psd",
-                        "target": "Art/TextureWithAlpha.tga"
+                        "source": "Art/RGB_PSD_WithAlphaChannel.psd",
+                        "target": "Art/RGB_PSD_WithAlphaChannel.tga"
                     },
                     {
                         "parent": "GameFilesEdited",
-                        "source": "Art/TextureWithoutAlpha.psd",
-                        "target": "Art/TextureWithoutAlpha.tga"
+                        "source": "Art/RGB_PSD_WithAlphaLayer.psd",
+                        "target": "Art/RGB_PSD_WithAlphaLayer.tga"
+                    },
+                    {
+                        "parent": "GameFilesEdited",
+                        "source": "Art/RGB_PSD_WithoutAlpha.psd",
+                        "target": "Art/RGB_PSD_WithoutAlpha.tga"
                     }
                 ]
             },
@@ -110,6 +115,10 @@
                             {
                                 "source": "Art/*.tga",
                                 "target": "Art/*.dds"
+                            },
+                            {
+                                "source": "Art/*.tga",
+                                "target": "Art/*.bmp"
                             }
                         ],
                         "params": {
