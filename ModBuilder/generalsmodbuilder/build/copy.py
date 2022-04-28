@@ -3,13 +3,13 @@ import subprocess
 import shutil
 import util
 import enum
+import PIL.Image
 from enum import Enum, Flag
 from typing import Callable
-from numpy import ndarray, uint8
 from psd_tools import PSDImage
+from psd_tools.constants import ColorMode as PSDColorMode
 from PIL.Image import Image as PILImage
 from PIL.Image import Resampling
-from PIL import Image
 from dataclasses import dataclass, field
 from data.bundles import ParamsT
 from data.tools import ToolsT
@@ -298,12 +298,23 @@ class BuildCopy:
 
         if util.HasFileExt(source, "psd"):
             psd: PSDImage = PSDImage.open(fp=source)
-            chf: ndarray = psd.numpy()
-            ch8: uint8 = uint8(chf * 255)
-            img = Image.fromarray(obj=ch8)
 
-        elif util.HasFileExt(source, ["bmp", "dds", "tga"]):
-            img: PILImage = Image.open(fp=source)
+            if psd.color_mode == PSDColorMode.RGB:
+                img = psd.composite(color=0.0, alpha=1.0)
+
+                if psd.channels == 4 and img.mode != "RGBA":
+                    # Images with alpha layers will have alpha channel built correctly, but
+                    # images with alpha channels have their alpha channel dropped in the composite step above.
+                    # Rebuild image manually from all 4 channels.
+                    r: PILImage = psd.topil(channel=0)
+                    g: PILImage = psd.topil(channel=1)
+                    b: PILImage = psd.topil(channel=2)
+                    a: PILImage = psd.topil(channel=3)
+                    img = PIL.Image.merge("RGBA", (r, g, b, a))
+            else:
+                util.RelAssert(f"Color mode '{psd.color_mode}' of image '{source}' is not supported.")
+        else:
+            img: PILImage = PIL.Image.open(fp=source)
 
         if img != None:
             img = BuildCopy.__ResizeImageWithParams(img, params)
@@ -405,7 +416,7 @@ class BuildCopy:
             hasAlpha = psd.channels > 3
 
         elif util.HasAnyFileExt(source, ["dds", "tga"]):
-            img: PILImage = Image.open(fp=source)
+            img: PILImage = PIL.Image.open(fp=source)
             hasAlpha = img.mode == "RGBA"
 
         return hasAlpha
