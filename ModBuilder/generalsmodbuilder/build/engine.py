@@ -1,20 +1,20 @@
 import importlib
 import subprocess
 import sys
-import util
 import os
 import enum
 from dataclasses import dataclass
 from logging import warning
 from glob import glob
-from build.common import ParamsToArgs
-from build.copy import BuildCopy, BuildCopyOption
-from build.thing import BuildFile, BuildFileStatus, BuildThing, BuildFilesT, BuildThingsT
-from build.setup import BuildSetup, BuildStep
-from data.bundles import Bundles, BundlePack, BundleItem, BundleFile, BundleEvent, BundleEventType
-from data.folders import Folders
-from data.runner import Runner
-from data.tools import ToolsT
+from generalsmodbuilder.build.common import ParamsToArgs
+from generalsmodbuilder.build.copy import BuildCopy, BuildCopyOption
+from generalsmodbuilder.build.thing import BuildFile, BuildFileStatus, BuildThing, BuildFilesT, BuildThingsT
+from generalsmodbuilder.build.setup import BuildSetup, BuildStep
+from generalsmodbuilder.data.bundles import Bundles, BundlePack, BundleItem, BundleFile, BundleEvent, BundleEventType
+from generalsmodbuilder.data.folders import Folders
+from generalsmodbuilder.data.runner import Runner
+from generalsmodbuilder.data.tools import ToolsT
+from generalsmodbuilder import util
 
 
 @dataclass(init=False)
@@ -748,7 +748,7 @@ class BuildEngine:
             picklePath: str = BuildEngine.__MakeLanguagePicklePath(setup.folders)
 
             if not os.path.isfile(picklePath):
-                
+
                 util.SavePickle(picklePath, curLanguage)
 
             util.SetRegKeyValue(regKey, language)

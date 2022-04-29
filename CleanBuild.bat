@@ -2,7 +2,6 @@ set ThisDir=%~dp0.
 
 del "%ThisDir%\ModBuilder\MANIFEST"
 rd /s /q "%ThisDir%\ModBuilder\.build"
-rd /s /q "%ThisDir%\ModBuilder\.dist"
 rd /s /q "%ThisDir%\ModBuilder\.pyinstaller"
 rd /s /q "%ThisDir%\ModBuilder\.release"
 rd /s /q "%ThisDir%\ModBuilder\__pycache__"

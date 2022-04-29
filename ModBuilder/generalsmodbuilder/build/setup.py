@@ -1,10 +1,10 @@
-import util
 import enum
 from dataclasses import dataclass
-from data.bundles import Bundles
-from data.folders import Folders
-from data.runner import Runner
-from data.tools import Tool, ToolsT
+from generalsmodbuilder.data.bundles import Bundles
+from generalsmodbuilder.data.folders import Folders
+from generalsmodbuilder.data.runner import Runner
+from generalsmodbuilder.data.tools import Tool, ToolsT
+from generalsmodbuilder import util
 
 
 class BuildStep(enum.Flag):

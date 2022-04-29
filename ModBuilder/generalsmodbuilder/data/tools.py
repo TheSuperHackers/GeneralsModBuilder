@@ -1,10 +1,10 @@
 import os.path
-import util
 import urllib.request
 import http.client
-from util import JsonFile
 from logging import warning
 from dataclasses import dataclass
+from generalsmodbuilder.util import JsonFile
+from generalsmodbuilder import util
 
 
 @dataclass(init=False)

@@ -1,19 +1,15 @@
-import argparse
-import util
 import os
-import data.folders
-import data.runner
-import data.bundles
-import data.tools
-from build.engine import BuildEngine
-from build.setup import BuildStep
-from build.setup import BuildSetup
-from data.bundles import Bundles
-from data.folders import Folders
-from data.runner import Runner
-from data.tools import ToolsT
-from util import JsonFile
-from __version__ import __version__
+from argparse import ArgumentParser
+from generalsmodbuilder.build.engine import BuildEngine
+from generalsmodbuilder.build.setup import BuildStep
+from generalsmodbuilder.build.setup import BuildSetup
+from generalsmodbuilder.data.bundles import Bundles, MakeBundlesFromJsons
+from generalsmodbuilder.data.folders import Folders, MakeFoldersFromJsons
+from generalsmodbuilder.data.runner import Runner, MakeRunnerFromJsons
+from generalsmodbuilder.data.tools import ToolsT, MakeToolsFromJsons
+from generalsmodbuilder.util import JsonFile
+from generalsmodbuilder.__version__ import __version__
+from generalsmodbuilder import util
 
 
 def __CreateJsonFiles(configPaths: list[str]) -> list[JsonFile]:
@@ -52,10 +48,10 @@ def RunWithConfig(configPaths: list[str],
     jsonFiles: list[JsonFile] = __CreateJsonFiles(configPaths)
     buildStep: BuildStep = __CreateBuildStep(build, release, install, uninstall, run)
 
-    folders: Folders = data.folders.MakeFoldersFromJsons(jsonFiles)
-    runner: Runner = data.runner.MakeRunnerFromJsons(jsonFiles)
-    bundles: Bundles = data.bundles.MakeBundlesFromJsons(jsonFiles)
-    tools: ToolsT = data.tools.MakeToolsFromJsons(jsonFiles)
+    folders: Folders = MakeFoldersFromJsons(jsonFiles)
+    runner: Runner = MakeRunnerFromJsons(jsonFiles)
+    bundles: Bundles = MakeBundlesFromJsons(jsonFiles)
+    tools: ToolsT = MakeToolsFromJsons(jsonFiles)
 
     setup = BuildSetup(
         step=buildStep,
@@ -72,7 +68,7 @@ def RunWithConfig(configPaths: list[str],
 def Main(args=None):
     print(f"Generals Mod Builder v{__version__} by The Super Hackers")
 
-    parser = argparse.ArgumentParser()
+    parser = ArgumentParser()
     parser.add_argument('-c', '--config', type=str, action="append", help='Path to a configuration file (json). Multiples can be specified.')
     parser.add_argument('-l', '--config-list', type=str, nargs="*", help='Paths to any amount of configuration files (json).')
     parser.add_argument('-b', '--build', action='store_true')
@@ -83,10 +79,21 @@ def Main(args=None):
     parser.add_argument('--print-config', action='store_true')
 
     args, unknownargs = parser.parse_known_args(args=args)
+
+    build = bool(args.build)
+    release = bool(args.release)
+    install = bool(args.install)
+    uninstall = bool(args.uninstall)
+    run = bool(args.run)
+
+    if (not build) and (not release) and (not install) and (not uninstall) and (not run):
+        parser.print_help()
+        return
+
     util.pprint(args)
 
     thisDir = util.GetAbsFileDir(__file__)
-    configPaths: list[str] = []
+    configPaths = list[str]()
 
     # Add default configurations first to list so readers can parse them first.
     configPaths.append(os.path.join(thisDir, "config", "DefaultRunner.json"))
@@ -103,11 +110,11 @@ def Main(args=None):
 
     RunWithConfig(
         configPaths=configPaths,
-        build=bool(args.build),
-        release=bool(args.release),
-        install=bool(args.install),
-        uninstall=bool(args.uninstall),
-        run=bool(args.run),
+        build=build,
+        release=release,
+        install=install,
+        uninstall=uninstall,
+        run=run,
         printConfig=bool(args.print_config))
 
 

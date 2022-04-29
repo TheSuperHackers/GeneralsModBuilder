@@ -1,4 +1,4 @@
-from data.common import ParamT, ParamsT
+from generalsmodbuilder.data.common import ParamT, ParamsT
 
 
 def ParamsToArgs(params: ParamsT, includeRegex: str = None, excludeRegex: str = None) -> list[str]:

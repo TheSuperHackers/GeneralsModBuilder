@@ -5,7 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Run",
+            "name": "RunBuild",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}\\ModBuilder\\build.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "RunModBuilder",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}\\ModBuilder\\generalsmodbuilder\\main.py",

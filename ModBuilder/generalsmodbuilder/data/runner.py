@@ -1,9 +1,9 @@
 import os.path
-import util
 from glob import glob
-from util import JsonFile
 from dataclasses import dataclass
-from data.common import ParamsT, VerifyParamsType, VerifyStringListType
+from generalsmodbuilder.data.common import ParamsT, VerifyParamsType, VerifyStringListType
+from generalsmodbuilder.util import JsonFile
+from generalsmodbuilder import util
 
 
 @dataclass(init=False)

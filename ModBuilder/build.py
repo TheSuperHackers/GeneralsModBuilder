@@ -1,0 +1,365 @@
+import importlib
+import shutil
+import subprocess
+import json
+import os
+import platform
+import sys
+from timeit import default_timer as timer
+
+
+def RelAssert(condition: bool, message: str = "") -> None:
+    if not condition:
+        raise Exception(message)
+
+
+def RelAssertType(obj: object, expectedType: type, objName: str) -> None:
+    if not isinstance(obj, expectedType):
+        raise Exception(f'Object "{objName}" is type:{type(obj).__name__} but should be type:{expectedType.__name__}')
+
+
+def JoinPathIfValid(default, *paths: str) -> str:
+    for path in paths:
+        if not path or not isinstance(path, str):
+            return default
+    return os.path.join(*paths)
+
+
+def GetFileDirAndName(file: str) -> str:
+    path, ext = os.path.splitext(file)
+    return path
+
+
+def ChangeDir(dir: str) -> None:
+    print(f"chdir '{dir}'")
+    os.chdir(dir)
+
+
+def ReadJson(path: str) -> dict:
+    print("Read json", path)
+    data: dict = None
+    with open(path, "rb") as rfile:
+        text = rfile.read()
+        data = json.loads(text)
+    return data
+
+
+class JsonFile:
+    path: str
+    data: dict
+
+    def __init__(self, path: str):
+        self.path = os.path.normpath(path)
+        self.data = ReadJson(path)
+        self.VerifyTypes()
+
+    def VerifyTypes(self) -> None:
+        RelAssertType(self.path, str, "JsonFile.path")
+        RelAssertType(self.data, dict, "JsonFile.data")
+
+
+class PyPackage:
+    absWhl: str
+
+    def __init__(self):
+        pass
+
+    def AbsDir(self) -> str:
+        return os.path.dirname(self.absWhl)
+
+    def AbsWhl(self) -> str:
+        return self.absWhl
+
+    def VerifyTypes(self) -> None:
+        if self.absWhl != None:
+            RelAssertType(self.absWhl, str, "PyPackage.absWhl")
+
+    def VerifyValues(self) -> None:
+        if self.absWhl != None:
+            RelAssert(os.path.isfile(self.AbsWhl()), f"PyPackage.absWhl '{self.AbsWhl()}' is not a valid file")
+
+    def Normalize(self) -> None:
+        if self.absWhl != None:
+            self.absWhl = os.path.normpath(self.absWhl)
+
+
+class BuildSetup:
+    absVenvDir: str
+    absVenvExe: str
+    absPythonExe: str
+    packages: list[PyPackage]
+    pipInstalls: list[str]
+
+    def __init__(self):
+        self.packages = list[PyPackage]()
+
+    def VerifyTypes(self) -> None:
+        RelAssertType(self.absVenvDir, str, "BuildSetup.absVenvDir")
+        RelAssertType(self.absVenvExe, str, "BuildSetup.absVenvExe")
+        RelAssertType(self.absPythonExe, str, "BuildSetup.absPythonExe")
+        RelAssertType(self.packages, list, "BuildSetup.packages")
+        RelAssertType(self.pipInstalls, list, "BuildSetup.pipInstalls")
+        for package in self.packages:
+            RelAssertType(package, PyPackage, "BuildSetup.packages")
+            package.VerifyTypes()
+        for name in self.pipInstalls:
+            RelAssertType(name, str, "BuildSetup.pipInstalls")
+
+    def VerifyValues(self) -> None:
+        RelAssert(os.path.isfile(self.absPythonExe), f"BuildSetup.absPythonExe '{self.absPythonExe}' is not a valid file" )
+        for package in self.packages:
+            package.VerifyValues()
+
+    def Normalize(self) -> None:
+        self.absVenvDir = os.path.normpath(self.absVenvDir)
+        self.absVenvExe = os.path.normpath(self.absVenvExe)
+        self.absPythonExe = os.path.normpath(self.absPythonExe)
+        for package in self.packages:
+            package.Normalize()
+
+
+class BuildStep:
+    absDir: str
+    name: str
+    setup: BuildSetup
+    config: dict
+
+    def __init__(self):
+        self.config = dict()
+
+    def MakeAbsPath(self, relPath: str) -> str:
+        RelAssertType(relPath, str, "relPath")
+        path: str = os.path.join(self.absDir, relPath)
+        path = os.path.normpath(path)
+        return path
+
+    def VerifyTypes(self) -> None:
+        RelAssertType(self.absDir, str, "BuildStep.absDir")
+        RelAssertType(self.name, str, "BuildStep.name")
+        RelAssertType(self.setup, BuildSetup, "BuildSetup.absVenvExe")
+        RelAssertType(self.config, dict, "BuildSetup.absPythonExe")
+        self.setup.VerifyTypes()
+
+    def VerifyValues(self) -> None:
+        RelAssert(os.path.isdir(self.absDir), f"BuildStep.absDir '{self.absDir}' is not an valid path")
+        RelAssert(self.name, "BuildStep.name must not be empty")
+        self.setup.VerifyValues()
+
+    def Normalize(self) -> None:
+        self.setup.Normalize()
+
+
+BuildStepsT = list[BuildStep]
+
+
+def __MakeBuildJsonPath() -> str:
+    return os.path.join(os.path.dirname(__file__), "build.json")
+
+
+def __MakeBuildSetupFromDict(jSetup: dict, absDir: str) -> BuildSetup:
+    buildSetup = BuildSetup()
+    buildSetup.pipInstalls = jSetup.get("pipInstalls")
+    platfrm: str = sys.platform.lower()
+    machine: str = platform.machine().lower()
+    jPlatform: dict = jSetup.get(platfrm)
+
+    if jPlatform:
+        buildSetup.absVenvDir = JoinPathIfValid(None, absDir, jPlatform.get("venvDir"))
+        buildSetup.absVenvExe = JoinPathIfValid(None, absDir, jPlatform.get("venvExe"))
+        jMachine: dict = jPlatform.get(machine)
+
+        if jMachine:
+            buildSetup.absPythonExe = JoinPathIfValid(None, absDir, jMachine.get("pythonExe"))
+            jPackages: list[str] = jMachine.get("packages")
+
+            if jPackages:
+                jPackage: str
+                for jPackage in jPackages:
+                    package = PyPackage()
+                    package.absWhl = JoinPathIfValid(None, absDir, jPackage)
+                    buildSetup.packages.append(package)
+
+    return buildSetup
+
+
+def __MakeBuildStepFromDict(jStep: dict, absDir: str) -> BuildStep:
+    buildStep = BuildStep()
+    buildStep.absDir = absDir
+    buildStep.name = jStep.get("name")
+    buildStep.config = jStep.get("config")
+    jSetup: dict = jStep.get("setup")
+    if jSetup:
+        buildStep.setup = __MakeBuildSetupFromDict(jSetup, absDir)
+
+    return buildStep
+
+
+def __MakeBuildStepsFromJson(jsonFile: JsonFile) -> BuildStepsT:
+    buildStep: BuildStep
+    buildSteps = BuildStepsT()
+    jBuild: dict = jsonFile.data.get("build")
+
+    if jBuild:
+        jsonDir: str = os.path.dirname(jsonFile.path)
+        jSteps: list = jBuild.get("steps")
+        jStep: dict
+
+        if jSteps:
+            for jStep in jSteps:
+                buildStep = __MakeBuildStepFromDict(jStep, jsonDir)
+                buildSteps.append(buildStep)
+
+    for buildStep in buildSteps:
+        buildStep.VerifyTypes()
+        buildStep.Normalize()
+        buildStep.VerifyValues()
+
+    return buildSteps
+
+
+def __Run(exec: str, *args) -> None:
+    strArgs: list[str] = [exec]
+    for arg in args:
+        if str(arg):
+            strArgs.append(str(arg))
+    subprocess.run(args=strArgs, check=True)
+
+
+def __RunAndCapture(exec: str, *args) -> str:
+    strArgs: list[str] = [exec]
+    for arg in args:
+        if str(arg):
+            strArgs.append(str(arg))
+    outputBytes: bytes = subprocess.run(args=strArgs, check=True, capture_output=True).stdout
+    outputStr: str = outputBytes.decode(sys.stdout.encoding)
+    outputStr = outputStr.strip("\r\n")
+    return outputStr
+
+
+def __CreateVenv(buildStep: BuildStep) -> None:
+    print(f"Create venv for '{buildStep.name}' ...")
+    __Run(buildStep.setup.absPythonExe, "-m", "venv", buildStep.setup.absVenvDir)
+
+
+def __InstallPackages(buildStep: BuildStep) -> None:
+    print(f"Install packages for '{buildStep.name}' ...")
+    package: PyPackage
+    name: str
+
+    for package in buildStep.setup.packages:
+        __Run(buildStep.setup.absVenvExe, "-m", "pip", "install", package.AbsWhl(), "--no-index", "--find-links", package.AbsDir())
+
+    for name in buildStep.setup.pipInstalls:
+        __Run(buildStep.setup.absVenvExe, "-m", "pip", "install", name)
+
+
+def __RunPoetry(buildStep: BuildStep) -> None:
+    print(f"Run {buildStep.name} ...")
+
+    workDir: str = os.getcwd()
+    projDir: str = buildStep.MakeAbsPath(buildStep.config.get("projDir"))
+
+    ChangeDir(projDir)
+
+    try:
+        # There is a bug in Poetry where it will not install packages into the virtual env,
+        # if the virtual env was created freshly during "poetry install" command.
+        # To trigger virtual env first, run innocent "poetry run python -V" here.
+        __Run(buildStep.setup.absVenvExe, "-m", "poetry", "run", "python", "-V")
+        # Install packages into Poetry's virtual env.
+        __Run(buildStep.setup.absVenvExe, "-m", "poetry", "install")
+        # Get virtual env path created by poetry.
+        venvDir: str = __RunAndCapture(buildStep.setup.absVenvExe, "-m", "poetry", "env", "info", "--path")
+        print(f"Poetry created venv '{venvDir}'")
+    finally:
+        ChangeDir(workDir)
+
+
+def __RunPyInstaller(buildStep: BuildStep) -> None:
+    print(f"Run {buildStep.name} ...")
+
+    config: dict = buildStep.config
+
+    workDir: str = os.getcwd()
+    exeName: str = config.get("exeName")
+    codeDir: str = buildStep.MakeAbsPath(config.get("codeDir"))
+    codeFile: str = config.get("codeFile")
+    distDir: str = buildStep.MakeAbsPath(config.get("distDir"))
+    buildDir: str = buildStep.MakeAbsPath(config.get("buildDir"))
+    makeArchive: bool = config.get("makeArchive")
+    archiveDir: str = buildStep.MakeAbsPath(config.get("archiveDir"))
+    rawImportDirs: list[str] = config.get("importDirs")
+    rawDataFiles: list[dict] = config.get("dataFiles")
+    pathsArgs = list[str]()
+    addDataArgs = list[str]()
+
+    rawImportDir: str
+    for rawImportDir in rawImportDirs:
+        dir: str = buildStep.MakeAbsPath(rawImportDir)
+        pathsArgs.append("--paths")
+        pathsArgs.append(dir)
+
+    rawDataFile: dict
+    for rawDataFile in rawDataFiles:
+        src: str = buildStep.MakeAbsPath(rawDataFile.get("src"))
+        dst: str = os.path.normpath(rawDataFile.get("dst"))
+        addDataArgs.append("--add-data")
+        addDataArgs.append(f"{src}{os.pathsep}{dst}")
+
+    ChangeDir(codeDir)
+
+    try:
+        __Run(buildStep.setup.absVenvExe, "-m", "PyInstaller", codeFile,
+            "--name", exeName,
+            "--distpath", distDir,
+            "--workpath", buildDir,
+            "--specpath", buildDir,
+            "--clean",
+            "--onedir",
+            "--noconfirm",
+            *pathsArgs,
+            *addDataArgs)
+    finally:
+        ChangeDir(workDir)
+
+    if makeArchive:
+        print(f"Create archives in '{archiveDir}' ...")
+        try:
+            relCodeDir = config.get("codeDir")
+            versionScript: str = relCodeDir + ".__version__"
+            versionModule = importlib.import_module(versionScript)
+            versionStr: str = "_v" + versionModule.__version__
+        except ImportError:
+            versionStr: str = ""
+
+        releaseBaseName = os.path.join(archiveDir, exeName + versionStr)
+        os.makedirs(archiveDir, exist_ok=True)
+        shutil.make_archive(base_name=releaseBaseName, format="zip", root_dir=distDir)
+
+
+def Process(buildStep: BuildStep) -> None:
+    __CreateVenv(buildStep)
+    __InstallPackages(buildStep)
+
+    if buildStep.name == "poetry":
+        __RunPoetry(buildStep)
+    elif buildStep.name == "PyInstaller":
+        __RunPyInstaller(buildStep)
+
+
+def Main() -> None:
+    startTimer = timer()
+
+    buildJson = JsonFile(__MakeBuildJsonPath())
+    buildSteps: BuildStepsT = __MakeBuildStepsFromJson(buildJson)
+    buildStep: BuildStep
+
+    for buildStep in buildSteps:
+        Process(buildStep)
+
+    endTimer = timer()
+    print("Build completed in", endTimer - startTimer, "seconds")
+
+
+if __name__ == "__main__":
+    Main()

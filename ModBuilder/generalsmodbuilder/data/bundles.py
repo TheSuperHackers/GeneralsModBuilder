@@ -1,10 +1,10 @@
 import enum
-import util
 import os.path
 from glob import glob
 from dataclasses import dataclass
-from data.common import ParamsT, VerifyParamsType
-from util import JsonFile
+from generalsmodbuilder.data.common import ParamsT, VerifyParamsType
+from generalsmodbuilder.util import JsonFile
+from generalsmodbuilder import util
 
 
 class BundleEventType(enum.Enum):

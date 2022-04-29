@@ -1,5 +1,5 @@
-import util
 from typing import Union
+from generalsmodbuilder import util
 
 
 ParamT = Union[str, int, float, bool]

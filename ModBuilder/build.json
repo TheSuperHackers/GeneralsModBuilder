@@ -1,0 +1,61 @@
+{
+    "build": {
+        "version": 1,
+        "steps": [
+            {
+                "name": "poetry",
+                "setup": {
+                    "win32": {
+                        "venvDir": ".venv-poetry",
+                        "venvExe": ".venv-poetry/Scripts/python.exe",
+                        "amd64": {
+                            "pythonExe": "C:/Python310/python.exe",
+                            "packages": []
+                        }
+                    },
+                    "pipInstalls": [
+                        "poetry==1.1.13"
+                    ]
+                },
+                "config": {
+                    "projDir": "."
+                }
+            },
+            {
+                "name": "PyInstaller",
+                "setup": {
+                    "win32": {
+                        "venvDir": ".venv-pyinstaller",
+                        "venvExe": ".venv-pyinstaller/Scripts/python.exe",
+                        "amd64": {
+                            "pythonExe": "C:/Python310/python.exe",
+                            "packages": []
+                        }
+                    },
+                    "pipInstalls": [
+                        "pyinstaller==4.10",
+                        "setuptools==62.1.0"
+                    ]
+                },
+                "config": {
+                    "exeName": "generalsmodbuilder",
+                    "codeDir": "generalsmodbuilder",
+                    "codeFile": "main.py",
+                    "distDir": ".pyinstaller",
+                    "buildDir": ".build",
+                    "makeArchive": true,
+                    "archiveDir": ".release",
+                    "importDirs": [
+                        ".venv/Lib/site-packages"
+                    ],
+                    "dataFiles": [
+                        {
+                            "src": "generalsmodbuilder/config/*.json",
+                            "dst": "config"
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}

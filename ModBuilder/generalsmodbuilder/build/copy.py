@@ -1,7 +1,6 @@
 import os
 import subprocess
 import shutil
-import util
 import enum
 import PIL.Image
 from enum import Enum, Flag
@@ -11,10 +10,11 @@ from psd_tools.constants import ColorMode as PSDColorMode
 from PIL.Image import Image as PILImage
 from PIL.Image import Resampling
 from dataclasses import dataclass, field
-from data.bundles import ParamsT
-from data.tools import ToolsT
-from build.thing import BuildFile, BuildThing
-from build.common import ParamsToArgs
+from generalsmodbuilder.data.bundles import ParamsT
+from generalsmodbuilder.data.tools import ToolsT
+from generalsmodbuilder.build.thing import BuildFile, BuildThing
+from generalsmodbuilder.build.common import ParamsToArgs
+from generalsmodbuilder import util
 
 
 class BuildFileType(Enum):

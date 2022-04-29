@@ -2,7 +2,7 @@ import os
 import enum
 from dataclasses import dataclass
 from typing import Any
-from data.bundles import ParamsT
+from generalsmodbuilder.data.bundles import ParamsT
 
 
 class BuildFileStatus(enum.Enum):
