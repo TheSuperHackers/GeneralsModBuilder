@@ -1,7 +1,4 @@
 .*
 !.gitignore
 
-*.egg-info/
 __pycache__/
-
-MANIFEST
