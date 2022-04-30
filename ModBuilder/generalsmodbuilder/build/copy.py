@@ -297,58 +297,57 @@ class BuildCopy:
         img: PILImage = None
 
         if util.HasFileExt(source, "psd"):
-            psd: PSDImage = PSDImage.open(fp=source)
-
-            if psd.color_mode == PSDColorMode.RGB:
-                img = BuildCopy.__BuildRGBAFromPSD(psd)
-            else:
-                raise Exception(f"PSD image '{source}' has unsupported color mode '{psd.color_mode}'.")
+            img = BuildCopy.__BuildImageFromPSD(source)
         else:
-            img: PILImage = PIL.Image.open(fp=source)
+            img = PIL.Image.open(fp=source)
 
         if img != None:
             img = BuildCopy.__ResizeImageWithParams(img, params)
-            img.save(target)
+            img.save(target, compression=None)
             BuildCopy.__PrintMakeResult(source, target)
             success = True
 
         return success
 
 
-    def __BuildRGBAFromPSD(psd: PSDImage) -> PILImage:
-        # Composite layers and build with layer alpha.
-        img: PILImage = psd.composite(color=0.0, alpha=1.0)
+    @staticmethod
+    def __BuildImageFromPSD(source: str) -> PILImage:
+        psd: PSDImage = PSDImage.open(fp=source)
 
-        if psd.channels > 3:
-            # Composite channel alpha into the image.
+        util.RelAssert(psd.color_mode == PSDColorMode.RGB, f"PSD image '{source}' has unsupported color mode '{psd.color_mode}'.")
+        util.RelAssert(psd.channels >= 3, f"PSD image '{source}' has unsupported channel size '{psd.channels}'.")
+
+        if psd.channels == 3:
+            r: PILImage = psd.topil(channel=0)
+            g: PILImage = psd.topil(channel=1)
+            b: PILImage = psd.topil(channel=2)
+            return PIL.Image.merge("RGB", (r, g, b))
+
+        elif psd.channels > 3:
+            # Composite whole image to preserve layers with alpha.
+            # NOTE: Photoshop does not do this. It would render white instead.
+            img: PILImage = psd.composite(color=0.0, alpha=1.0)
+
+            white: PILImage = PIL.Image.new("L", psd.size, 255)
+            black: PILImage = PIL.Image.new("L", psd.size, 0)
+
             r: PILImage
             g: PILImage
             b: PILImage
             a: PILImage
-            aLayer: PILImage
-            white: PILImage = PIL.Image.new("L", img.size, 255)
-            black: PILImage = PIL.Image.new("L", img.size, 0)
 
             if img.mode == "RGBA":
-                r, g, b, aLayer = img.split()
-                a = aLayer
-            else:
+                r, g, b, a = img.split()
+            elif img.mode == "RGB":
                 r, g, b = img.split()
-                a = white
 
-            aLayerData = list(a.getdata())
-
+            # Composite alpha from each alpha channel.
+            a = white
             for channel in range(3, psd.channels):
                 an: PILImage = psd.topil(channel=channel)
-                if list(an.getdata()) == aLayerData:
-                    # Alpha channel is same as layer alpha. Discard duplicate.
-                    continue
-                else:
-                    a = PIL.Image.composite(an, black, a)
+                a = PIL.Image.composite(an, black, a)
 
-            img = PIL.Image.merge("RGBA", (r, g, b, a))
-
-        return img
+            return PIL.Image.merge("RGBA", (r, g, b, a))
 
 
     def __CopyToDDS(self, source: str, target: str, params: ParamsT) -> bool:

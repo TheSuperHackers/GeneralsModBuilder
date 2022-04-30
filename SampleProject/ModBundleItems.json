@@ -119,13 +119,14 @@
                             {
                                 "source": "Art/*.tga",
                                 "target": "Art/*.bmp"
+                            },
+                            {
+                                "source": "Art/*.psd",
+                                "target": "Art/*.tga"
                             }
                         ],
                         "params": {
-                            "rescale": [
-                                2.0,
-                                2.0
-                            ],
+                            "rescale": 2.0,
                             "resampling": "BOX",
                             "-quality": 255,
                             "-mipmode": "None"
