@@ -2,13 +2,13 @@
 
 set SetupDir=%~dp0.
 
-set ModBuilderVer=1.3
+set ModBuilderVer=1.4
 set ModBuilderDir=%SetupDir%\.modbuilder\v%ModBuilderVer%
 set ModBuilderExe=%ModBuilderDir%\generalsmodbuilder\generalsmodbuilder.exe
 set ModBuilderArc=%ModBuilderDir%\generalsmodbuilder.7z
 set ModBuilderArcUrl=https://github.com/TheSuperHackers/GeneralsTools/raw/main/Tools/generalsmodbuilder/v%ModBuilderVer%/generalsmodbuilder_v%ModBuilderVer%.7z
-set ModBuilderArcSha256=65424774ffc3ea51f0796485e32846e873ee2fa0a9fe595f7d328704363e8d7a
-set ModBuilderArcSize=36570350
+set ModBuilderArcSha256=97719efd0108ef56a14b42de937576648a8b9295272cc18d47ba50fd56dfb512
+set ModBuilderArcSize=30082734
 
 set ConfigDir=%SetupDir%\..\..
 set ConfigFiles=^
