@@ -5,7 +5,77 @@ import json
 import os
 import platform
 import sys
+import hashlib
 from timeit import default_timer as timer
+from typing import Callable
+
+
+def GetAbsFileDir(file: str) -> str:
+    dir: str
+    dir = os.path.dirname(file)
+    dir = os.path.abspath(dir)
+    return dir
+
+
+def GetFileDirAndName(file: str) -> str:
+    path, ext = os.path.splitext(file)
+    return path
+
+
+def GetFileName(file: str) -> str:
+    path, name = os.path.split(file)
+    return name
+
+
+def GetFileSize(path: str) -> str:
+    return os.path.getsize(path)
+
+
+def GetFileMd5(path: str) -> str:
+    return GetFileHash(path, hashlib.md5)
+
+
+def GetFileSha256(path: str) -> str:
+    return GetFileHash(path, hashlib.sha256)
+
+
+def GetFileHash(path: str, hashFunc: Callable) -> str:
+    hashStr: str = ""
+    if os.path.isfile(path):
+        hashObj: hashlib._Hash = hashFunc()
+        with open(path, "rb") as rfile:
+            for chunk in iter(lambda: rfile.read(4096), b""):
+                hashObj.update(chunk)
+        hashStr = hashObj.hexdigest()
+    return hashStr
+
+
+g_writeFileCount: int = 0
+
+def WriteFile(path: str, data: bytes) -> None:
+    if len(data) > 0:
+        with open(path, 'wb') as f:
+            written: int = f.write(data)
+            assert(written == len(data))
+        global g_writeFileCount
+        g_writeFileCount += 1
+        print(f"Created file ({g_writeFileCount}) '{path}'")
+
+
+def GenerateHashFiles(files: list[str]) -> str:
+    file: str
+    for file in files:
+        hashDir: str = os.path.join(GetAbsFileDir(file), "hashes")
+        hashFile: str = os.path.join(hashDir, GetFileName(file))
+        os.makedirs(hashDir, exist_ok=True)
+
+        md5: str = GetFileMd5(file)
+        sha256: str = GetFileSha256(file)
+        size: str = GetFileSize(file)
+
+        WriteFile(hashFile + ".md5", str.encode(md5))
+        WriteFile(hashFile + ".sha256", str.encode(sha256))
+        WriteFile(hashFile + ".size", str.encode(str(size)))
 
 
 def RelAssert(condition: bool, message: str = "") -> None:
@@ -23,11 +93,6 @@ def JoinPathIfValid(default, *paths: str) -> str:
         if not path or not isinstance(path, str):
             return default
     return os.path.join(*paths)
-
-
-def GetFileDirAndName(file: str) -> str:
-    path, ext = os.path.splitext(file)
-    return path
 
 
 def ChangeDir(dir: str) -> None:
@@ -335,6 +400,8 @@ def __RunPyInstaller(buildStep: BuildStep) -> None:
         releaseBaseName = os.path.join(archiveDir, exeName + versionStr)
         os.makedirs(archiveDir, exist_ok=True)
         shutil.make_archive(base_name=releaseBaseName, format="zip", root_dir=distDir)
+
+        GenerateHashFiles([releaseBaseName + ".zip"])
 
 
 def Process(buildStep: BuildStep) -> None:
