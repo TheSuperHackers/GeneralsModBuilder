@@ -1,5 +1,4 @@
 .Build/
 .Release/
-.generalsmodbuilder/
-.log/
+.modbuilder/
 __pycache__/

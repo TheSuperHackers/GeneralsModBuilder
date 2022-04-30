@@ -3,12 +3,12 @@
 set SetupDir=%~dp0.
 
 set ModBuilderVer=1.3
-set ModBuilderDir=%SetupDir%\.GeneralsModBuilder\v%ModBuilderVer%
-set ModBuilderExe=%ModBuilderDir%\generalsmodbuilder.exe
-set ModBuilderZip=%ModBuilderDir%\generalsmodbuilder.zip
-set ModBuilderZipUrl=https://github.com/TheSuperHackers/GeneralsTools/raw/main/Tools/generalsmodbuilder/v%ModBuilderVer%/generalsmodbuilder_v%ModBuilderVer%.zip
-set ModBuilderZipSha256=3084a157402863622f81cfccf245b7e4e9d7be38233b56b7e3a2c235f1eaac79
-set ModBuilderZipSize=7885138
+set ModBuilderDir=%SetupDir%\.modbuilder\v%ModBuilderVer%
+set ModBuilderExe=%ModBuilderDir%\generalsmodbuilder\generalsmodbuilder.exe
+set ModBuilderArc=%ModBuilderDir%\generalsmodbuilder.7z
+set ModBuilderArcUrl=https://github.com/TheSuperHackers/GeneralsTools/raw/main/Tools/generalsmodbuilder/v%ModBuilderVer%/generalsmodbuilder_v%ModBuilderVer%.7z
+set ModBuilderArcSha256=65424774ffc3ea51f0796485e32846e873ee2fa0a9fe595f7d328704363e8d7a
+set ModBuilderArcSize=36570350
 
 set ConfigDir=%SetupDir%\..\..
 set ConfigFiles=^
@@ -22,10 +22,10 @@ if [%~1]==[print] (
     echo ver... %ModBuilderVer%
     echo dir... %ModBuilderDir%
     echo exe... %ModBuilderExe%
-    echo zip... %ModBuilderZip%
-    echo zipurl %ModBuilderZipUrl%
-    echo zipsha %ModBuilderZipSha256%
-    echo zipsiz %ModBuilderZipSize%
+    echo archiv %ModBuilderArc%
+    echo arcurl %ModBuilderArcUrl%
+    echo arcsha %ModBuilderArcSha256%
+    echo arcsiz %ModBuilderArcSize%
     for %%f in (%ConfigFiles%) do (
         echo config %%f
     )
