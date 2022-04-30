@@ -7,7 +7,7 @@ import platform
 import sys
 import hashlib
 from timeit import default_timer as timer
-from typing import Callable
+from typing import Callable, Union
 
 
 def GetAbsFileDir(file: str) -> str:
@@ -62,9 +62,22 @@ def WriteFile(path: str, data: bytes) -> None:
         print(f"Created file ({g_writeFileCount}) '{path}'")
 
 
-def GenerateHashFiles(files: list[str]) -> str:
-    file: str
-    for file in files:
+def DeleteFileOrPath(path: str) -> bool:
+    if os.path.islink(path):
+        os.unlink(path)
+        return True
+    if os.path.isfile(path):
+        os.remove(path)
+        return True
+    elif os.path.isdir(path):
+        shutil.rmtree(path)
+        return True
+    else:
+        return False
+
+
+def __GenerateHashFiles(file: str) -> None:
+    if os.path.isfile(file):
         hashDir: str = os.path.join(GetAbsFileDir(file), "hashes")
         hashFile: str = os.path.join(hashDir, GetFileName(file))
         os.makedirs(hashDir, exist_ok=True)
@@ -76,6 +89,14 @@ def GenerateHashFiles(files: list[str]) -> str:
         WriteFile(hashFile + ".md5", str.encode(md5))
         WriteFile(hashFile + ".sha256", str.encode(sha256))
         WriteFile(hashFile + ".size", str.encode(str(size)))
+
+
+def GenerateHashFiles(files: Union[str, list[str]]) -> None:
+    if isinstance(files, str):
+        __GenerateHashFiles(files)
+    elif isinstance(files, list):
+        for file in files:
+            __GenerateHashFiles(file)
 
 
 def RelAssert(condition: bool, message: str = "") -> None:
@@ -218,7 +239,7 @@ BuildStepsT = list[BuildStep]
 
 
 def __MakeBuildJsonPath() -> str:
-    return os.path.join(os.path.dirname(__file__), "build.json")
+    return os.path.join(GetAbsFileDir(__file__), "build.json")
 
 
 def __MakeBuildSetupFromDict(jSetup: dict, absDir: str) -> BuildSetup:
@@ -387,21 +408,45 @@ def __RunPyInstaller(buildStep: BuildStep) -> None:
     finally:
         ChangeDir(workDir)
 
+    postDeleteFiles: list[str] = config.get("postDeleteFiles")
+    if postDeleteFiles:
+        for file in postDeleteFiles:
+            absFile: str = buildStep.MakeAbsPath(file)
+            print("Delete '{absFile}'")
+            DeleteFileOrPath(absFile)
+
     if makeArchive:
-        print(f"Create archives in '{archiveDir}' ...")
         try:
-            relCodeDir = config.get("codeDir")
-            versionScript: str = relCodeDir + ".__version__"
+            versionScript: str = config.get("codeDir") + ".__version__"
             versionModule = importlib.import_module(versionScript)
-            versionStr: str = "_v" + versionModule.__version__
+            outBaseName: str = exeName + "_v" + versionModule.__version__
         except ImportError:
-            versionStr: str = ""
+            outBaseName: str = exeName
 
-        releaseBaseName = os.path.join(archiveDir, exeName + versionStr)
-        os.makedirs(archiveDir, exist_ok=True)
-        shutil.make_archive(base_name=releaseBaseName, format="zip", root_dir=distDir)
+        __BuildArchives(inDir=distDir, outDir=archiveDir, outBaseName=outBaseName)
 
-        GenerateHashFiles([releaseBaseName + ".zip"])
+
+def __BuildArchives(inDir: str, outDir: str, outBaseName: str) -> None:
+    print(f"Create archives in '{outDir}' ...")
+
+    os.makedirs(outDir, exist_ok=True)
+
+    absBaseName = os.path.join(outDir, outBaseName)
+    x7z: str = os.path.join(GetAbsFileDir(__file__), "7z.exe")
+
+    if os.name == "nt" and os.path.isfile(x7z):
+        x7zInDir: str = os.path.join(inDir, "*")
+        DeleteFileOrPath(absBaseName + ".7z")
+        DeleteFileOrPath(absBaseName + ".zip")
+        __Run(x7z, "a", "-t7z", "-mx9", absBaseName + ".7z", x7zInDir)
+        __Run(x7z, "a", "-tzip", "-mx9", absBaseName + ".zip", x7zInDir)
+        GenerateHashFiles(absBaseName + ".7z")
+        GenerateHashFiles(absBaseName + ".zip")
+    else:
+        shutil.make_archive(base_name=absBaseName, format="zip", root_dir=inDir)
+        shutil.make_archive(base_name=absBaseName, format="gztar", root_dir=inDir)
+        GenerateHashFiles(absBaseName + ".zip")
+        GenerateHashFiles(absBaseName + ".gztar")
 
 
 def Process(buildStep: BuildStep) -> None:

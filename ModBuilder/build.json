@@ -53,6 +53,9 @@
                             "src": "generalsmodbuilder/config/*.json",
                             "dst": "config"
                         }
+                    ],
+                    "postDeleteFiles": [
+                        ".pyinstaller/generalsmodbuilder/skimage/data/"
                     ]
                 }
             }
