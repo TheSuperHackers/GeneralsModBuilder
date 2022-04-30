@@ -427,7 +427,23 @@ class BuildCopy:
                     break
 
         if size != img.size:
-            img = img.resize(size=size, resample=resample)
+            r: PILImage
+            g: PILImage
+            b: PILImage
+            a: PILImage
+
+            if img.mode == "RGBA":
+                # The RGB channels lose color information on image resize where the Alpha channel is black.
+                # To workaround this issue, resize each channel separately.
+                r, g, b, a = img.split()
+                r = r.resize(size=size, resample=resample)
+                g = g.resize(size=size, resample=resample)
+                b = b.resize(size=size, resample=resample)
+                a = a.resize(size=size, resample=resample)
+                img = PIL.Image.merge("RGBA", (r, g, b, a))
+
+            else:
+                img = img.resize(size=size, resample=resample)
 
         return img
 
