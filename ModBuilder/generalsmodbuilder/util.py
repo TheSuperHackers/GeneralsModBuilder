@@ -49,7 +49,7 @@ def LoadPickle(path: str) -> Any:
 def SavePickle(path: str, data: Any) -> None:
     MakeDirsForFile(path)
     with open(path, "wb") as wfile:
-        pickle.dump(data, wfile)
+        pickle.dump(data, wfile, protocol=pickle.HIGHEST_PROTOCOL)
     print("Saved pickle", path)
 
 

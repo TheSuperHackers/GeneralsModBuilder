@@ -3,14 +3,17 @@ import subprocess
 import sys
 import os
 import enum
+from copy import deepcopy
 from dataclasses import dataclass
 from logging import warning
 from glob import glob
+from typing import Any
 from generalsmodbuilder.build.common import ParamsToArgs
 from generalsmodbuilder.build.copy import BuildCopy, BuildCopyOption
 from generalsmodbuilder.build.thing import BuildFile, BuildFileStatus, BuildThing, BuildFilesT, BuildThingsT
 from generalsmodbuilder.build.setup import BuildSetup, BuildStep
 from generalsmodbuilder.data.bundles import Bundles, BundlePack, BundleItem, BundleFile, BundleEvent, BundleEventType
+from generalsmodbuilder.data.common import ParamsT
 from generalsmodbuilder.data.folders import Folders
 from generalsmodbuilder.data.runner import Runner
 from generalsmodbuilder.data.tools import ToolsT
@@ -21,10 +24,18 @@ from generalsmodbuilder import util
 class BuildFilePathInfo:
     ownerThingName: str
     md5: str
+    params: ParamsT
 
     def __init__(self):
         self.ownerThingName = None
         self.md5 = None
+        self.params = None
+
+    def Matches(self, other: Any) -> bool:
+        try:
+            return self.md5 == other.md5 and self.params == other.params
+        except AttributeError:
+            return False
 
 
 BuildFilePathInfosT = dict[str, BuildFilePathInfo]
@@ -453,6 +464,7 @@ class BuildEngine:
                 info = BuildFilePathInfo()
                 info.ownerThingName = thing.name
                 info.md5 = util.GetFileMd5(absRealSource)
+                info.params = deepcopy(file.params)
                 infos[absRealSource] = info
 
             # Plain source will not be hashed as optimization.
@@ -460,6 +472,7 @@ class BuildEngine:
                 info = BuildFilePathInfo()
                 info.ownerThingName = thing.name
                 info.md5 = ""
+                info.params = deepcopy(file.params)
                 infos[absSource] = info
 
         for file in thing.files:
@@ -569,13 +582,13 @@ class BuildEngine:
                 newInfo: BuildFilePathInfo = diff.newInfos.get(filePath)
                 util.RelAssert(newInfo != None, "Info must exist")
 
-                if newInfo.md5 != oldInfo.md5:
-                    return BuildFileStatus.Changed
-                else:
+                if newInfo.Matches(oldInfo):
                     if parentStatus != None and parentStatus != BuildFileStatus.Unknown:
                         return parentStatus
                     else:
                         return BuildFileStatus.Unchanged
+                else:
+                    return BuildFileStatus.Changed
         else:
             return BuildFileStatus.Missing
 
