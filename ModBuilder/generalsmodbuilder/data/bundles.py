@@ -2,13 +2,21 @@ import enum
 import os.path
 from glob import glob
 from dataclasses import dataclass
+from enum import Enum, auto
 from generalsmodbuilder.data.common import ParamsT, VerifyParamsType
 from generalsmodbuilder.util import JsonFile
 from generalsmodbuilder import util
 
 
-class BundleEventType(enum.Enum):
-    OnPreBuild = 0
+class BundleEventType(Enum):
+    OnPreBuild = auto()
+    OnBuild = auto()
+    OnPostBuild = auto()
+    OnRelease = auto()
+    OnInstall = auto()
+    OnRun = auto()
+    OnUninstall = auto()
+
 
 def GetJsonBundleEventName(type: BundleEventType) -> str:
     return type.name[:1].lower() + type.name[1:]

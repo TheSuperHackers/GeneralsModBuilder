@@ -78,6 +78,12 @@
                     "kwargs": {
                         "info": "Arbitrary data passed to script"
                     }
+                },
+                "onBuild": {
+                    "script": "Scripts/Python/OnBuildItem.py"
+                },
+                "onPostBuild": {
+                    "script": "Scripts/Python/OnPostBuildItem.py"
                 }
             },
             {

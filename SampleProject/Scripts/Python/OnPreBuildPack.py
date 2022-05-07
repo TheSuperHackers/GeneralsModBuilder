@@ -5,4 +5,4 @@ def OnEvent(**kwargs) -> None:
 
     bundlePack = kwargs.get("_bundlePack")
 
-    assert(bundlePack != None, "_bundlePack kwargs not found")
+    assert bundlePack != None, "_bundlePack kwargs not found"

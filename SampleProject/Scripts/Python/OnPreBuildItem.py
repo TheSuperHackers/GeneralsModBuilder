@@ -6,5 +6,5 @@ def OnPreBuild(**kwargs) -> None:
     bundleItem = kwargs.get("_bundleItem")
     info = kwargs.get("info")
 
-    assert(bundleItem != None, "_bundleItem kwargs not found")
-    assert(info != None, "info kwargs not found")
+    assert bundleItem != None, "_bundleItem kwargs not found"
+    assert info != None, "info kwargs not found"

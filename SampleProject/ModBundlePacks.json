@@ -19,6 +19,18 @@
                 ],
                 "onPreBuild": {
                     "script": "Scripts/Python/OnPreBuildPack.py"
+                },
+                "onRelease": {
+                    "script": "Scripts/Python/OnReleasePack.py"
+                },
+                "onInstall": {
+                    "script": "Scripts/Python/OnInstallPack.py"
+                },
+                "onRun": {
+                    "script": "Scripts/Python/OnRunPack.py"
+                },
+                "onUninstall": {
+                    "script": "Scripts/Python/OnUninstallPack.py"
                 }
             },
             {
