@@ -26,7 +26,7 @@ class BuildFilePathInfo:
     params: ParamsT
 
     def __init__(self):
-        self.md5 = None
+        self.md5 = ""
         self.params = None
 
     def Matches(self, other: Any) -> bool:
@@ -470,41 +470,44 @@ class BuildEngine:
         for file in thing.files:
             absRealSource = file.AbsRealSource()
             absSource = file.AbsSource()
+            sourceMd5: str = ""
+            sourceParams: ParamsT = None
 
             if not infos.get(absRealSource):
+                sourceMd5 = util.GetFileMd5(absRealSource)
+                sourceParams = deepcopy(file.params)
                 info = BuildFilePathInfo()
-                info.md5 = util.GetFileMd5(absRealSource)
-                info.params = deepcopy(file.params)
+                info.md5 = sourceMd5
+                info.params = sourceParams
                 infos[absRealSource] = info
 
-            # Plain source will not be hashed as optimization.
             if not infos.get(absSource):
                 info = BuildFilePathInfo()
-                info.md5 = ""
-                info.params = deepcopy(file.params)
+                info.md5 = sourceMd5
+                info.params = sourceParams
                 infos[absSource] = info
 
         for file in thing.files:
+            absRealTarget = file.AbsRealTarget(thing.absParentDir)
             absTarget = file.AbsTarget(thing.absParentDir)
             absTargetDirs: list[str] = util.GetAbsFileDirs(absTarget, thing.absParentDir)
             absTargetDir: str
+            targetMd5: str = ""
 
             for absTargetDir in absTargetDirs:
                 if not infos.get(absTargetDir):
                     info = BuildFilePathInfo()
-                    info.md5 = ""
                     infos[absTargetDir] = info
 
-            absRealTarget = file.AbsRealTarget(thing.absParentDir)
             if not infos.get(absRealTarget):
+                targetMd5 = util.GetFileMd5(absRealTarget)
                 info = BuildFilePathInfo()
-                info.md5 = util.GetFileMd5(absRealTarget)
+                info.md5 = targetMd5
                 infos[absRealTarget] = info
 
-            # Plain target will not be hashed as optimization.
             if not infos.get(absTarget):
                 info = BuildFilePathInfo()
-                info.md5 = ""
+                info.md5 = targetMd5
                 infos[absTarget] = info
 
         return infos
