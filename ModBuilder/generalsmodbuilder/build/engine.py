@@ -2,12 +2,12 @@ import importlib
 import subprocess
 import sys
 import os
-import enum
 from copy import deepcopy
 from dataclasses import dataclass
 from logging import warning
 from glob import glob
 from typing import Any
+from enum import Enum, auto
 from generalsmodbuilder.build.common import ParamsToArgs
 from generalsmodbuilder.build.copy import BuildCopy, BuildCopyOption
 from generalsmodbuilder.build.thing import BuildFile, BuildFileStatus, BuildThing, BuildFilesT, BuildThingsT
@@ -22,12 +22,10 @@ from generalsmodbuilder import util
 
 @dataclass(init=False)
 class BuildFilePathInfo:
-    ownerThingName: str
     md5: str
     params: ParamsT
 
     def __init__(self):
-        self.ownerThingName = None
         self.md5 = None
         self.params = None
 
@@ -65,12 +63,12 @@ class BuildDiff:
         return True
 
 
-class BuildIndex(enum.Enum):
+class BuildIndex(Enum):
     RawBundleItem = 0
-    BigBundleItem = enum.auto()
-    RawBundlePack = enum.auto()
-    ReleaseBundlePack = enum.auto()
-    InstallBundlePack = enum.auto()
+    BigBundleItem = auto()
+    RawBundlePack = auto()
+    ReleaseBundlePack = auto()
+    InstallBundlePack = auto()
 
 
 def GetBuildIndexName(index: BuildIndex) -> str:
@@ -475,7 +473,6 @@ class BuildEngine:
 
             if not infos.get(absRealSource):
                 info = BuildFilePathInfo()
-                info.ownerThingName = thing.name
                 info.md5 = util.GetFileMd5(absRealSource)
                 info.params = deepcopy(file.params)
                 infos[absRealSource] = info
@@ -483,7 +480,6 @@ class BuildEngine:
             # Plain source will not be hashed as optimization.
             if not infos.get(absSource):
                 info = BuildFilePathInfo()
-                info.ownerThingName = thing.name
                 info.md5 = ""
                 info.params = deepcopy(file.params)
                 infos[absSource] = info
@@ -496,21 +492,18 @@ class BuildEngine:
             for absTargetDir in absTargetDirs:
                 if not infos.get(absTargetDir):
                     info = BuildFilePathInfo()
-                    info.ownerThingName = thing.name
                     info.md5 = ""
                     infos[absTargetDir] = info
 
             absRealTarget = file.AbsRealTarget(thing.absParentDir)
             if not infos.get(absRealTarget):
                 info = BuildFilePathInfo()
-                info.ownerThingName = thing.name
                 info.md5 = util.GetFileMd5(absRealTarget)
                 infos[absRealTarget] = info
 
             # Plain target will not be hashed as optimization.
             if not infos.get(absTarget):
                 info = BuildFilePathInfo()
-                info.ownerThingName = thing.name
                 info.md5 = ""
                 infos[absTarget] = info
 
