@@ -44,11 +44,20 @@ class BuildDiff:
     newInfos: BuildFilePathInfosT
     oldInfos: BuildFilePathInfosT
     loadPath: str
+    includesParentDiff: bool
 
-    def __init__(self, loadPath: str):
+    def __init__(self, loadPath: str, includesParentDiff: bool):
+        """
+        loadPath : str
+            String path to serialization file.
+        includesParentDiff : bool
+            Diff contains parent file diffs. This option is required when a build step can be run in isolation from other build steps.
+            For example if a Build is run without a Release Build, then the Release diff would lose information if it did not store the parent diff.
+        """
         self.newInfos = BuildFilePathInfosT()
         self.oldInfos = BuildFilePathInfosT()
         self.loadPath = loadPath
+        self.includesParentDiff = includesParentDiff
         self.TryLoadOldInfos()
 
     def TryLoadOldInfos(self) -> bool:
@@ -432,8 +441,8 @@ class BuildEngine:
 
 
     @staticmethod
-    def __BuildWithData(data: BuildIndexData, copy: BuildCopy, setup: BuildSetup) -> None:
-        BuildEngine.__PopulateDiffFromThings(data, setup.folders)
+    def __BuildWithData(data: BuildIndexData, copy: BuildCopy, setup: BuildSetup, diffWithParentThings: bool = False) -> None:
+        BuildEngine.__PopulateDiff(data, setup.folders, diffWithParentThings)
         BuildEngine.__PopulateBuildFileStatusInThings(data.things, data.diff)
         BuildEngine.__DeleteObsoleteFilesOfThings(data.things, data.diff)
         BuildEngine.__CopyFilesOfThings(data.things, copy)
@@ -443,28 +452,27 @@ class BuildEngine:
 
 
     @staticmethod
-    def __PopulateDiffFromThings(data: BuildIndexData, folders: Folders) -> None:
+    def __PopulateDiff(data: BuildIndexData, folders: Folders, withParentThings: bool) -> None:
         path: str = MakeDiffPath(data.index, folders)
-        data.diff = BuildDiff(path)
-        data.diff.newInfos = BuildEngine.__CreateFilePathInfoDictFromThings(data.things)
+        data.diff = BuildDiff(path, withParentThings)
+        BuildEngine.__PopulateDiffFromThings(data.diff, data.things)
 
 
     @staticmethod
-    def __CreateFilePathInfoDictFromThings(things: BuildThingsT) -> BuildFilePathInfosT:
-        infos = BuildFilePathInfosT()
+    def __PopulateDiffFromThings(diff: BuildDiff, things: BuildThingsT) -> None:
         thing: BuildThing
 
         for thing in things.values():
             print(f"Create file infos for {thing.name} ...")
 
-            infos.update(BuildEngine.__CreateFilePathInfoDictFromThing(thing))
+            BuildEngine.__PopulateFilePathInfosFromThing(diff.newInfos, thing)
 
-        return infos
+            if diff.includesParentDiff and thing.parentThing != None:
+                BuildEngine.__PopulateFilePathInfosFromThing(diff.newInfos, thing.parentThing)
 
 
     @staticmethod
-    def __CreateFilePathInfoDictFromThing(thing: BuildThing) -> BuildFilePathInfosT:
-        infos = BuildFilePathInfosT()
+    def __PopulateFilePathInfosFromThing(infos: BuildFilePathInfosT, thing: BuildThing) -> None:
         file: BuildFile
 
         for file in thing.files:
@@ -510,8 +518,6 @@ class BuildEngine:
                 info.md5 = targetMd5
                 infos[absTarget] = info
 
-        return infos
-
 
     @staticmethod
     def __RehashFilePathInfoDict(infos: BuildFilePathInfosT, things: BuildThingsT) -> None:
@@ -535,6 +541,9 @@ class BuildEngine:
 
         for thing in things.values():
             print(f"Populate file status for {thing.name} ...")
+
+            if diff.includesParentDiff and thing.parentThing != None:
+                BuildEngine.__PopulateFileStatusInThing(thing.parentThing, diff)
 
             BuildEngine.__PopulateFileStatusInThing(thing, diff)
 
@@ -668,7 +677,7 @@ class BuildEngine:
 
         self.__SendBundleEvents(BundleEventType.OnRelease)
 
-        BuildEngine.__BuildWithData(self.structure.GetProcessData(BuildIndex.ReleaseBundlePack), copy, self.setup)
+        BuildEngine.__BuildWithData(self.structure.GetProcessData(BuildIndex.ReleaseBundlePack), copy, self.setup, diffWithParentThings=True)
 
         return True
 
@@ -681,7 +690,7 @@ class BuildEngine:
 
         self.__SendBundleEvents(BundleEventType.OnInstall)
 
-        BuildEngine.__PopulateDiffFromThings(data, setup.folders)
+        BuildEngine.__PopulateDiff(data, setup.folders, withParentThings=True)
         BuildEngine.__PopulateBuildFileStatusInThings(data.things, data.diff)
         BuildEngine.__CopyFilesOfThings(data.things, self.installCopy)
         BuildEngine.__RehashFilePathInfoDict(data.diff.newInfos, data.things)
