@@ -16,6 +16,16 @@ class BundleEventType(Enum):
     OnInstall = auto()
     OnRun = auto()
     OnUninstall = auto()
+    OnStartBuildRawBundleItem = auto()
+    OnStartBuildBigBundleItem = auto()
+    OnStartBuildRawBundlePack = auto()
+    OnStartBuildReleaseBundlePack = auto()
+    OnStartBuildInstallBundlePack = auto()
+    OnFinishBuildRawBundleItem = auto()
+    OnFinishBuildBigBundleItem = auto()
+    OnFinishBuildRawBundlePack = auto()
+    OnFinishBuildReleaseBundlePack = auto()
+    OnFinishBuildInstallBundlePack = auto()
 
 
 def GetJsonBundleEventName(type: BundleEventType) -> str:

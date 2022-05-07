@@ -3,10 +3,10 @@
 def OnEvent(**kwargs) -> None:
     print("OnReleasePack.py called ...")
 
-    rawBundleItem = kwargs.get("_rawBundleThing")
-    bigBundleItem = kwargs.get("_releaseBundleThing")
-    bigBundleItem = kwargs.get("_installBundleThing")
+    rawBuildThing = kwargs.get("_rawBuildThing")
+    releaseBuildThing = kwargs.get("_releaseBuildThing")
+    installBuildThing = kwargs.get("_installBuildThing")
 
-    assert rawBundleItem != None, "_rawBundleThing kwargs not found"
-    assert bigBundleItem != None, "_releaseBundleThing kwargs not found"
-    assert bigBundleItem != None, "_installBundleThing kwargs not found"
+    assert rawBuildThing != None, "_rawBuildThing kwargs not found"
+    assert releaseBuildThing != None, "_releaseBuildThing kwargs not found"
+    assert installBuildThing != None, "_installBuildThing kwargs not found"

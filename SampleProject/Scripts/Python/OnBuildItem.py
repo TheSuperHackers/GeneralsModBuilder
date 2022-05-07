@@ -4,9 +4,9 @@ def OnEvent(**kwargs) -> None:
     print("OnBuildItem.py called ...")
 
     bundleItem = kwargs.get("_bundleItem")
-    rawBundleItem = kwargs.get("_rawBundleThing")
-    bigBundleItem = kwargs.get("_bigBundleThing")
+    rawBuildThing = kwargs.get("_rawBuildThing")
+    bigBuildThing = kwargs.get("_bigBuildThing")
 
     assert bundleItem != None, "_bundleItem kwargs not found"
-    assert rawBundleItem != None, "_rawBundleThing kwargs not found"
-    assert bigBundleItem != None, "_bigBundleItem kwargs not found"
+    assert rawBuildThing != None, "_rawBuildThing kwargs not found"
+    assert bigBuildThing != None, "_bigBuildThing kwargs not found"

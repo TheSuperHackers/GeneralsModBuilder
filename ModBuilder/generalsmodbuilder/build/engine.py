@@ -90,6 +90,27 @@ def MakeDiffPath(index: BuildIndex, folders: Folders) -> str:
     return os.path.join(folders.absBuildDir, f"{GetBuildIndexName(index)}.pickle")
 
 
+g_buildIndexToStartBuildEvent = dict[BuildIndex, BundleEventType]()
+g_buildIndexToStartBuildEvent[BuildIndex.RawBundleItem] = BundleEventType.OnStartBuildRawBundleItem
+g_buildIndexToStartBuildEvent[BuildIndex.BigBundleItem] = BundleEventType.OnStartBuildBigBundleItem
+g_buildIndexToStartBuildEvent[BuildIndex.RawBundlePack] = BundleEventType.OnStartBuildRawBundlePack
+g_buildIndexToStartBuildEvent[BuildIndex.ReleaseBundlePack] = BundleEventType.OnStartBuildReleaseBundlePack
+g_buildIndexToStartBuildEvent[BuildIndex.InstallBundlePack] = BundleEventType.OnStartBuildInstallBundlePack
+
+g_buildIndexToFinishBuildEvent = dict[BuildIndex, BundleEventType]()
+g_buildIndexToFinishBuildEvent[BuildIndex.RawBundleItem] = BundleEventType.OnFinishBuildRawBundleItem
+g_buildIndexToFinishBuildEvent[BuildIndex.BigBundleItem] = BundleEventType.OnFinishBuildBigBundleItem
+g_buildIndexToFinishBuildEvent[BuildIndex.RawBundlePack] = BundleEventType.OnFinishBuildRawBundlePack
+g_buildIndexToFinishBuildEvent[BuildIndex.ReleaseBundlePack] = BundleEventType.OnFinishBuildReleaseBundlePack
+g_buildIndexToFinishBuildEvent[BuildIndex.InstallBundlePack] = BundleEventType.OnFinishBuildInstallBundlePack
+
+def GetStartBuildEvent(index: BuildIndex) -> BundleEventType:
+    return g_buildIndexToStartBuildEvent[index]
+
+def GetFinishBuildEvent(index: BuildIndex) -> BundleEventType:
+    return g_buildIndexToFinishBuildEvent[index]
+
+
 @dataclass(init=False)
 class BuildIndexData:
     index: BuildIndex
@@ -111,7 +132,7 @@ class BuildStructure:
         for index in BuildIndex:
             self.data.append(BuildIndexData(index))
 
-    def GetProcessData(self, index: BuildIndex) -> BuildIndexData:
+    def GetIndexData(self, index: BuildIndex) -> BuildIndexData:
         return self.data[index.value]
 
     def GetThings(self, index: BuildIndex) -> BuildThingsT:
@@ -221,10 +242,10 @@ class BuildEngine:
         return True
 
 
-    def __SendBundleEvents(self, eventType: BundleEventType):
-        structure: BuildStructure = self.structure
-        bundles: Bundles = self.setup.bundles
-        folders: Folders = self.setup.folders
+    @staticmethod
+    def __SendBundleEvents(structure: BuildStructure, setup: BuildSetup, eventType: BundleEventType):
+        bundles: Bundles = setup.bundles
+        folders: Folders = setup.folders
         sent: bool = False
         item: BundleItem
         pack: BundlePack
@@ -234,11 +255,11 @@ class BuildEngine:
             if event != None:
                 kwargs = dict()
                 kwargs["_bundleItem"] = item
-                kwargs["_rawBundleThing"] = structure.FindThingWithPlainName(BuildIndex.RawBundleItem, item.name)
-                kwargs["_bigBundleThing"] = structure.FindThingWithPlainName(BuildIndex.BigBundleItem, item.name)
                 kwargs["_absBuildDir"] = folders.absBuildDir
                 kwargs["_absReleaseDir"] = folders.absReleaseDir
                 kwargs["_absReleaseUnpackedDir"] = folders.absReleaseUnpackedDir
+                kwargs["_rawBuildThing"] = structure.FindThingWithPlainName(BuildIndex.RawBundleItem, item.name)
+                kwargs["_bigBuildThing"] = structure.FindThingWithPlainName(BuildIndex.BigBundleItem, item.name)
                 sent |= BuildEngine.__CallScript(event, kwargs)
                 item.VerifyTypes()
                 item.Normalize()
@@ -248,12 +269,12 @@ class BuildEngine:
             if event != None:
                 kwargs = dict()
                 kwargs["_bundlePack"] = pack
-                kwargs["_rawBundleThing"] = structure.FindThingWithPlainName(BuildIndex.RawBundlePack, pack.name)
-                kwargs["_releaseBundleThing"] = structure.FindThingWithPlainName(BuildIndex.ReleaseBundlePack, pack.name)
-                kwargs["_installBundleThing"] = structure.FindThingWithPlainName(BuildIndex.InstallBundlePack, pack.name)
                 kwargs["_absBuildDir"] = folders.absBuildDir
                 kwargs["_absReleaseDir"] = folders.absReleaseDir
                 kwargs["_absReleaseUnpackedDir"] = folders.absReleaseUnpackedDir
+                kwargs["_rawBuildThing"] = structure.FindThingWithPlainName(BuildIndex.RawBundlePack, pack.name)
+                kwargs["_releaseBuildThing"] = structure.FindThingWithPlainName(BuildIndex.ReleaseBundlePack, pack.name)
+                kwargs["_installBuildThing"] = structure.FindThingWithPlainName(BuildIndex.InstallBundlePack, pack.name)
                 sent |= BuildEngine.__CallScript(event, kwargs)
                 pack.VerifyTypes()
                 pack.Normalize()
@@ -277,7 +298,7 @@ class BuildEngine:
         self.installCopy = BuildCopy(tools=tools, options=options)
         self.installLanguagePicklePath = os.path.join(folders.absBuildDir, "GameLanguage.pickle")
 
-        self.__SendBundleEvents(BundleEventType.OnPreBuild)
+        BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnPreBuild)
 
         BuildEngine.__PopulateStructureRawBundleItems(self.structure, bundles, folders)
         BuildEngine.__PopulateStructureBigBundleItems(self.structure, bundles, folders)
@@ -428,24 +449,51 @@ class BuildEngine:
     def __Build(self) -> bool:
         print("Do Build ...")
 
+        BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnBuild)
+
         tools: ToolsT = self.setup.tools
         copy = BuildCopy(tools=tools, options=BuildCopyOption.EnableSymlinks)
 
-        self.__SendBundleEvents(BundleEventType.OnBuild)
+        BuildEngine.__BuildWithData(self.structure, self.setup, copy, BuildIndex.RawBundleItem)
+        BuildEngine.__BuildWithData(self.structure, self.setup, copy, BuildIndex.BigBundleItem)
+        BuildEngine.__BuildWithData(self.structure, self.setup, copy, BuildIndex.RawBundlePack)
 
-        BuildEngine.__BuildWithData(self.structure.GetProcessData(BuildIndex.RawBundleItem), copy, self.setup)
-        BuildEngine.__BuildWithData(self.structure.GetProcessData(BuildIndex.BigBundleItem), copy, self.setup)
-        BuildEngine.__BuildWithData(self.structure.GetProcessData(BuildIndex.RawBundlePack), copy, self.setup)
+        return True
+
+
+    def __PostBuild(self) -> bool:
+        print("Do Post Build ...")
+
+        BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnPostBuild)
 
         return True
 
 
     @staticmethod
-    def __BuildWithData(data: BuildIndexData, copy: BuildCopy, setup: BuildSetup, diffWithParentThings: bool = False) -> None:
+    def __BuildWithData(
+            structure: BuildStructure,
+            setup: BuildSetup,
+            copy: BuildCopy,
+            index: BuildIndex,
+            deleteObsoleteFiles: bool = True,
+            diffWithParentThings: bool = False) -> None:
+
+        data: BuildIndexData = structure.GetIndexData(index)
+
+        # Start event is sent before populating the build diff to allow for file modifications and file injections.
+        BuildEngine.__SendBundleEvents(structure, setup, GetStartBuildEvent(index))
+
         BuildEngine.__PopulateDiff(data, setup.folders, diffWithParentThings)
         BuildEngine.__PopulateBuildFileStatusInThings(data.things, data.diff)
-        BuildEngine.__DeleteObsoleteFilesOfThings(data.things, data.diff)
+
+        if deleteObsoleteFiles:
+            BuildEngine.__DeleteObsoleteFilesOfThings(data.things, data.diff)
+
         BuildEngine.__CopyFilesOfThings(data.things, copy)
+
+        # Finish event is sent before finalizing the build diff to allow for file verifications with hard failures.
+        BuildEngine.__SendBundleEvents(structure, setup, GetFinishBuildEvent(index))
+
         BuildEngine.__RehashFilePathInfoDict(data.diff.newInfos, data.things)
 
         data.diff.SaveNewInfos()
@@ -661,23 +709,15 @@ class BuildEngine:
             copy.UncopyThing(thing)
 
 
-    def __PostBuild(self) -> bool:
-        print("Do Post Build ...")
-
-        self.__SendBundleEvents(BundleEventType.OnPostBuild)
-
-        return True
-
-
     def __BuildRelease(self) -> bool:
         print("Do Build Release ...")
+
+        BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnRelease)
 
         tools: ToolsT = self.setup.tools
         copy = BuildCopy(tools=tools)
 
-        self.__SendBundleEvents(BundleEventType.OnRelease)
-
-        BuildEngine.__BuildWithData(self.structure.GetProcessData(BuildIndex.ReleaseBundlePack), copy, self.setup, diffWithParentThings=True)
+        BuildEngine.__BuildWithData(self.structure, self.setup, copy, BuildIndex.ReleaseBundlePack, diffWithParentThings=True)
 
         return True
 
@@ -685,25 +725,20 @@ class BuildEngine:
     def __Install(self) -> bool:
         print("Do Install ...")
 
+        BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnInstall)
+
         setup: BuildSetup = self.setup
-        data: BuildIndexData = self.structure.GetProcessData(BuildIndex.InstallBundlePack)
+        data: BuildIndexData = self.structure.GetIndexData(BuildIndex.InstallBundlePack)
 
-        self.__SendBundleEvents(BundleEventType.OnInstall)
-
-        BuildEngine.__PopulateDiff(data, setup.folders, withParentThings=True)
-        BuildEngine.__PopulateBuildFileStatusInThings(data.things, data.diff)
-        BuildEngine.__CopyFilesOfThings(data.things, self.installCopy)
-        BuildEngine.__RehashFilePathInfoDict(data.diff.newInfos, data.things)
-
-        data.diff.SaveNewInfos()
-
-        installedFiles: list[str] = BuildEngine.__GetAllTargetFilesFromThings(data.things)
-        BuildEngine.__CheckGameInstallFiles(installedFiles, setup.runner)
+        BuildEngine.__BuildWithData(self.structure, self.setup, self.installCopy, data.index, deleteObsoleteFiles=False, diffWithParentThings=True)
 
         thing: BuildThing
         for thing in data.things.values():
             if thing.setGameLanguageOnInstall:
                 BuildEngine.__SetGameLanguage(thing.setGameLanguageOnInstall, setup)
+
+        installedFiles: list[str] = BuildEngine.__GetAllTargetFilesFromThings(data.things)
+        BuildEngine.__CheckGameInstallFiles(installedFiles, setup.runner)
 
         return True
 
@@ -753,7 +788,7 @@ class BuildEngine:
 
         print("Run", " ".join(args))
 
-        self.__SendBundleEvents(BundleEventType.OnRun)
+        BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnRun)
 
         subprocess.run(args=args)
 
@@ -763,9 +798,9 @@ class BuildEngine:
     def __Uninstall(self) -> bool:
         print("Do Uninstall ...")
 
-        data: BuildIndexData = self.structure.GetProcessData(BuildIndex.InstallBundlePack)
+        BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnUninstall)
 
-        self.__SendBundleEvents(BundleEventType.OnUninstall)
+        data: BuildIndexData = self.structure.GetIndexData(BuildIndex.InstallBundlePack)
 
         BuildEngine.__UncopyFilesOfThings(data.things, self.installCopy)
 

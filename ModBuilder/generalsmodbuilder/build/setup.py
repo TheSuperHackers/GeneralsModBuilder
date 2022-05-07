@@ -1,4 +1,4 @@
-import enum
+from enum import Flag, auto
 from dataclasses import dataclass
 from generalsmodbuilder.data.bundles import Bundles
 from generalsmodbuilder.data.folders import Folders
@@ -7,15 +7,15 @@ from generalsmodbuilder.data.tools import Tool, ToolsT
 from generalsmodbuilder import util
 
 
-class BuildStep(enum.Flag):
+class BuildStep(Flag):
     Zero = 0
-    PreBuild = enum.auto()
-    Build = enum.auto()
-    PostBuild = enum.auto()
-    Release = enum.auto()
-    Install = enum.auto()
-    Run = enum.auto()
-    Uninstall = enum.auto()
+    PreBuild = auto()
+    Build = auto()
+    PostBuild = auto()
+    Release = auto()
+    Install = auto()
+    Run = auto()
+    Uninstall = auto()
 
 
 @dataclass
