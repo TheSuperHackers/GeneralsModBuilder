@@ -37,6 +37,11 @@
                 "files": [
                     {
                         "parent": "GameFilesEdited",
+                        "params": {
+                            "forceEOL": "\r\n",
+                            "deleteComments": ";",
+                            "deleteWhitespace": 1
+                        },
                         "sourceTargetList": [
                             {
                                 "source": "Data/INI/*.ini",
@@ -146,6 +151,10 @@
                 "files": [
                     {
                         "parent": "GameFilesEdited",
+                        "params": {
+                            "forceEOL": "\r\n",
+                            "deleteWhitespace": 1
+                        },
                         "sourceList": [
                             "Window/*.wnd",
                             "Window/Menus/*.wnd"
