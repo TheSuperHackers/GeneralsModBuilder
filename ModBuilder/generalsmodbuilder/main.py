@@ -4,7 +4,7 @@ from argparse import ArgumentParser
 from generalsmodbuilder.build.engine import BuildEngine
 from generalsmodbuilder.build.setup import BuildStep
 from generalsmodbuilder.build.setup import BuildSetup
-from generalsmodbuilder.data.bundles import Bundles, MakeBundlesFromJsons
+from generalsmodbuilder.data.bundles import Bundles, BundlePack, MakeBundlesFromJsons
 from generalsmodbuilder.data.folders import Folders, MakeFoldersFromJsons
 from generalsmodbuilder.data.runner import Runner, MakeRunnerFromJsons
 from generalsmodbuilder.data.tools import ToolsT, MakeToolsFromJsons
@@ -38,7 +38,16 @@ def __CreateBuildStep(build: bool, release: bool, install: bool, uninstall: bool
     return buildStep
 
 
-def RunWithConfig(configPaths: list[str],
+def __PatchBundlesInstall(bundles: Bundles, installList: list[str]) -> None:
+    pack: BundlePack
+    for pack in bundles.packs:
+        if pack.name in installList:
+            pack.install = True
+
+
+def RunWithConfig(
+        configPaths: list[str],
+        installList: list[str],
         build: bool=False,
         release: bool=False,
         install: bool=False,
@@ -53,6 +62,8 @@ def RunWithConfig(configPaths: list[str],
     runner: Runner = MakeRunnerFromJsons(jsonFiles)
     bundles: Bundles = MakeBundlesFromJsons(jsonFiles)
     tools: ToolsT = MakeToolsFromJsons(jsonFiles)
+
+    __PatchBundlesInstall(bundles, installList)
 
     setup = BuildSetup(
         step=buildStep,
@@ -74,19 +85,29 @@ def Main(args=None):
     parser.add_argument('-l', '--config-list', type=str, nargs="*", help='Paths to any amount of configuration files (json).')
     parser.add_argument('-b', '--build', action='store_true')
     parser.add_argument('-z', '--release', action='store_true')
-    parser.add_argument('-i', '--install', action='store_true')
+    parser.add_argument('-i', '--install', type=str, nargs="?", const="_default_", action='append', help='Can specify bundle pack name to install. Multiples can be specified.')
+    parser.add_argument('-o', '--install-list', type=str, nargs="*", help='Installs specified bundle pack names.')
     parser.add_argument('-u', '--uninstall', action='store_true')
     parser.add_argument('-r', '--run', action='store_true')
     parser.add_argument('--print-config', action='store_true')
 
     args, unknownargs = parser.parse_known_args(args=args)
 
+    # Build install pack name list.
+    installList = list[str]()
+    if args.install_list:
+        installList.extend(args.install_list)
+    if args.install:
+        installList.extend(args.install)
+
+    # Set main tool commands.
     build = bool(args.build)
     release = bool(args.release)
-    install = bool(args.install)
+    install = bool(installList)
     uninstall = bool(args.uninstall)
     run = bool(args.run)
 
+    # Check if any work needs to be done.
     if (not build) and (not release) and (not install) and (not uninstall) and (not run):
         parser.print_help()
         return
@@ -112,6 +133,7 @@ def Main(args=None):
     try:
         RunWithConfig(
             configPaths=configPaths,
+            installList=installList,
             build=build,
             release=release,
             install=install,
