@@ -27,7 +27,7 @@
                 "${workspaceFolder}\\SampleProject\\ModRunner.json",
                 "--build",
                 "--release",
-                "--install",
+                "--install=SampleProjectTGA256",
                 "--run",
                 "--uninstall"
             ]

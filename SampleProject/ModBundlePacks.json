@@ -5,7 +5,6 @@
         "packsSuffix": "_v1.0",
         "packs": [
             {
-                "install": true,
                 "setGameLanguageOnInstall": "English",
                 "name": "SampleProjectTGA256",
                 "itemNames": [
