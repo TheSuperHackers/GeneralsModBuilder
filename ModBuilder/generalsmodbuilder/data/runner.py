@@ -55,7 +55,7 @@ class Runner:
         for file in fileList:
             if not os.path.isfile(file) and "*" in file:
                 globFiles = glob(file, recursive=True)
-                util.RelAssert(bool(globFiles), f"Wildcard '{file}' matches nothing")
+                # It is ok if globFiles is empty.
                 for globFile in globFiles:
                     if os.path.isfile(globFile):
                         newFiles.append(globFile)
@@ -92,6 +92,6 @@ def MakeRunnerFromJsons(jsonFiles: list[JsonFile]) -> Runner:
     for i in range(len(runner.absRegularGameDataFiles)):
         runner.absRegularGameDataFiles[i] = os.path.join(runner.absGameInstallDir, runner.absRegularGameDataFiles[i])
 
-    runner.ResolveWildcards()
     runner.VerifyValues()
+    runner.ResolveWildcards()
     return runner
