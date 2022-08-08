@@ -1,4 +1,5 @@
 import os
+import traceback
 from argparse import ArgumentParser
 from generalsmodbuilder.build.engine import BuildEngine
 from generalsmodbuilder.build.setup import BuildStep
@@ -108,14 +109,20 @@ def Main(args=None):
     for i in range(len(configPaths)):
         configPaths[i] = os.path.abspath(configPaths[i])
 
-    RunWithConfig(
-        configPaths=configPaths,
-        build=build,
-        release=release,
-        install=install,
-        uninstall=uninstall,
-        run=run,
-        printConfig=bool(args.print_config))
+    try:
+        RunWithConfig(
+            configPaths=configPaths,
+            build=build,
+            release=release,
+            install=install,
+            uninstall=uninstall,
+            run=run,
+            printConfig=bool(args.print_config))
+
+    except Exception as e:
+        print("ERROR CALLSTACK")
+        traceback.print_exc()
+        input("Press any key to continue...")
 
 
 if __name__ == "__main__":
