@@ -28,6 +28,7 @@
                 "--build",
                 "--release",
                 "--install",
+                "--run",
                 "--uninstall"
             ]
         },
