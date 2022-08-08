@@ -28,6 +28,8 @@ class BuildFileType(Enum):
     bmp = enum.auto()
     tga = enum.auto()
     dds = enum.auto()
+    ini = enum.auto()
+    wnd = enum.auto()
     Any = enum.auto()
     Auto = enum.auto()
 
@@ -170,6 +172,13 @@ class BuildCopy:
 
 
     def __GetCopyFunction(self, sourceT: BuildFileType, targetT: BuildFileType) -> Callable:
+        if targetT == BuildFileType.ini:
+            return self.__CopyToINI
+
+        if targetT == BuildFileType.wnd:
+            return self.__CopyToWND
+
+        # Be mindful about what comes before and after this.
         if targetT == BuildFileType.Any or sourceT == targetT:
             return self.__CopyTo
 
@@ -470,3 +479,60 @@ class BuildCopy:
 
     def __GetToolExePath(self, name: str) -> str:
         return self.tools.get(name).GetExecutable()
+
+
+    def __CopyToINI(self, source: str, target: str, params: ParamsT) -> bool:
+        if self.__CopyToProcessedScript(source, target, params):
+            return True
+        else:
+            return self.__CopyTo(source, target, params)
+
+
+    def __CopyToWND(self, source: str, target: str, params: ParamsT) -> bool:
+        if self.__CopyToProcessedScript(source, target, params):
+            return True
+        else:
+            return self.__CopyTo(source, target, params)
+
+
+    def __CopyToProcessedScript(self, source: str, target: str, params: ParamsT) -> bool:
+        forceEOL: str = params.get("forceEOL")
+        deleteComments: str = params.get("deleteComments")
+        deleteWhitespace: int = params.get("deleteWhitespace")
+        doForceEOL: bool = isinstance(forceEOL, str) and bool(forceEOL)
+        doDeleteComments: bool = isinstance(deleteComments, str) and bool(deleteComments)
+        doDeleteWhitespace: bool = isinstance(deleteWhitespace, int) and deleteWhitespace > 0
+
+        if doDeleteWhitespace or doDeleteComments or doForceEOL:
+            line: str
+            with open(source, "r", encoding="ascii") as sourceFile:
+                with open(target, "w", encoding="ascii", newline="") as targetFile:
+                    sourceLines: list[str] = [line.rstrip("\r\n") for line in sourceFile]
+
+                    if doDeleteComments:
+                        for i, s in enumerate(sourceLines):
+                            sourceLines[i] = s.split(deleteComments, 1)[0]
+
+                    # Delete obsolete spaces
+                    if doDeleteWhitespace:
+                        for i, s in enumerate(sourceLines):
+                            sourceLines[i] = " ".join(s.split())
+
+                    # Delete empty lines
+                    if doDeleteWhitespace:
+                        sourceLines[:] = [line for line in sourceLines if line.strip()]
+
+                    if doForceEOL:
+                        for i, s in enumerate(sourceLines):
+                            sourceLines[i] = s + forceEOL
+                    else:
+                        for i, s in enumerate(sourceLines):
+                            sourceLines[i] = s + "\n"
+
+                    for line in sourceLines:
+                        targetFile.write(line)
+
+                    BuildCopy.__PrintMakeResult(source, target)
+                    return True
+
+        return False
