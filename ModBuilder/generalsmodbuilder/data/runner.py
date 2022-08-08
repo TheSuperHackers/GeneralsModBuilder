@@ -79,12 +79,18 @@ def MakeRunnerFromJsons(jsonFiles: list[JsonFile]) -> Runner:
             runner.gameLanguageRegKey = jRunner.get("gameLanguageRegKey", runner.gameLanguageRegKey)
 
             gameInstallDir: str = jRunner.get("gameInstallPath")
-            gameInstallRegKey: str = jRunner.get("gameInstallRegKey")
 
             if isinstance(gameInstallDir, str) and gameInstallDir:
                 runner.absGameInstallDir = os.path.join(jsonDir, gameInstallDir)
-            elif isinstance(gameInstallRegKey, str) and gameInstallRegKey:
-                runner.absGameInstallDir = util.GetRegKeyValue(gameInstallRegKey)
+            else:
+                gameInstallRegKey: str = jRunner.get("gameInstallRegKey")
+                if isinstance(gameInstallRegKey, str) and gameInstallRegKey:
+                    runner.absGameInstallDir = util.GetRegKeyValue(gameInstallRegKey)
+                # If the first is invalid, try the second one.
+                if not os.path.isfile(runner.AbsGameExeFile()):
+                    gameInstall2RegKey: str = jRunner.get("gameInstall2RegKey")
+                    if isinstance(gameInstall2RegKey, str) and gameInstall2RegKey:
+                        runner.absGameInstallDir = util.GetRegKeyValue(gameInstall2RegKey)
 
     runner.VerifyTypes()
     runner.Normalize()
