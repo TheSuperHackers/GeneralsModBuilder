@@ -233,8 +233,12 @@ class BuildCopy:
             "-SAVE_CSF", target]
 
         language: str = params.get("language")
-        if language != None and isinstance(language, str):
+        if isinstance(language, str) and bool(language):
             args.extend(["-LOAD_STR_LANGUAGES", language])
+
+        swapAndSetLanguage: str = params.get("swapAndSetLanguage")
+        if isinstance(swapAndSetLanguage, str) and bool(swapAndSetLanguage):
+            args.extend(["-SWAP_AND_SET_LANGUAGE", swapAndSetLanguage])
 
         subprocess.run(args, check=True)
 
@@ -249,7 +253,7 @@ class BuildCopy:
             "-SAVE_STR", target]
 
         language: str = params.get("language")
-        if language != None and isinstance(language, str):
+        if isinstance(language, str) and bool(language):
             args.extend(["-SAVE_STR_LANGUAGES", language])
 
         subprocess.run(args, check=True)
