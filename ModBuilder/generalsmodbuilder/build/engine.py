@@ -727,7 +727,6 @@ class BuildEngine:
 
         BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnInstall)
 
-        setup: BuildSetup = self.setup
         data: BuildIndexData = self.structure.GetIndexData(BuildIndex.InstallBundlePack)
 
         BuildEngine.__BuildWithData(self.structure, self.setup, self.installCopy, data.index, deleteObsoleteFiles=False, diffWithParentThings=True)
@@ -735,10 +734,10 @@ class BuildEngine:
         thing: BuildThing
         for thing in data.things.values():
             if thing.setGameLanguageOnInstall:
-                BuildEngine.__SetGameLanguage(thing.setGameLanguageOnInstall, setup)
+                BuildEngine.__SetGameLanguage(thing.setGameLanguageOnInstall, self.setup)
 
         installedFiles: list[str] = BuildEngine.__GetAllTargetFilesFromThings(data.things)
-        BuildEngine.__CheckGameInstallFiles(installedFiles, setup.runner)
+        BuildEngine.__CheckGameInstallFiles(installedFiles, self.setup.runner)
 
         return True
 
@@ -835,9 +834,13 @@ class BuildEngine:
         print(f"Restore Game Language ...")
 
         picklePath: str = BuildEngine.__MakeLanguagePicklePath(setup.folders)
-
-        if os.path.isfile(picklePath):
+        try:
             language: str = util.LoadPickle(picklePath)
-            regKey: str = setup.runner.gameLanguageRegKey
-            util.SetRegKeyValue(regKey, language)
-            os.remove(picklePath)
+        except:
+            return
+        finally:
+            if os.path.isfile(picklePath):
+                os.remove(picklePath)
+
+        regKey: str = setup.runner.gameLanguageRegKey
+        util.SetRegKeyValue(regKey, language)
