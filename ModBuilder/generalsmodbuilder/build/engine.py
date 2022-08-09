@@ -730,6 +730,7 @@ class BuildEngine:
         data: BuildIndexData = self.structure.GetIndexData(BuildIndex.InstallBundlePack)
 
         BuildEngine.__BuildWithData(self.structure, self.setup, self.installCopy, data.index, deleteObsoleteFiles=False, diffWithParentThings=True)
+        BuildEngine.__SaveInstalledThingsInfo(data.things, self.setup)
 
         thing: BuildThing
         for thing in data.things.values():
@@ -803,6 +804,11 @@ class BuildEngine:
 
         BuildEngine.__UncopyFilesOfThings(data.things, self.installCopy)
 
+        installedThings: BuildThingsT = BuildEngine.__LoadInstalledThingsInfo(self.setup)
+        if installedThings != None:
+            BuildEngine.__UncopyFilesOfThings(installedThings, self.installCopy)
+            BuildEngine.__DeleteInstalledThingsInfo(self.setup)
+
         BuildEngine.__RestoreGameLanguage(self.setup)
 
         return True
@@ -844,3 +850,33 @@ class BuildEngine:
 
         regKey: str = setup.runner.gameLanguageRegKey
         util.SetRegKeyValue(regKey, language)
+
+
+    @staticmethod
+    def __MakeInstalledThingsPicklePath(folders: Folders) -> str:
+        return os.path.join(folders.absBuildDir, "InstalledThings.pickle")
+
+
+    @staticmethod
+    def __LoadInstalledThingsInfo(setup: BuildSetup) -> BuildThingsT:
+        picklePath: str = BuildEngine.__MakeInstalledThingsPicklePath(setup.folders)
+        try:
+            return util.LoadPickle(picklePath)
+        except:
+            return BuildThingsT()
+
+
+    @staticmethod
+    def __SaveInstalledThingsInfo(things: BuildThingsT, setup: BuildSetup) -> None:
+        picklePath: str = BuildEngine.__MakeInstalledThingsPicklePath(setup.folders)
+        installedThings: BuildThingsT = BuildEngine.__LoadInstalledThingsInfo(setup)
+        installedThings.update(things)
+        util.SavePickle(picklePath, installedThings)
+
+
+    @staticmethod
+    def __DeleteInstalledThingsInfo(setup: BuildSetup) -> None:
+        picklePath: str = BuildEngine.__MakeInstalledThingsPicklePath(setup.folders)
+        if os.path.isfile(picklePath):
+            print("Remove", picklePath)
+            os.remove(picklePath)
