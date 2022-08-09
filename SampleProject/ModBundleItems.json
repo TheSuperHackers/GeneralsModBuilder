@@ -75,6 +75,14 @@
                         "params": {
                             "language": "Spanish"
                         }
+                    },
+                    {
+                        "parent": "GameFilesEdited",
+                        "source": "Data/generals_de.str",
+                        "target": "Data/German/generals.csf",
+                        "params": {
+                            "swapAndSetLanguage": "German"
+                        }
                     }
                 ],
                 "onPreBuild": {
