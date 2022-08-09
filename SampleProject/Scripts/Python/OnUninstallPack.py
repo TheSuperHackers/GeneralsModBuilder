@@ -9,4 +9,4 @@ def OnEvent(**kwargs) -> None:
 
     assert rawBuildThing != None, "_rawBuildThing kwargs not found"
     assert releaseBuildThing != None, "_releaseBuildThing kwargs not found"
-    assert installBuildThing != None, "_installBuildThing kwargs not found"
+    #assert installBuildThing != None, "_installBuildThing kwargs not found"
