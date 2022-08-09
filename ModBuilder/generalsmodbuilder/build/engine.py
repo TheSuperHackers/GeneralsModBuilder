@@ -825,7 +825,6 @@ class BuildEngine:
             picklePath: str = BuildEngine.__MakeLanguagePicklePath(setup.folders)
 
             if not os.path.isfile(picklePath):
-
                 util.SavePickle(picklePath, curLanguage)
 
             util.SetRegKeyValue(regKey, language)
