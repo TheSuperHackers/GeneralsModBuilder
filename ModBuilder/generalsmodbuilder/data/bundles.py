@@ -189,9 +189,21 @@ class BundleItem:
             newName = sourceName if targetName == "*" else targetName
             newExtn = sourceExtn if targetExtn == ".*" else targetExtn
 
-        # TODO: Implement ** target folder support?
+        if "**" in targetPath:
+            basePathPair: list[str] = targetPath.split("**", 1)
+            basePath = os.path.dirname(basePathPair[0])
+            sourceExtraPathPair: list[str] = source.split(basePath)
+            if len(sourceExtraPathPair) > 1:
+                sourceExtraPath = os.path.dirname(sourceExtraPathPair[-1])
+                sourceExtraPath = util.RemoveLeadingAndTrailingSlashes(sourceExtraPath)
+            else:
+                sourceExtraPath = ""
+            newPath = targetPath.replace("**", sourceExtraPath)
+            newPath = os.path.normpath(newPath)
+        else:
+            newPath = os.path.normpath(targetPath)
 
-        newTarget = os.path.join(targetPath, newName + newExtn)
+        newTarget = os.path.join(newPath, newName + newExtn)
         return newTarget
 
 
