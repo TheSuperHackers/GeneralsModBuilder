@@ -178,6 +178,14 @@ def CreateRelPaths(paths: list[str], start: str) -> list[str]:
     return relPaths
 
 
+def RemoveLeadingAndTrailingSlashes(s: str):
+    while s.startswith('/') or s.startswith('\\'):
+        s = s[1:]
+    while s.endswith('/') or s.endswith('\\'):
+        s = s[:-1]
+    return s
+
+
 def MakeDirsForFile(file: str) -> None:
     os.makedirs(GetAbsFileDir(file), exist_ok=True)
 
