@@ -178,11 +178,21 @@ def CreateRelPaths(paths: list[str], start: str) -> list[str]:
     return relPaths
 
 
-def RemoveLeadingAndTrailingSlashes(s: str):
-    while s.startswith('/') or s.startswith('\\'):
-        s = s[1:]
-    while s.endswith('/') or s.endswith('\\'):
-        s = s[:-1]
+def RemoveLeadingString(s: str, remove: str):
+    if s.startswith(remove):
+        s = s[len(remove):]
+    return s
+
+
+def RemoveTrailingString(s: str, remove: str):
+    if s.endswith(remove):
+        s = s[:-len(remove)]
+    return s
+
+
+def RemoveLeadingAndTrailingString(s: str, remove: str):
+    s = RemoveLeadingString(s, remove)
+    s = RemoveTrailingString(s, remove)
     return s
 
 

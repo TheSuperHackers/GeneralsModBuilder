@@ -35,10 +35,14 @@ class BuildFile:
         return self.relTarget
 
     def AbsTarget(self, absParentDir: str) -> str:
-        return os.path.join(absParentDir, self.relTarget)
+        path = os.path.join(absParentDir, self.relTarget)
+        path = os.path.normpath(path)
+        return path
 
     def AbsRealTarget(self, absParentDir: str) -> str:
-        return os.path.realpath(self.AbsTarget(absParentDir))
+        path = self.AbsTarget(absParentDir)
+        path = os.path.realpath(path)
+        return path
 
     def AbsSource(self) -> str:
         return self.absSource
