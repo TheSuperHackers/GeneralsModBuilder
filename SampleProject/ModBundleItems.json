@@ -44,8 +44,8 @@
                         },
                         "sourceTargetList": [
                             {
-                                "source": "Data/INI/*.ini",
-                                "target": "Data/INI/*"
+                                "source": "Data/INI/**/*.ini",
+                                "target": "Data/INI/**/*.ini"
                             },
                             {
                                 "source": "Data/English/*.ini",
