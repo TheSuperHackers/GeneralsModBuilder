@@ -327,8 +327,8 @@ class BuildCopy:
     def __BuildImageFromPSD(source: str) -> PILImage:
         psd: PSDImage = PSDImage.open(fp=source)
 
-        util.RelAssert(psd.color_mode == PSDColorMode.RGB, f"PSD image '{source}' has unsupported color mode '{psd.color_mode}'.")
-        util.RelAssert(psd.channels >= 3, f"PSD image '{source}' has unsupported channel size '{psd.channels}'.")
+        util.Verify(psd.color_mode == PSDColorMode.RGB, f"PSD image '{source}' has unsupported color mode '{psd.color_mode}'.")
+        util.Verify(psd.channels >= 3, f"PSD image '{source}' has unsupported channel size '{psd.channels}'.")
 
         if psd.channels == 3:
             r: PILImage = psd.topil(channel=0)

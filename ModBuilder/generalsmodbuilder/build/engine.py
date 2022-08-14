@@ -646,7 +646,7 @@ class BuildEngine:
                 return BuildFileStatus.Added
             else:
                 newInfo: BuildFilePathInfo = diff.newInfos.get(filePath)
-                util.RelAssert(newInfo != None, "Info must exist")
+                util.Verify(newInfo != None, "Info must exist")
 
                 if newInfo.Matches(oldInfo):
                     if parentStatus != None and parentStatus != BuildFileStatus.Unknown:

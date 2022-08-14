@@ -28,17 +28,17 @@ class BuildSetup:
     printConfig: bool
 
     def VerifyTypes(self) -> None:
-        util.RelAssertType(self.step, BuildStep, "BuildSetup.step")
-        util.RelAssertType(self.folders, Folders, "BuildSetup.folders")
-        util.RelAssertType(self.runner, Runner, "BuildSetup.runner")
-        util.RelAssertType(self.bundles, Bundles, "BuildSetup.bundles")
-        util.RelAssertType(self.tools, dict, "BuildSetup.tools")
-        util.RelAssertType(self.printConfig, bool, "BuildSetup.printConfig")
+        util.VerifyType(self.step, BuildStep, "BuildSetup.step")
+        util.VerifyType(self.folders, Folders, "BuildSetup.folders")
+        util.VerifyType(self.runner, Runner, "BuildSetup.runner")
+        util.VerifyType(self.bundles, Bundles, "BuildSetup.bundles")
+        util.VerifyType(self.tools, dict, "BuildSetup.tools")
+        util.VerifyType(self.printConfig, bool, "BuildSetup.printConfig")
         for k,v in self.tools.items():
-            util.RelAssertType(k, str, "BuildSetup.tools.key")
-            util.RelAssertType(v, Tool, "BuildSetup.tools.value")
+            util.VerifyType(k, str, "BuildSetup.tools.key")
+            util.VerifyType(v, Tool, "BuildSetup.tools.value")
 
     def VerifyValues(self) -> None:
-        util.RelAssert(self.tools.get("crunch") != None, "BuildSetup.tools is missing a definition for 'crunch'")
-        util.RelAssert(self.tools.get("gametextcompiler") != None, "BuildSetup.tools is missing a definition for 'gametextcompiler'")
-        util.RelAssert(self.tools.get("generalsbigcreator") != None, "BuildSetup.tools is missing a definition for 'generalsbigcreator'")
+        util.Verify(self.tools.get("crunch") != None, "BuildSetup.tools is missing a definition for 'crunch'")
+        util.Verify(self.tools.get("gametextcompiler") != None, "BuildSetup.tools is missing a definition for 'gametextcompiler'")
+        util.Verify(self.tools.get("generalsbigcreator") != None, "BuildSetup.tools is missing a definition for 'generalsbigcreator'")

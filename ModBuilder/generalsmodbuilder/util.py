@@ -11,14 +11,14 @@ from copy import copy
 from typing import Any, Callable, Union
 
 
-def RelAssert(condition: bool, message: str = "") -> None:
+def Verify(condition: bool, message: str = "") -> None:
     if not condition:
-        raise Exception(message)
+        raise AssertionError(message)
 
 
-def RelAssertType(obj: object, expectedType: type | types.UnionType, objName: str) -> None:
+def VerifyType(obj: object, expectedType: type | types.UnionType, objName: str) -> None:
     if not isinstance(obj, expectedType):
-        raise Exception(f'Object "{objName}" is type:{type(obj).__name__} but should be type:{expectedType.__name__}')
+        raise AssertionError(f'Object "{objName}" is type:{type(obj).__name__} but should be type:{expectedType.__name__}')
 
 
 def pprint(obj: Any) -> None:
@@ -72,8 +72,8 @@ class JsonFile:
         self.VerifyTypes()
 
     def VerifyTypes(self) -> None:
-        RelAssertType(self.path, str, "JsonFile.path")
-        RelAssertType(self.data, dict, "JsonFile.data")
+        VerifyType(self.path, str, "JsonFile.path")
+        VerifyType(self.data, dict, "JsonFile.data")
 
 
 def GetRegKeyValue(path, root=winreg.HKEY_LOCAL_MACHINE) -> Union[int, str, None]:
