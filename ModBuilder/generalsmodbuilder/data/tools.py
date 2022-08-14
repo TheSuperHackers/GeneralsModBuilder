@@ -28,28 +28,28 @@ class ToolFile:
         self.absTarget = os.path.normpath(self.absTarget)
 
     def VerifyTypes(self) -> None:
-        util.RelAssertType(self.url, str, "ToolFile.url")
-        util.RelAssertType(self.absTarget, str, "ToolFile.absTarget")
-        util.RelAssertType(self.md5, str, "ToolFile.md5")
-        util.RelAssertType(self.sha256, str, "ToolFile.sha256")
-        util.RelAssertType(self.size, int, "ToolFile.size")
-        util.RelAssertType(self.runnable, bool, "ToolFile.runnable")
+        util.VerifyType(self.url, str, "ToolFile.url")
+        util.VerifyType(self.absTarget, str, "ToolFile.absTarget")
+        util.VerifyType(self.md5, str, "ToolFile.md5")
+        util.VerifyType(self.sha256, str, "ToolFile.sha256")
+        util.VerifyType(self.size, int, "ToolFile.size")
+        util.VerifyType(self.runnable, bool, "ToolFile.runnable")
 
     def VerifyValues(self) -> None:
         # TODO Verify url format?
-        util.RelAssert(util.IsValidPathName(self.absTarget), f"ToolFile.absTarget '{self.absTarget}' is not a valid file name")
+        util.Verify(util.IsValidPathName(self.absTarget), f"ToolFile.absTarget '{self.absTarget}' is not a valid file name")
 
     def VerifyInstall(self) -> None:
-        util.RelAssert(os.path.isfile(self.absTarget), f"ToolFile.absTarget file '{self.absTarget}' does not exist")
+        util.Verify(os.path.isfile(self.absTarget), f"ToolFile.absTarget file '{self.absTarget}' does not exist")
         if self.md5:
             actual: str = util.GetFileMd5(self.absTarget)
-            util.RelAssert(self.md5 == actual, f"ToolFile.md5 '{self.md5}' does not match md5 '{actual}' of target file '{self.absTarget}'")
+            util.Verify(self.md5 == actual, f"ToolFile.md5 '{self.md5}' does not match md5 '{actual}' of target file '{self.absTarget}'")
         if self.sha256:
             actual: str = util.GetFileSha256(self.absTarget)
-            util.RelAssert(self.md5 == actual, f"ToolFile.sha256 '{self.md5}' does not match sha256 '{actual}' of target file '{self.absTarget}'")
+            util.Verify(self.md5 == actual, f"ToolFile.sha256 '{self.md5}' does not match sha256 '{actual}' of target file '{self.absTarget}'")
         if self.size >= 0:
             actual: int = util.GetFileSize(self.absTarget)
-            util.RelAssert(self.size == actual, f"ToolFile.size '{self.size}' does not match size '{actual}' of target file '{self.absTarget}'")
+            util.Verify(self.size == actual, f"ToolFile.size '{self.size}' does not match size '{actual}' of target file '{self.absTarget}'")
 
     def HashOk(self) -> bool:
         md5Ok = (not self.md5 or self.md5 == util.GetFileMd5(self.absTarget))
@@ -100,14 +100,14 @@ class Tool:
             file.Normalize()
 
     def VerifyTypes(self) -> None:
-        util.RelAssertType(self.name, str, "Tool.name")
-        util.RelAssertType(self.version, float, "Tool.version")
-        util.RelAssertType(self.files, list, "Tool.files")
+        util.VerifyType(self.name, str, "Tool.name")
+        util.VerifyType(self.version, float, "Tool.version")
+        util.VerifyType(self.files, list, "Tool.files")
         for file in self.files:
             file.VerifyTypes()
 
     def VerifyValues(self) -> None:
-        util.RelAssert(self.GetExecutable() != None, "Tool.files contains no runnable file")
+        util.Verify(self.GetExecutable() != None, "Tool.files contains no runnable file")
         for file in self.files:
             file.VerifyValues()
 

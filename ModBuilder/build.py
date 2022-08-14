@@ -99,14 +99,14 @@ def GenerateHashFiles(files: Union[str, list[str]]) -> None:
             __GenerateHashFiles(file)
 
 
-def RelAssert(condition: bool, message: str = "") -> None:
+def Verify(condition: bool, message: str = "") -> None:
     if not condition:
-        raise Exception(message)
+        raise AssertionError(message)
 
 
-def RelAssertType(obj: object, expectedType: type, objName: str) -> None:
+def VerifyType(obj: object, expectedType: type, objName: str) -> None:
     if not isinstance(obj, expectedType):
-        raise Exception(f'Object "{objName}" is type:{type(obj).__name__} but should be type:{expectedType.__name__}')
+        raise AssertionError(f'Object "{objName}" is type:{type(obj).__name__} but should be type:{expectedType.__name__}')
 
 
 def JoinPathIfValid(default, *paths: str) -> str:
@@ -140,8 +140,8 @@ class JsonFile:
         self.VerifyTypes()
 
     def VerifyTypes(self) -> None:
-        RelAssertType(self.path, str, "JsonFile.path")
-        RelAssertType(self.data, dict, "JsonFile.data")
+        VerifyType(self.path, str, "JsonFile.path")
+        VerifyType(self.data, dict, "JsonFile.data")
 
 
 class PyPackage:
@@ -158,11 +158,11 @@ class PyPackage:
 
     def VerifyTypes(self) -> None:
         if self.absWhl != None:
-            RelAssertType(self.absWhl, str, "PyPackage.absWhl")
+            VerifyType(self.absWhl, str, "PyPackage.absWhl")
 
     def VerifyValues(self) -> None:
         if self.absWhl != None:
-            RelAssert(os.path.isfile(self.AbsWhl()), f"PyPackage.absWhl '{self.AbsWhl()}' is not a valid file")
+            Verify(os.path.isfile(self.AbsWhl()), f"PyPackage.absWhl '{self.AbsWhl()}' is not a valid file")
 
     def Normalize(self) -> None:
         if self.absWhl != None:
@@ -180,19 +180,19 @@ class BuildSetup:
         self.packages = list[PyPackage]()
 
     def VerifyTypes(self) -> None:
-        RelAssertType(self.absVenvDir, str, "BuildSetup.absVenvDir")
-        RelAssertType(self.absVenvExe, str, "BuildSetup.absVenvExe")
-        RelAssertType(self.absPythonExe, str, "BuildSetup.absPythonExe")
-        RelAssertType(self.packages, list, "BuildSetup.packages")
-        RelAssertType(self.pipInstalls, list, "BuildSetup.pipInstalls")
+        VerifyType(self.absVenvDir, str, "BuildSetup.absVenvDir")
+        VerifyType(self.absVenvExe, str, "BuildSetup.absVenvExe")
+        VerifyType(self.absPythonExe, str, "BuildSetup.absPythonExe")
+        VerifyType(self.packages, list, "BuildSetup.packages")
+        VerifyType(self.pipInstalls, list, "BuildSetup.pipInstalls")
         for package in self.packages:
-            RelAssertType(package, PyPackage, "BuildSetup.packages")
+            VerifyType(package, PyPackage, "BuildSetup.packages")
             package.VerifyTypes()
         for name in self.pipInstalls:
-            RelAssertType(name, str, "BuildSetup.pipInstalls")
+            VerifyType(name, str, "BuildSetup.pipInstalls")
 
     def VerifyValues(self) -> None:
-        RelAssert(os.path.isfile(self.absPythonExe), f"BuildSetup.absPythonExe '{self.absPythonExe}' is not a valid file" )
+        Verify(os.path.isfile(self.absPythonExe), f"BuildSetup.absPythonExe '{self.absPythonExe}' is not a valid file" )
         for package in self.packages:
             package.VerifyValues()
 
@@ -214,21 +214,21 @@ class BuildStep:
         self.config = dict()
 
     def MakeAbsPath(self, relPath: str) -> str:
-        RelAssertType(relPath, str, "relPath")
+        VerifyType(relPath, str, "relPath")
         path: str = os.path.join(self.absDir, relPath)
         path = os.path.normpath(path)
         return path
 
     def VerifyTypes(self) -> None:
-        RelAssertType(self.absDir, str, "BuildStep.absDir")
-        RelAssertType(self.name, str, "BuildStep.name")
-        RelAssertType(self.setup, BuildSetup, "BuildSetup.absVenvExe")
-        RelAssertType(self.config, dict, "BuildSetup.absPythonExe")
+        VerifyType(self.absDir, str, "BuildStep.absDir")
+        VerifyType(self.name, str, "BuildStep.name")
+        VerifyType(self.setup, BuildSetup, "BuildSetup.absVenvExe")
+        VerifyType(self.config, dict, "BuildSetup.absPythonExe")
         self.setup.VerifyTypes()
 
     def VerifyValues(self) -> None:
-        RelAssert(os.path.isdir(self.absDir), f"BuildStep.absDir '{self.absDir}' is not an valid path")
-        RelAssert(self.name, "BuildStep.name must not be empty")
+        Verify(os.path.isdir(self.absDir), f"BuildStep.absDir '{self.absDir}' is not an valid path")
+        Verify(self.name, "BuildStep.name must not be empty")
         self.setup.VerifyValues()
 
     def Normalize(self) -> None:

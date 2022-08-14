@@ -54,14 +54,14 @@ class BundleEvent:
         return name
 
     def VerifyTypes(self) -> None:
-        util.RelAssertType(self.type, BundleEventType, "BundleEvent.type")
-        util.RelAssertType(self.absScript, str, "BundleEvent.absScript")
-        util.RelAssertType(self.funcName, str, "BundleEvent.functionName")
-        util.RelAssertType(self.kwargs, dict, "BundleEvent.kwargs")
+        util.VerifyType(self.type, BundleEventType, "BundleEvent.type")
+        util.VerifyType(self.absScript, str, "BundleEvent.absScript")
+        util.VerifyType(self.funcName, str, "BundleEvent.functionName")
+        util.VerifyType(self.kwargs, dict, "BundleEvent.kwargs")
 
     def VerifyValues(self) -> None:
-        util.RelAssert(os.path.isfile(self.absScript), f"BundleEvent.absScript '{self.absScript}' is not a valid file")
-        util.RelAssert(len(self.funcName) > 0, f"BundleEvent.functionName cannot be empty")
+        util.Verify(os.path.isfile(self.absScript), f"BundleEvent.absScript '{self.absScript}' is not a valid file")
+        util.Verify(len(self.funcName) > 0, f"BundleEvent.functionName cannot be empty")
 
     def Normalize(self) -> None:
         self.absScript = os.path.normpath(self.absScript)
@@ -82,14 +82,14 @@ class BundleFile:
         self.params = ParamsT()
 
     def VerifyTypes(self) -> None:
-        util.RelAssertType(self.absSourceFile, str, "BundleFile.absSourceFile")
-        util.RelAssertType(self.relTargetFile, str, "BundleFile.relTargetFile")
+        util.VerifyType(self.absSourceFile, str, "BundleFile.absSourceFile")
+        util.VerifyType(self.relTargetFile, str, "BundleFile.relTargetFile")
         VerifyParamsType(self.params, "BundleFile.params")
 
     def VerifyValues(self) -> None:
-        util.RelAssert(os.path.isfile(self.absSourceFile), f"BundleFile.absSourceFile '{self.absSourceFile}' is not a valid file")
-        util.RelAssert(util.IsValidPathName(self.relTargetFile), f"BundleFile.relTargetFile '{self.relTargetFile}' is not a valid file name")
-        util.RelAssert(not os.path.isabs(self.relTargetFile), f"BundleFile.relTargetFile '{self.relTargetFile}' is not a relative path")
+        util.Verify(os.path.isfile(self.absSourceFile), f"BundleFile.absSourceFile '{self.absSourceFile}' is not a valid file")
+        util.Verify(util.IsValidPathName(self.relTargetFile), f"BundleFile.relTargetFile '{self.relTargetFile}' is not a valid file name")
+        util.Verify(not os.path.isabs(self.relTargetFile), f"BundleFile.relTargetFile '{self.relTargetFile}' is not a relative path")
 
     def Normalize(self) -> None:
         self.absSourceFile = os.path.normpath(self.absSourceFile)
@@ -118,27 +118,27 @@ class BundleItem:
         self.events = BundleEventsT()
 
     def VerifyTypes(self) -> None:
-        util.RelAssertType(self.name, str, "BundleItem.name")
-        util.RelAssertType(self.files, list, "BundleItem.files")
-        util.RelAssertType(self.namePrefix, str, "BundleItem.namePrefix")
-        util.RelAssertType(self.nameSuffix, str, "BundleItem.nameSuffix")
-        util.RelAssertType(self.isBig, bool, "BundleItem.isBig")
-        util.RelAssertType(self.bigSuffix, str, "BundleItem.bigSuffix")
-        util.RelAssertType(self.setGameLanguageOnInstall, str, "BundleItem.setGameLanguageOnInstall")
-        util.RelAssertType(self.events, dict, "BundleItem.events")
+        util.VerifyType(self.name, str, "BundleItem.name")
+        util.VerifyType(self.files, list, "BundleItem.files")
+        util.VerifyType(self.namePrefix, str, "BundleItem.namePrefix")
+        util.VerifyType(self.nameSuffix, str, "BundleItem.nameSuffix")
+        util.VerifyType(self.isBig, bool, "BundleItem.isBig")
+        util.VerifyType(self.bigSuffix, str, "BundleItem.bigSuffix")
+        util.VerifyType(self.setGameLanguageOnInstall, str, "BundleItem.setGameLanguageOnInstall")
+        util.VerifyType(self.events, dict, "BundleItem.events")
         for file in self.files:
-            util.RelAssertType(file, BundleFile, "BundleItem.files.value")
+            util.VerifyType(file, BundleFile, "BundleItem.files.value")
             file.VerifyTypes()
         for type,event in self.events.items():
-            util.RelAssertType(type, BundleEventType, "BundleItem.events.key")
-            util.RelAssertType(event, BundleEvent, "BundleItem.events.value")
+            util.VerifyType(type, BundleEventType, "BundleItem.events.key")
+            util.VerifyType(event, BundleEvent, "BundleItem.events.value")
             event.VerifyTypes()
 
     def VerifyValues(self) -> None:
-        util.RelAssert(util.IsValidPathName(self.name), f"BundleItem.name '{self.name}' has invalid name")
-        util.RelAssert(not self.namePrefix or util.IsValidPathName(self.namePrefix), f"BundleItem.namePrefix '{self.namePrefix}' has invalid name")
-        util.RelAssert(not self.nameSuffix or util.IsValidPathName(self.nameSuffix), f"BundleItem.nameSuffix '{self.nameSuffix}' has invalid name")
-        util.RelAssert(not self.bigSuffix or util.IsValidPathName(self.bigSuffix), f"BundleItem.bigSuffix '{self.bigSuffix}' has invalid name")
+        util.Verify(util.IsValidPathName(self.name), f"BundleItem.name '{self.name}' has invalid name")
+        util.Verify(not self.namePrefix or util.IsValidPathName(self.namePrefix), f"BundleItem.namePrefix '{self.namePrefix}' has invalid name")
+        util.Verify(not self.nameSuffix or util.IsValidPathName(self.nameSuffix), f"BundleItem.nameSuffix '{self.nameSuffix}' has invalid name")
+        util.Verify(not self.bigSuffix or util.IsValidPathName(self.bigSuffix), f"BundleItem.bigSuffix '{self.bigSuffix}' has invalid name")
         for file in self.files:
             file.VerifyValues()
         for event in self.events.values():
@@ -157,7 +157,7 @@ class BundleItem:
         for curFile in self.files:
             if not os.path.isfile(curFile.absSourceFile) and "*" in curFile.absSourceFile:
                 globFiles = glob(curFile.absSourceFile, recursive=True)
-                util.RelAssert(bool(globFiles), f"Wildcard '{curFile.absSourceFile}' matches nothing")
+                util.Verify(bool(globFiles), f"Wildcard '{curFile.absSourceFile}' matches nothing")
 
                 for globFile in globFiles:
                     if os.path.isfile(globFile):
@@ -227,24 +227,24 @@ class BundlePack:
         self.events = BundleEventsT()
 
     def VerifyTypes(self) -> None:
-        util.RelAssertType(self.name, str, "BundlePack.name")
-        util.RelAssertType(self.itemNames, list, "BundlePack.itemNames")
-        util.RelAssertType(self.namePrefix, str, "BundlePack.namePrefix")
-        util.RelAssertType(self.nameSuffix, str, "BundlePack.nameSuffix")
-        util.RelAssertType(self.install, bool, "BundlePack.install")
-        util.RelAssertType(self.setGameLanguageOnInstall, str, "BundlePack.setGameLanguageOnInstall")
-        util.RelAssertType(self.events, dict, "BundlePack.events")
+        util.VerifyType(self.name, str, "BundlePack.name")
+        util.VerifyType(self.itemNames, list, "BundlePack.itemNames")
+        util.VerifyType(self.namePrefix, str, "BundlePack.namePrefix")
+        util.VerifyType(self.nameSuffix, str, "BundlePack.nameSuffix")
+        util.VerifyType(self.install, bool, "BundlePack.install")
+        util.VerifyType(self.setGameLanguageOnInstall, str, "BundlePack.setGameLanguageOnInstall")
+        util.VerifyType(self.events, dict, "BundlePack.events")
         for itemName in self.itemNames:
-            util.RelAssertType(itemName, str, "BundlePack.itemNames.value")
+            util.VerifyType(itemName, str, "BundlePack.itemNames.value")
         for type,event in self.events.items():
-            util.RelAssertType(type, BundleEventType, "BundlePack.events.key")
-            util.RelAssertType(event, BundleEvent, "BundlePack.events.value")
+            util.VerifyType(type, BundleEventType, "BundlePack.events.key")
+            util.VerifyType(event, BundleEvent, "BundlePack.events.value")
             event.VerifyTypes()
 
     def VerifyValues(self) -> None:
-        util.RelAssert(util.IsValidPathName(self.name), f"BundlePack.name '{self.name}' has invalid name")
-        util.RelAssert(not self.namePrefix or util.IsValidPathName(self.namePrefix), f"BundlePack.namePrefix '{self.namePrefix}' has invalid name")
-        util.RelAssert(not self.nameSuffix or util.IsValidPathName(self.nameSuffix), f"BundlePack.nameSuffix '{self.nameSuffix}' has invalid name")
+        util.Verify(util.IsValidPathName(self.name), f"BundlePack.name '{self.name}' has invalid name")
+        util.Verify(not self.namePrefix or util.IsValidPathName(self.namePrefix), f"BundlePack.namePrefix '{self.namePrefix}' has invalid name")
+        util.Verify(not self.nameSuffix or util.IsValidPathName(self.nameSuffix), f"BundlePack.nameSuffix '{self.nameSuffix}' has invalid name")
         for event in self.events.values():
             event.VerifyValues()
 
@@ -293,13 +293,13 @@ class Bundles:
         return ""
 
     def VerifyTypes(self) -> None:
-        util.RelAssertType(self.items, list, "Bundles.items")
-        util.RelAssertType(self.packs, list, "Bundles.packs")
+        util.VerifyType(self.items, list, "Bundles.items")
+        util.VerifyType(self.packs, list, "Bundles.packs")
         for item in self.items:
-            util.RelAssertType(item, BundleItem, "Bundles.items.value")
+            util.VerifyType(item, BundleItem, "Bundles.items.value")
             item.VerifyTypes()
         for pack in self.packs:
-            util.RelAssertType(pack, BundlePack, "Bundles.packs.value")
+            util.VerifyType(pack, BundlePack, "Bundles.packs.value")
             pack.VerifyTypes()
 
     def VerifyValues(self) -> None:
@@ -316,7 +316,7 @@ class Bundles:
             for b in range(a + 1, itemLen):
                 nameA: str = self.items[a].name
                 nameB: str = self.items[b].name
-                util.RelAssert(nameA != nameB, f"Bundles.items has items with duplicate name '{nameA}'")
+                util.Verify(nameA != nameB, f"Bundles.items has items with duplicate name '{nameA}'")
 
     def __VerifyKnownItemsInPacks(self) -> None:
         for pack in self.packs:
@@ -326,7 +326,7 @@ class Bundles:
                     if packItemName == item.name:
                         found = True
                         break
-                util.RelAssert(found, f"Bundles.packs with pack '{pack.name}' references unknown bundle item '{packItemName}'")
+                util.Verify(found, f"Bundles.packs with pack '{pack.name}' references unknown bundle item '{packItemName}'")
 
     def Normalize(self) -> None:
         for item in self.items:
