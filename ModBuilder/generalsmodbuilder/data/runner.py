@@ -79,9 +79,15 @@ def MakeRunnerFromJsons(jsonFiles: list[JsonFile]) -> Runner:
             runner.absRegularGameDataFiles = jRunner.get("regularGameDataFiles", runner.absRegularGameDataFiles)
             runner.gameLanguageRegKey = jRunner.get("gameLanguageRegKey", runner.gameLanguageRegKey)
 
+            tuczhGameInstallRegKey: str = jRunner.get("tuczhGameInstallRegKey")
             gameInstall2RegKey: str = jRunner.get("gameInstall2RegKey")
             gameInstallRegKey: str = jRunner.get("gameInstallRegKey")
             gameInstallDir: str = jRunner.get("gameInstallPath")
+
+            if isinstance(tuczhGameInstallRegKey, str) and tuczhGameInstallRegKey:
+                if keyValue := util.GetRegKeyValue(tuczhGameInstallRegKey):
+                    tuczhPath = os.path.join(keyValue, "Command and Conquer Generals Zero Hour")
+                    absGameInstallDirs.append(tuczhPath)
 
             if isinstance(gameInstall2RegKey, str) and gameInstall2RegKey:
                 if keyValue := util.GetRegKeyValue(gameInstall2RegKey):
