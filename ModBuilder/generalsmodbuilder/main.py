@@ -59,7 +59,7 @@ def RunWithConfig(
     buildStep: BuildStep = __CreateBuildStep(build, release, install, uninstall, run)
 
     folders: Folders = MakeFoldersFromJsons(jsonFiles)
-    runner: Runner = MakeRunnerFromJsons(jsonFiles)
+    runner: Runner = MakeRunnerFromJsons(jsonFiles) if (install or uninstall or run) else Runner()
     bundles: Bundles = MakeBundlesFromJsons(jsonFiles)
     tools: ToolsT = MakeToolsFromJsons(jsonFiles)
 
