@@ -1,9 +1,9 @@
 {
     "runner": {
         "version": 1,
-        "gameLanguageRegKey": "SOFTWARE\\WOW6432Node\\Electronic Arts\\EA Games\\Command and Conquer Generals Zero Hour:Language",
-        "gameInstallRegKey": "SOFTWARE\\WOW6432Node\\Electronic Arts\\EA Games\\Command and Conquer Generals Zero Hour:InstallPath",
-        "gameInstall2RegKey": "SOFTWARE\\WOW6432Node\\Electronic Arts\\EA Games\\Command and Conquer The First Decade:zh_folder",
+        "gameLanguageRegKey": "SOFTWARE\\Electronic Arts\\EA Games\\Command and Conquer Generals Zero Hour:Language",
+        "gameInstallRegKey": "SOFTWARE\\Electronic Arts\\EA Games\\Command and Conquer Generals Zero Hour:InstallPath",
+        "gameInstall2RegKey": "SOFTWARE\\Electronic Arts\\EA Games\\Command and Conquer The First Decade:zh_folder",
         "gameInstallPath": "",
         "gameExeFile": "generals.exe",
         "gameExeArgs": {
