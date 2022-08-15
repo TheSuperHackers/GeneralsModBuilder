@@ -66,6 +66,7 @@ class Runner:
 
 def MakeRunnerFromJsons(jsonFiles: list[JsonFile]) -> Runner:
     runner = Runner()
+    absGameInstallDirs = list[str]()
 
     for jsonFile in jsonFiles:
         jsonDir: str = util.GetAbsSmartFileDir(jsonFile.path)
@@ -78,19 +79,27 @@ def MakeRunnerFromJsons(jsonFiles: list[JsonFile]) -> Runner:
             runner.absRegularGameDataFiles = jRunner.get("regularGameDataFiles", runner.absRegularGameDataFiles)
             runner.gameLanguageRegKey = jRunner.get("gameLanguageRegKey", runner.gameLanguageRegKey)
 
+            gameInstall2RegKey: str = jRunner.get("gameInstall2RegKey")
+            gameInstallRegKey: str = jRunner.get("gameInstallRegKey")
             gameInstallDir: str = jRunner.get("gameInstallPath")
 
+            if isinstance(gameInstall2RegKey, str) and gameInstall2RegKey:
+                if keyValue := util.GetRegKeyValue(gameInstall2RegKey):
+                    absGameInstallDirs.append(keyValue)
+
+            if isinstance(gameInstallRegKey, str) and gameInstallRegKey:
+                if keyValue := util.GetRegKeyValue(gameInstallRegKey):
+                    absGameInstallDirs.append(keyValue)
+
             if isinstance(gameInstallDir, str) and gameInstallDir:
-                runner.absGameInstallDir = os.path.join(jsonDir, gameInstallDir)
-            else:
-                gameInstallRegKey: str = jRunner.get("gameInstallRegKey")
-                if isinstance(gameInstallRegKey, str) and gameInstallRegKey:
-                    runner.absGameInstallDir = util.GetRegKeyValue(gameInstallRegKey)
-                # If the first is invalid, try the second one.
-                if not os.path.isfile(runner.AbsGameExeFile()):
-                    gameInstall2RegKey: str = jRunner.get("gameInstall2RegKey")
-                    if isinstance(gameInstall2RegKey, str) and gameInstall2RegKey:
-                        runner.absGameInstallDir = util.GetRegKeyValue(gameInstall2RegKey)
+                absGameInstallDirs.append(os.path.join(jsonDir, gameInstallDir))
+
+    if runner.relGameExeFile:
+        for absGameInstallDir in reversed(absGameInstallDirs):
+            absGameExeFile: str = os.path.join(absGameInstallDir, runner.relGameExeFile)
+            if os.path.isfile(absGameExeFile):
+                runner.absGameInstallDir = absGameInstallDir
+                break
 
     runner.VerifyTypes()
     runner.Normalize()
