@@ -79,7 +79,7 @@ class JsonFile:
 def GetRegKeyValue(path, root=winreg.HKEY_LOCAL_MACHINE) -> Union[int, str, None]:
     path, name = str.split(path, sep=':')
     try:
-        with winreg.OpenKey(root, path, 0, winreg.KEY_READ) as key:
+        with winreg.OpenKey(root, path, 0, winreg.KEY_READ|winreg.KEY_WOW64_32KEY) as key:
             valuePair = winreg.QueryValueEx(key, name)
             if valuePair:
                 print(f"Get registry key {path} : {name} as '{valuePair[0]}'")
@@ -93,7 +93,7 @@ def GetRegKeyValue(path, root=winreg.HKEY_LOCAL_MACHINE) -> Union[int, str, None
 def SetRegKeyValue(path: str, value: Union[int, str], root=winreg.HKEY_LOCAL_MACHINE, regtype=None) -> bool:
     try:
         path, name = str.split(path, sep=':')
-        with winreg.OpenKey(root, path, 0, winreg.KEY_WRITE|winreg.KEY_READ) as key:
+        with winreg.OpenKey(root, path, 0, winreg.KEY_WRITE|winreg.KEY_READ|winreg.KEY_WOW64_32KEY) as key:
             if regtype == None:
                 regtype = winreg.QueryValueEx(key, name)[1]
             if regtype == None:
