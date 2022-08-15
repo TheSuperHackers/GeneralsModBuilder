@@ -16,8 +16,8 @@ class Runner:
     gameLanguageRegKey: str
 
     def __init__(self):
-        self.absGameInstallDir = None
-        self.relGameExeFile = None
+        self.absGameInstallDir = ""
+        self.relGameExeFile = ""
         self.gameExeArgs = ParamsT()
         self.relevantGameDataFileTypes = list[str]()
         self.absRegularGameDataFiles = list[str]()
