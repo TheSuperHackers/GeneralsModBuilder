@@ -840,16 +840,16 @@ class BuildEngine:
         print(f"Restore Game Language ...")
 
         picklePath: str = BuildEngine.__MakeLanguagePicklePath(setup.folders)
-        try:
-            language: str = util.LoadPickle(picklePath)
-        except:
-            return
-        finally:
-            if os.path.isfile(picklePath):
+        if os.path.isfile(picklePath):
+            try:
+                language: str = util.LoadPickle(picklePath)
+            except:
+                return
+            finally:
                 os.remove(picklePath)
 
-        regKey: str = setup.runner.gameLanguageRegKey
-        util.SetRegKeyValue(regKey, language)
+            regKey: str = setup.runner.gameLanguageRegKey
+            util.SetRegKeyValue(regKey, language)
 
 
     @staticmethod
