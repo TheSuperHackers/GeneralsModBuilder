@@ -725,6 +725,10 @@ class BuildEngine:
     def __Install(self) -> bool:
         print("Do Install ...")
 
+        # Cleanup before install to avoid duplicated consecutive installs.
+        BuildEngine.__RevertInstalledThings(self.setup, self.installCopy)
+        BuildEngine.__RestoreGameLanguage(self.setup)
+
         BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnInstall)
 
         data: BuildIndexData = self.structure.GetIndexData(BuildIndex.InstallBundlePack)
@@ -800,15 +804,7 @@ class BuildEngine:
 
         BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnUninstall)
 
-        data: BuildIndexData = self.structure.GetIndexData(BuildIndex.InstallBundlePack)
-
-        BuildEngine.__UncopyFilesOfThings(data.things, self.installCopy)
-
-        installedThings: BuildThingsT = BuildEngine.__LoadInstalledThingsInfo(self.setup)
-        if installedThings != None:
-            BuildEngine.__UncopyFilesOfThings(installedThings, self.installCopy)
-            BuildEngine.__DeleteInstalledThingsInfo(self.setup)
-
+        BuildEngine.__RevertInstalledThings(self.setup, self.installCopy)
         BuildEngine.__RestoreGameLanguage(self.setup)
 
         return True
@@ -868,6 +864,8 @@ class BuildEngine:
 
     @staticmethod
     def __SaveInstalledThingsInfo(things: BuildThingsT, setup: BuildSetup) -> None:
+        print(f"Save Installed Things ...")
+
         picklePath: str = BuildEngine.__MakeInstalledThingsPicklePath(setup.folders)
         installedThings: BuildThingsT = BuildEngine.__LoadInstalledThingsInfo(setup)
         installedThings.update(things)
@@ -880,3 +878,12 @@ class BuildEngine:
         if os.path.isfile(picklePath):
             print("Remove", picklePath)
             os.remove(picklePath)
+
+
+    @staticmethod
+    def __RevertInstalledThings(setup: BuildSetup, copy: BuildCopy) -> None:
+        print(f"Revert Installed Things ...")
+
+        installedThings: BuildThingsT = BuildEngine.__LoadInstalledThingsInfo(setup)
+        BuildEngine.__UncopyFilesOfThings(installedThings, copy)
+        BuildEngine.__DeleteInstalledThingsInfo(setup)
