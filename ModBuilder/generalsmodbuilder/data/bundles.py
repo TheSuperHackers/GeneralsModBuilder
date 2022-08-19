@@ -1,8 +1,10 @@
-import enum
-import os.path
+import copy
+import os
+import zlib
 from glob import glob
 from dataclasses import dataclass
 from enum import Enum, auto
+from typing import Union
 from generalsmodbuilder.data.common import ParamsT, VerifyParamsType
 from generalsmodbuilder.util import JsonFile
 from generalsmodbuilder import util
@@ -71,20 +73,55 @@ BundleEventsT = dict[BundleEventType, BundleEvent]
 
 
 @dataclass(init=False)
+class BundleRegistryDefinition:
+    paths: list[str]
+    crc32: int
+
+    def __init__(self, paths: list[str]):
+        if paths:
+            self.paths = paths
+            self.__VerifyTypes()
+            self.__Normalize()
+            self.__VerifyValues()
+            pathsStr = "".join(self.paths)
+            pathsBytes = bytes(pathsStr, encoding="utf-8")
+            self.crc32 = zlib.crc32(pathsBytes)
+        else:
+            self.paths = None
+            self.crc32 = 0
+
+    def __VerifyTypes(self) -> None:
+        util.VerifyType(self.paths, list, "BundleFileHashRegistry.paths")
+        for path in self.paths:
+            util.VerifyType(path, str, "BundleFileHashRegistry.paths.value")
+
+    def __VerifyValues(self) -> None:
+        for path in self.paths:
+            util.Verify(os.path.isfile(path), f"BundleFileHashRegistry.paths.value '{path}' is not a valid file")
+
+    def __Normalize(self) -> None:
+        for index, path in enumerate(self.paths):
+            self.paths[index] = os.path.normpath(path)
+
+
+@dataclass(init=False)
 class BundleFile:
     absSourceFile: str
     relTargetFile: str
     params: ParamsT
+    registryDef: BundleRegistryDefinition
 
     def __init__(self):
         self.absSourceFile = None
         self.relTargetFile = None
-        self.params = ParamsT()
+        self.params = None
+        self.registryDef = None
 
     def VerifyTypes(self) -> None:
         util.VerifyType(self.absSourceFile, str, "BundleFile.absSourceFile")
         util.VerifyType(self.relTargetFile, str, "BundleFile.relTargetFile")
         VerifyParamsType(self.params, "BundleFile.params")
+        util.VerifyType(self.registryDef, Union[BundleRegistryDefinition, None], "BundleFile.registry")
 
     def VerifyValues(self) -> None:
         util.Verify(os.path.isfile(self.absSourceFile), f"BundleFile.absSourceFile '{self.absSourceFile}' is not a valid file")
@@ -161,10 +198,8 @@ class BundleItem:
 
                 for globFile in globFiles:
                     if os.path.isfile(globFile):
-                        newFile = BundleFile()
+                        newFile = copy.copy(curFile)
                         newFile.absSourceFile = globFile
-                        newFile.relTargetFile = curFile.relTargetFile
-                        newFile.params = curFile.params
                         newFiles.append(newFile)
             else:
                 newFiles.append(curFile)
@@ -345,10 +380,14 @@ class Bundles:
 def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
     files: list[BundleFile] = list()
 
-    parent = util.JoinPathIfValid(jsonDir, jsonDir, jFile.get("parent"))
-    params: ParamsT = jFile.get("params")
-    if params == None:
-        params = ParamsT()
+    parent: str = util.JoinPathIfValid(jsonDir, jsonDir, jFile.get("parent"))
+
+    params: ParamsT = jFile.get("params", ParamsT())
+
+    registryPaths: list[str] = jFile.get("registryList", list[str]())
+    for index, path in enumerate(registryPaths):
+        registryPaths[index] = os.path.join(jsonDir, path)
+    registryDef = BundleRegistryDefinition(registryPaths) if registryPaths else None
 
     jSource: str = jFile.get("source")
     jSourceList: list = jFile.get("sourceList")
@@ -359,6 +398,7 @@ def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
         bundleFile.absSourceFile = util.JoinPathIfValid(None, parent, jSource)
         bundleFile.relTargetFile = jFile.get("target", jSource)
         bundleFile.params = params
+        bundleFile.registryDef = registryDef
         files.append(bundleFile)
 
     if jSourceList:
@@ -368,6 +408,7 @@ def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
             bundleFile.absSourceFile = util.JoinPathIfValid(None, parent, jElement)
             bundleFile.relTargetFile = jElement
             bundleFile.params = params
+            bundleFile.registryDef = registryDef
             files.append(bundleFile)
 
     if jSourceTargetList:
@@ -378,6 +419,7 @@ def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
             bundleFile.absSourceFile = util.JoinPathIfValid(None, parent, jElementSource)
             bundleFile.relTargetFile = jElement.get("target", jElementSource)
             bundleFile.params = params
+            bundleFile.registryDef = registryDef
             files.append(bundleFile)
 
     return files
