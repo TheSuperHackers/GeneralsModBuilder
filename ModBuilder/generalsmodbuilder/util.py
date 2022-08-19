@@ -153,6 +153,11 @@ def GetFileExt(file: str) -> str:
     return ext
 
 
+def GetFileDir(file: str) -> str:
+    path, ext = os.path.split(file)
+    return path
+
+
 def GetFileDirAndName(file: str) -> str:
     path, ext = os.path.splitext(file)
     return path

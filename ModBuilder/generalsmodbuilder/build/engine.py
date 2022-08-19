@@ -10,9 +10,10 @@ from typing import Any
 from enum import Enum, auto
 from generalsmodbuilder.build.common import ParamsToArgs
 from generalsmodbuilder.build.copy import BuildCopy, BuildCopyOption
+from generalsmodbuilder.build.filehashregistry import FileHash, FileHashRegistry
 from generalsmodbuilder.build.thing import BuildFile, BuildFileStatus, BuildThing, BuildFilesT, BuildThingsT, IsStatusRelevantForBuild
 from generalsmodbuilder.build.setup import BuildSetup, BuildStep
-from generalsmodbuilder.data.bundles import Bundles, BundlePack, BundleItem, BundleFile, BundleEvent, BundleEventType
+from generalsmodbuilder.data.bundles import BundleRegistryDefinition, Bundles, BundlePack, BundleItem, BundleFile, BundleEvent, BundleEventType
 from generalsmodbuilder.data.common import ParamsT
 from generalsmodbuilder.data.folders import Folders
 from generalsmodbuilder.data.runner import Runner
@@ -45,20 +46,47 @@ class BuildDiff:
     oldInfos: BuildFilePathInfosT
     loadPath: str
     includesParentDiff: bool
+    registryDict: dict[int, FileHashRegistry]
 
-    def __init__(self, loadPath: str, includesParentDiff: bool):
+    def __init__(self, loadPath: str, includesParentDiff: bool, useFileHashRegistry: bool):
         """
         loadPath : str
             String path to serialization file.
         includesParentDiff : bool
             Diff contains parent file diffs. This option is required when a build step can be run in isolation from other build steps.
             For example if a Build is run without a Release Build, then the Release diff would lose information if it did not store the parent diff.
+        useFileHashRegistry : bool
+            Intended to be used with file hash registry.
         """
         self.newInfos = BuildFilePathInfosT()
         self.oldInfos = BuildFilePathInfosT()
         self.loadPath = loadPath
         self.includesParentDiff = includesParentDiff
+        self.registryDict = dict[int, FileHashRegistry]() if useFileHashRegistry else None
         self.TryLoadOldInfos()
+
+    def UseFileHashRegistry(self) -> bool:
+        return self.registryDict != None
+
+    def GetOrCreateRegistry(self, registryDef: BundleRegistryDefinition) -> FileHashRegistry:
+        assert(registryDef != None)
+        if self.registryDict != None:
+            registry: FileHashRegistry = self.registryDict.get(registryDef.crc32)
+            if registry == None:
+                registry = FileHashRegistry()
+                for fullPath in registryDef.paths:
+                    pathName: str = util.GetFileDirAndName(fullPath)
+                    path: str = util.GetFileDir(pathName)
+                    name: str = util.GetFileName(pathName)
+                    registryTmp = FileHashRegistry()
+                    if registryTmp.LoadRegistry(path, name):
+                        registry.Merge(registryTmp)
+
+                self.registryDict[registryDef.crc32] = registry
+
+            return registry
+        else:
+            return None
 
     def TryLoadOldInfos(self) -> bool:
         try:
@@ -322,6 +350,7 @@ class BuildEngine:
                 buildFile.absSource = itemFile.absSourceFile
                 buildFile.relTarget = itemFile.relTargetFile
                 buildFile.params = itemFile.params
+                buildFile.registryDef = itemFile.registryDef
                 newThing.files.append(buildFile)
 
             structure.AddThing(BuildIndex.RawBundleItem, newThing)
@@ -451,7 +480,7 @@ class BuildEngine:
         tools: ToolsT = self.setup.tools
         copy = BuildCopy(tools=tools, options=BuildCopyOption.EnableSymlinks)
 
-        BuildEngine.__BuildWithData(self.structure, self.setup, copy, BuildIndex.RawBundleItem)
+        BuildEngine.__BuildWithData(self.structure, self.setup, copy, BuildIndex.RawBundleItem, diffWithFileHashRegistry=True)
         BuildEngine.__BuildWithData(self.structure, self.setup, copy, BuildIndex.BigBundleItem)
         BuildEngine.__BuildWithData(self.structure, self.setup, copy, BuildIndex.RawBundlePack)
 
@@ -473,14 +502,15 @@ class BuildEngine:
             copy: BuildCopy,
             index: BuildIndex,
             deleteObsoleteFiles: bool = True,
-            diffWithParentThings: bool = False) -> None:
+            diffWithParentThings: bool = False,
+            diffWithFileHashRegistry: bool = False) -> None:
 
         data: BuildIndexData = structure.GetIndexData(index)
 
         # Start event is sent before populating the build diff to allow for file modifications and file injections.
         BuildEngine.__SendBundleEvents(structure, setup, GetStartBuildEvent(index))
 
-        BuildEngine.__PopulateDiff(data, setup.folders, diffWithParentThings)
+        BuildEngine.__PopulateDiff(data, setup.folders, diffWithParentThings, diffWithFileHashRegistry)
         BuildEngine.__PopulateBuildFileStatusInThings(data.things, data.diff)
 
         if deleteObsoleteFiles:
@@ -497,9 +527,9 @@ class BuildEngine:
 
 
     @staticmethod
-    def __PopulateDiff(data: BuildIndexData, folders: Folders, withParentThings: bool) -> None:
+    def __PopulateDiff(data: BuildIndexData, folders: Folders, withParentThings: bool, useFileHashRegistry: bool) -> None:
         path: str = MakeDiffPath(data.index, folders)
-        data.diff = BuildDiff(path, withParentThings)
+        data.diff = BuildDiff(path, withParentThings, useFileHashRegistry)
         BuildEngine.__PopulateDiffFromThings(data.diff, data.things)
 
 
@@ -607,8 +637,12 @@ class BuildEngine:
             parentStatus: BuildFileStatus = parentStatus if parentFile == None else parentFile.GetCombinedStatus()
             absSource: str = file.AbsRealSource()
             absTarget: str = file.AbsRealTarget(thing.absParentDir)
-            file.sourceStatus = BuildEngine.__GetBuildFileStatus(absSource, parentStatus, diff)
-            file.targetStatus = BuildEngine.__GetBuildFileStatus(absTarget, None, diff)
+
+            file.sourceStatus = BuildEngine.__GetStatusWithFileHashRegistry(absSource, file.relTarget, diff, file.registryDef)
+            if file.sourceStatus == BuildFileStatus.Unknown:
+                file.sourceStatus = BuildEngine.__GetBuildFileStatus(absSource, parentStatus, diff)
+            if file.sourceStatus != BuildFileStatus.Irrelevant:
+                file.targetStatus = BuildEngine.__GetBuildFileStatus(absTarget, None, diff)
 
         for status in BuildFileStatus:
             thing.fileCounts[status.value] = 0
@@ -632,6 +666,21 @@ class BuildEngine:
             if IsStatusRelevantForBuild(file.targetStatus):
                 absTarget: str = file.AbsTarget(thing.absParentDir)
                 print(f"Target {absTarget} is {file.targetStatus.name}")
+
+
+    @staticmethod
+    def __GetStatusWithFileHashRegistry(absFilePath: str, relFilePath: str, diff: BuildDiff, registryDef: BundleRegistryDefinition) -> BuildFileStatus:
+        if registryDef != None and diff.UseFileHashRegistry():
+            filePathInfo: BuildFilePathInfo = diff.newInfos.get(absFilePath)
+            if filePathInfo != None:
+                registry: FileHashRegistry = diff.GetOrCreateRegistry(registryDef)
+                assert registry != None
+                fileHash: FileHash = registry.FindFile(relFilePath)
+                if fileHash != None:
+                    if filePathInfo.md5 == fileHash.md5:
+                        return BuildFileStatus.Irrelevant
+
+        return BuildFileStatus.Unknown
 
 
     @staticmethod
@@ -665,6 +714,16 @@ class BuildEngine:
 
             fileNames: list[str] = BuildEngine.__CreateListOfExistingFilesFromThing(thing)
             fileName: str
+            buildFile: BuildFile
+
+            for buildFile in thing.files:
+                if buildFile.sourceStatus == BuildFileStatus.Irrelevant:
+                    fileName = buildFile.AbsTarget(thing.absParentDir)
+                    oldInfo: BuildFilePathInfo = diff.oldInfos.get(fileName)
+                    if oldInfo != None:
+                        thing.fileCounts[BuildFileStatus.Removed.value] += 1
+                    if util.DeleteFileOrPath(fileName):
+                        print("Deleted", fileName)
 
             for fileName in fileNames:
                 if os.path.lexists(fileName):
@@ -673,7 +732,6 @@ class BuildEngine:
                         oldInfo: BuildFilePathInfo = diff.oldInfos.get(fileName)
                         if oldInfo != None:
                             thing.fileCounts[BuildFileStatus.Removed.value] += 1
-
                         if util.DeleteFileOrPath(fileName):
                             print("Deleted", fileName)
 
