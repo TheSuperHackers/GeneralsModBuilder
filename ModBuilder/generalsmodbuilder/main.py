@@ -1,7 +1,9 @@
 import os
 import traceback
+from glob import glob
 from argparse import ArgumentParser
 from generalsmodbuilder.build.engine import BuildEngine
+from generalsmodbuilder.build.filehashregistry import FileHashRegistry
 from generalsmodbuilder.build.setup import BuildStep
 from generalsmodbuilder.build.setup import BuildSetup
 from generalsmodbuilder.data.bundles import Bundles, BundlePack, MakeBundlesFromJsons
@@ -77,6 +79,25 @@ def RunWithConfig(
     engine.Run(setup)
 
 
+def BuildFileHashRegistry(inputPaths: list[str], outputPath: str, outputName: str) -> None:
+    registry = FileHashRegistry()
+    for inputPath in inputPaths:
+        cleanInputPath: str = inputPath.split("*", 1)[0]
+        cleanInputPath = os.path.normpath(cleanInputPath)
+        inputFiles: list[str] = glob(inputPath, recursive=True)
+        for inputFile in inputFiles:
+            relFile = util.RemoveLeadingString(inputFile, cleanInputPath)
+            relFile = util.RemoveLeadingString(relFile, "/")
+            relFile = util.RemoveLeadingString(relFile, "\\")
+            registry.AddFile(
+                relFile=relFile,
+                size=util.GetFileSize(inputFile),
+                md5=util.GetFileMd5(inputFile),
+                sha256=util.GetFileSha256(inputFile))
+
+    registry.SaveRegistry(outputPath, outputName)
+
+
 def Main(args=None):
     print(f"Generals Mod Builder v{__version__} by The Super Hackers")
 
@@ -90,8 +111,18 @@ def Main(args=None):
     parser.add_argument('-u', '--uninstall', action='store_true')
     parser.add_argument('-r', '--run', action='store_true')
     parser.add_argument('--print-config', action='store_true')
+    parser.add_argument('--file-hash-registry-input', type=str, action="append", help='Path to generate file hash registry from. Multiples can be specified.')
+    parser.add_argument('--file-hash-registry-output', type=str, help='Path to save file hash registry to.')
+    parser.add_argument('--file-hash-registry-name', type=str, default="FileHashRegistry", help='Name of the file hash registry.')
 
     args, unknownargs = parser.parse_known_args(args=args)
+
+    if args.file_hash_registry_input and args.file_hash_registry_output:
+        BuildFileHashRegistry(
+            args.file_hash_registry_input,
+            args.file_hash_registry_output,
+            args.file_hash_registry_name)
+        return
 
     # Build install pack name list.
     installList = list[str]()
