@@ -28,6 +28,15 @@
                                 "target": "Data/Audio/Sounds/*"
                             }
                         ]
+                    },
+                    {
+                        "parent": "GameFilesEdited",
+                        "sourceList": [
+                            "Data/INI/**/*.ini"
+                        ],
+                        "registryList": [
+                            "Resources/FileHashRegistry/GeneralsZH-104.zip"
+                        ]
                     }
                 ]
             },
