@@ -1,5 +1,7 @@
 import csv
+import io
 import os
+import zipfile
 from dataclasses import dataclass
 from generalsmodbuilder import util
 from typing import Any
@@ -67,15 +69,39 @@ class FileHashRegistry:
                 writer.writerow(value.GetAsList())
         return True
 
+    def __ParseRegistry(self, file: Any) -> None:
+        reader: csv._reader = csv.reader(file, lineterminator="\n")
+        rowExpected = FileHash.GetRowNameList()
+        row0 = next(reader)
+        util.Verify(row0[:len(rowExpected)] == rowExpected, "Registry")
+        for row in reader:
+            self.AddFile(row[0], int(row[1]), row[2], row[3])
+
     def LoadRegistry(self, path: str, name: str) -> bool:
-        print(f"Load File Hash Registry {path} {name}")
-        filePath: str = os.path.join(path, name + ".csv")
-        with open(filePath, "r", encoding="ascii") as file:
-            reader: csv._reader = csv.reader(file, lineterminator="\n")
-            rowExpected = FileHash.GetRowNameList()
-            row0 = next(reader)
-            util.Verify(row0[:len(rowExpected)] == rowExpected, "Registry")
-            self.Clear()
-            for row in reader:
-                self.AddFile(row[0], int(row[1]), row[2], row[3])
-        return bool(self.fileHashes)
+        print(f"Load File Hash Registry {name}")
+        success = False
+        filePath: str = os.path.join(path, name + ".zip")
+        try:
+            with zipfile.ZipFile(filePath) as zip:
+                print(f"Reading {filePath}")
+                self.Clear()
+                for zipinfo in zip.infolist():
+                    print(f"Reading {zipinfo.filename} in archive")
+                    with zip.open(zipinfo, "r") as file:
+                        textFile = io.TextIOWrapper(file, encoding="ascii")
+                        self.__ParseRegistry(textFile)
+            return bool(self.fileHashes)
+        except OSError:
+            pass
+
+        filePath = os.path.join(path, name + ".csv")
+        try:
+            with open(filePath, "r", encoding="ascii") as file:
+                print(f"Reading {filePath}")
+                self.Clear()
+                self.__ParseRegistry(file)
+            return bool(self.fileHashes)
+        except OSError:
+            pass
+
+        return False
