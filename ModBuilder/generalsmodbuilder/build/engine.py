@@ -163,7 +163,6 @@ class BuildEngine:
     setup: BuildSetup
     structure: BuildStructure
     installCopy: BuildCopy
-    installLanguagePicklePath: str
 
 
     def __init__(self):
@@ -174,7 +173,6 @@ class BuildEngine:
         self.setup = None
         self.structure = None
         self.installCopy = None
-        self.installLanguagePicklePath = None
 
 
     def Run(self, setup: BuildSetup) -> bool:
@@ -296,7 +294,6 @@ class BuildEngine:
         options = BuildCopyOption.EnableBackup | BuildCopyOption.EnableSymlinks
         self.structure = BuildStructure()
         self.installCopy = BuildCopy(tools=tools, options=options)
-        self.installLanguagePicklePath = os.path.join(folders.absBuildDir, "GameLanguage.pickle")
 
         BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnPreBuild)
 
