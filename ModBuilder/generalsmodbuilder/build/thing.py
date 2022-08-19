@@ -2,11 +2,12 @@ import os
 import enum
 from dataclasses import dataclass
 from typing import Any
-from generalsmodbuilder.data.bundles import ParamsT
+from generalsmodbuilder.data.bundles import BundleRegistryDefinition, ParamsT
 
 
 class BuildFileStatus(enum.Enum):
     Unknown = 0
+    Irrelevant = enum.auto()
     Unchanged = enum.auto()
     Removed = enum.auto()
     Missing = enum.auto()
@@ -29,6 +30,7 @@ class BuildFile:
     sourceStatus: BuildFileStatus
     parentFile: Any
     params: ParamsT
+    registryDef: BundleRegistryDefinition
 
     def __init__(self):
         self.relTarget = None
@@ -36,7 +38,8 @@ class BuildFile:
         self.targetStatus = BuildFileStatus.Unknown
         self.sourceStatus = BuildFileStatus.Unknown
         self.parentFile = None
-        self.params = dict()
+        self.params = None
+        self.registryDef = None
 
     def RelTarget(self) -> str:
         return self.relTarget
