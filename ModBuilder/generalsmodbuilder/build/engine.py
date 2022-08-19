@@ -10,7 +10,7 @@ from typing import Any
 from enum import Enum, auto
 from generalsmodbuilder.build.common import ParamsToArgs
 from generalsmodbuilder.build.copy import BuildCopy, BuildCopyOption
-from generalsmodbuilder.build.thing import BuildFile, BuildFileStatus, BuildThing, BuildFilesT, BuildThingsT
+from generalsmodbuilder.build.thing import BuildFile, BuildFileStatus, BuildThing, BuildFilesT, BuildThingsT, IsStatusRelevantForBuild
 from generalsmodbuilder.build.setup import BuildSetup, BuildStep
 from generalsmodbuilder.data.bundles import Bundles, BundlePack, BundleItem, BundleFile, BundleEvent, BundleEventType
 from generalsmodbuilder.data.common import ParamsT
@@ -618,18 +618,18 @@ class BuildEngine:
             thing.fileCounts[status.value] += 1
 
         for status in BuildFileStatus:
-            if status != BuildFileStatus.Unchanged:
+            if IsStatusRelevantForBuild(status):
                 count: int = thing.GetFileCount(status)
                 if count > 0:
                     print(f"{thing.name} has {count} files {status.name}")
 
         for file in thing.files:
-            if file.sourceStatus != BuildFileStatus.Unchanged:
+            if IsStatusRelevantForBuild(file.sourceStatus):
                 absSource: str = file.absSource
                 print(f"Source {absSource} is {file.sourceStatus.name}")
 
         for file in thing.files:
-            if file.targetStatus != BuildFileStatus.Unchanged:
+            if IsStatusRelevantForBuild(file.targetStatus):
                 absTarget: str = file.AbsTarget(thing.absParentDir)
                 print(f"Target {absTarget} is {file.targetStatus.name}")
 

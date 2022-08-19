@@ -14,6 +14,13 @@ class BuildFileStatus(enum.Enum):
     Changed = enum.auto()
 
 
+def IsStatusRelevantForBuild(status: BuildFileStatus) -> bool:
+    return (status == BuildFileStatus.Removed or
+            status == BuildFileStatus.Missing or
+            status == BuildFileStatus.Added or
+            status == BuildFileStatus.Changed)
+
+
 @dataclass(init=False)
 class BuildFile:
     relTarget: str
@@ -56,10 +63,7 @@ class BuildFile:
 
     def RequiresRebuild(self) -> bool:
         status: BuildFileStatus = self.GetCombinedStatus()
-        return (status == BuildFileStatus.Removed or
-                status == BuildFileStatus.Missing or
-                status == BuildFileStatus.Added or
-                status == BuildFileStatus.Changed)
+        return IsStatusRelevantForBuild(status)
 
 
 BuildFilesT = list[BuildFile]
