@@ -88,6 +88,9 @@ class BuildCopy:
             sourceType = BuildFileType.Auto,
             targetType = BuildFileType.Auto) -> bool:
 
+        if not os.path.exists(source):
+            return False
+
         if sourceType == BuildFileType.Auto:
             sourceType = GetFileType(source)
 
@@ -110,8 +113,7 @@ class BuildCopy:
     def Uncopy(self, file: str) -> bool:
         success: bool = False
 
-        if os.path.isfile(file):
-            os.remove(file)
+        if util.DeleteFileOrPath(file):
             BuildCopy.__PrintUncopyResult(file)
             success = True
 
