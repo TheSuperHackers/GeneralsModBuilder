@@ -29,7 +29,8 @@
                 "--release",
                 "--install=SampleProjectTGA256",
                 "--run",
-                "--uninstall"
+                "--uninstall",
+                "--debug"
             ]
         },
         {
@@ -45,7 +46,8 @@
                 "${workspaceFolder}\\SampleProject\\ModBundlePacks.json",
                 "${workspaceFolder}\\SampleProject\\ModFolders.json",
                 "${workspaceFolder}\\SampleProject\\ModRunner.json",
-                "--build"
+                "--build",
+                "--debug"
             ]
         },
         {
@@ -62,7 +64,8 @@
                 "${workspaceFolder}\\SampleProject\\ModFolders.json",
                 "${workspaceFolder}\\SampleProject\\ModRunner.json",
                 "--build",
-                "--release"
+                "--release",
+                "--debug"
             ]
         }
     ]
