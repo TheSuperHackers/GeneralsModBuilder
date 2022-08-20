@@ -27,21 +27,28 @@ FileHashDictT = dict[str, FileHash]
 
 class FileHashRegistry:
     fileHashes: FileHashDictT
+    lowerPath: bool
     posixPath: bool
     encoding: str
 
 
     def __init__(self):
         self.fileHashes = FileHashDictT()
+        self.lowerPath = True
         self.posixPath = True
         self.encoding = "ascii"
 
 
     def __ProcessPath(self, path: str) -> str:
+        if self.lowerPath:
+            path = path.lower()
+
         if self.posixPath:
-            return path.replace("\\", "/")
+            path = path.replace("\\", "/")
         else:
-            return path.replace("/", "\\")
+            path = path.replace("/", "\\")
+
+        return path
 
 
     def Clear(self) -> None:

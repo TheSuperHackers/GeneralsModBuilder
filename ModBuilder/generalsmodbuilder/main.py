@@ -81,6 +81,8 @@ def RunWithConfig(
 
 def BuildFileHashRegistry(inputPaths: list[str], outputPath: str, outputName: str) -> None:
     registry = FileHashRegistry()
+    registry.lowerPath = False
+
     for inputPath in inputPaths:
         cleanInputPath: str = inputPath.split("*", 1)[0]
         cleanInputPath = os.path.normpath(cleanInputPath)
