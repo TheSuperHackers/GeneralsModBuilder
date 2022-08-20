@@ -108,14 +108,15 @@ class BuildCopy:
 
 
     def Uncopy(self, file: str) -> bool:
-        success: bool = True
+        success: bool = False
 
         if os.path.isfile(file):
             os.remove(file)
             BuildCopy.__PrintUncopyResult(file)
+            success = True
 
         if self.options & BuildCopyOption.EnableBackup:
-            success &= BuildCopy.__RevertBackup(file)
+            BuildCopy.__RevertBackup(file)
 
         return success
 
