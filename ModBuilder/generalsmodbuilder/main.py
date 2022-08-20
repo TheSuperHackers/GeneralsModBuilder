@@ -110,6 +110,7 @@ def Main(args=None):
     parser.add_argument('-o', '--install-list', type=str, nargs="*", help='Installs specified bundle pack names.')
     parser.add_argument('-u', '--uninstall', action='store_true')
     parser.add_argument('-r', '--run', action='store_true')
+    parser.add_argument('--debug', action='store_true')
     parser.add_argument('--print-config', action='store_true')
     parser.add_argument('--file-hash-registry-input', type=str, action="append", help='Path to generate file hash registry from. Multiples can be specified.')
     parser.add_argument('--file-hash-registry-output', type=str, help='Path to save file hash registry to.')
@@ -161,7 +162,10 @@ def Main(args=None):
     for i in range(len(configPaths)):
         configPaths[i] = os.path.abspath(configPaths[i])
 
-    try:
+    debug = bool(args.debug)
+    printConfig = bool(args.print_config)
+
+    if debug:
         RunWithConfig(
             configPaths=configPaths,
             installList=installList,
@@ -170,12 +174,22 @@ def Main(args=None):
             install=install,
             uninstall=uninstall,
             run=run,
-            printConfig=bool(args.print_config))
-
-    except Exception as e:
-        print("ERROR CALLSTACK")
-        traceback.print_exc()
-        input("Press any key to continue...")
+            printConfig=printConfig)
+    else:
+        try:
+            RunWithConfig(
+                configPaths=configPaths,
+                installList=installList,
+                build=build,
+                release=release,
+                install=install,
+                uninstall=uninstall,
+                run=run,
+                printConfig=printConfig)
+        except Exception:
+            print("ERROR CALLSTACK")
+            traceback.print_exc()
+            input("Press any key to continue...")
 
 
 if __name__ == "__main__":
