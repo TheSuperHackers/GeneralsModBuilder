@@ -21,14 +21,10 @@ from generalsmodbuilder.data.tools import ToolsT
 from generalsmodbuilder import util
 
 
-@dataclass(init=False)
+@dataclass
 class BuildFilePathInfo:
     md5: str
     params: ParamsT
-
-    def __init__(self):
-        self.md5 = ""
-        self.params = None
 
     def Matches(self, other: Any) -> bool:
         try:
@@ -40,10 +36,34 @@ class BuildFilePathInfo:
 BuildFilePathInfosT = dict[str, BuildFilePathInfo]
 
 
+class BuildDiffRegistry:
+    filePathInfos: BuildFilePathInfosT
+    lowerPath: bool
+
+    def __init__(self):
+        self.filePathInfos = BuildFilePathInfosT()
+        self.lowerPath = True
+
+    def __ProcessPath(self, filepath: str) -> str:
+        if self.lowerPath:
+            filepath = filepath.lower()
+        return filepath
+
+    def AddFile(self, filepath: str, md5: str = "", params: ParamsT = None) -> BuildFilePathInfo:
+        filepath = self.__ProcessPath(filepath)
+        pathinfo = BuildFilePathInfo(md5, params)
+        self.filePathInfos[filepath] = pathinfo
+        return pathinfo
+
+    def FindFile(self, filepath: str) -> BuildFilePathInfo | None:
+        filepath = self.__ProcessPath(filepath)
+        return self.filePathInfos.get(filepath)
+
+
 @dataclass(init=False)
 class BuildDiff:
-    newInfos: BuildFilePathInfosT
-    oldInfos: BuildFilePathInfosT
+    newDiffRegistry: BuildDiffRegistry
+    oldDiffRegistry: BuildDiffRegistry
     loadPath: str
     includesParentDiff: bool
     registryDict: dict[int, FileHashRegistry]
@@ -58,12 +78,12 @@ class BuildDiff:
         useFileHashRegistry : bool
             Intended to be used with file hash registry.
         """
-        self.newInfos = BuildFilePathInfosT()
-        self.oldInfos = BuildFilePathInfosT()
+        self.newDiffRegistry = BuildDiffRegistry()
+        self.oldDiffRegistry = BuildDiffRegistry()
         self.loadPath = loadPath
         self.includesParentDiff = includesParentDiff
         self.registryDict = dict[int, FileHashRegistry]() if useFileHashRegistry else None
-        self.TryLoadOldInfos()
+        self.TryLoadOldDiffRegistry()
 
     def UseFileHashRegistry(self) -> bool:
         return self.registryDict != None
@@ -88,15 +108,15 @@ class BuildDiff:
         else:
             return None
 
-    def TryLoadOldInfos(self) -> bool:
+    def TryLoadOldDiffRegistry(self) -> bool:
         try:
-            self.oldInfos = util.LoadPickle(self.loadPath)
+            self.oldDiffRegistry.filePathInfos = util.LoadPickle(self.loadPath)
             return True
         except:
             return False
 
-    def SaveNewInfos(self) -> bool:
-        util.SavePickle(self.loadPath, self.newInfos)
+    def SaveNewDiffRegistry(self) -> bool:
+        util.SavePickle(self.loadPath, self.newDiffRegistry.filePathInfos)
         return True
 
 
@@ -521,9 +541,9 @@ class BuildEngine:
         # Finish event is sent before finalizing the build diff to allow for file verifications with hard failures.
         BuildEngine.__SendBundleEvents(structure, setup, GetFinishBuildEvent(index))
 
-        BuildEngine.__RehashFilePathInfoDict(data.diff.newInfos, data.things)
+        BuildEngine.__RehashFilePathInfoDict(data.diff.newDiffRegistry, data.things)
 
-        data.diff.SaveNewInfos()
+        data.diff.SaveNewDiffRegistry()
 
 
     @staticmethod
@@ -540,14 +560,14 @@ class BuildEngine:
         for thing in things.values():
             print(f"Create file infos for {thing.name} ...")
 
-            BuildEngine.__PopulateFilePathInfosFromThing(diff.newInfos, thing)
+            BuildEngine.__PopulateFilePathInfosFromThing(diff.newDiffRegistry, thing)
 
             if diff.includesParentDiff and thing.parentThing != None:
-                BuildEngine.__PopulateFilePathInfosFromThing(diff.newInfos, thing.parentThing)
+                BuildEngine.__PopulateFilePathInfosFromThing(diff.newDiffRegistry, thing.parentThing)
 
 
     @staticmethod
-    def __PopulateFilePathInfosFromThing(infos: BuildFilePathInfosT, thing: BuildThing) -> None:
+    def __PopulateFilePathInfosFromThing(diffRegistry: BuildDiffRegistry, thing: BuildThing) -> None:
         file: BuildFile
 
         for file in thing.files:
@@ -556,19 +576,13 @@ class BuildEngine:
             sourceMd5: str = ""
             sourceParams: ParamsT = None
 
-            if not infos.get(absRealSource):
+            if not diffRegistry.FindFile(absRealSource):
                 sourceMd5 = util.GetFileMd5(absRealSource)
                 sourceParams = deepcopy(file.params)
-                info = BuildFilePathInfo()
-                info.md5 = sourceMd5
-                info.params = sourceParams
-                infos[absRealSource] = info
+                diffRegistry.AddFile(absRealSource, md5=sourceMd5, params=sourceParams)
 
-            if not infos.get(absSource):
-                info = BuildFilePathInfo()
-                info.md5 = sourceMd5
-                info.params = sourceParams
-                infos[absSource] = info
+            if not diffRegistry.FindFile(absSource):
+                diffRegistry.AddFile(absSource, md5=sourceMd5, params=sourceParams)
 
         for file in thing.files:
             absRealTarget = file.AbsRealTarget(thing.absParentDir)
@@ -578,24 +592,19 @@ class BuildEngine:
             targetMd5: str = ""
 
             for absTargetDir in absTargetDirs:
-                if not infos.get(absTargetDir):
-                    info = BuildFilePathInfo()
-                    infos[absTargetDir] = info
+                if not diffRegistry.FindFile(absTargetDir):
+                    diffRegistry.AddFile(absTargetDir)
 
-            if not infos.get(absRealTarget):
+            if not diffRegistry.FindFile(absRealTarget):
                 targetMd5 = util.GetFileMd5(absRealTarget)
-                info = BuildFilePathInfo()
-                info.md5 = targetMd5
-                infos[absRealTarget] = info
+                diffRegistry.AddFile(absRealTarget, md5=targetMd5)
 
-            if not infos.get(absTarget):
-                info = BuildFilePathInfo()
-                info.md5 = targetMd5
-                infos[absTarget] = info
+            if not diffRegistry.FindFile(absTarget):
+                diffRegistry.AddFile(absTarget, md5=targetMd5)
 
 
     @staticmethod
-    def __RehashFilePathInfoDict(infos: BuildFilePathInfosT, things: BuildThingsT) -> None:
+    def __RehashFilePathInfoDict(diffRegistry: BuildDiffRegistry, things: BuildThingsT) -> None:
         thing: BuildThing
         file: BuildFile
 
@@ -605,7 +614,7 @@ class BuildEngine:
             for file in thing.files:
                 if file.RequiresRebuild():
                     absTarget: str = file.AbsTarget(thing.absParentDir)
-                    targetInfo: BuildFilePathInfo = infos.get(absTarget)
+                    targetInfo: BuildFilePathInfo = diffRegistry.FindFile(absTarget)
                     assert(targetInfo != None)
                     targetInfo.md5 = util.GetFileMd5(absTarget)
 
@@ -671,7 +680,7 @@ class BuildEngine:
     @staticmethod
     def __GetStatusWithFileHashRegistry(absFilePath: str, relFilePath: str, diff: BuildDiff, registryDef: BundleRegistryDefinition) -> BuildFileStatus:
         if registryDef != None and diff.UseFileHashRegistry():
-            filePathInfo: BuildFilePathInfo = diff.newInfos.get(absFilePath)
+            filePathInfo: BuildFilePathInfo = diff.newDiffRegistry.FindFile(absFilePath)
             if filePathInfo != None:
                 registry: FileHashRegistry = diff.GetOrCreateRegistry(registryDef)
                 assert registry != None
@@ -686,12 +695,12 @@ class BuildEngine:
     @staticmethod
     def __GetBuildFileStatus(filePath: str, parentStatus: BuildFileStatus, diff: BuildDiff) -> BuildFileStatus:
         if os.path.exists(filePath):
-            oldInfo: BuildFilePathInfo = diff.oldInfos.get(filePath)
+            oldInfo: BuildFilePathInfo = diff.oldDiffRegistry.FindFile(filePath)
 
             if oldInfo == None:
                 return BuildFileStatus.Added
             else:
-                newInfo: BuildFilePathInfo = diff.newInfos.get(filePath)
+                newInfo: BuildFilePathInfo = diff.newDiffRegistry.FindFile(filePath)
                 util.Verify(newInfo != None, "Info must exist")
 
                 if newInfo.Matches(oldInfo):
@@ -719,7 +728,7 @@ class BuildEngine:
             for buildFile in thing.files:
                 if buildFile.sourceStatus == BuildFileStatus.Irrelevant:
                     fileName = buildFile.AbsTarget(thing.absParentDir)
-                    oldInfo: BuildFilePathInfo = diff.oldInfos.get(fileName)
+                    oldInfo: BuildFilePathInfo = diff.oldDiffRegistry.FindFile(fileName)
                     if oldInfo != None:
                         thing.fileCounts[BuildFileStatus.Removed.value] += 1
                     if util.DeleteFileOrPath(fileName):
@@ -727,9 +736,9 @@ class BuildEngine:
 
             for fileName in fileNames:
                 if os.path.lexists(fileName):
-                    newInfo: BuildFilePathInfo = diff.newInfos.get(fileName)
+                    newInfo: BuildFilePathInfo = diff.newDiffRegistry.FindFile(fileName)
                     if newInfo == None:
-                        oldInfo: BuildFilePathInfo = diff.oldInfos.get(fileName)
+                        oldInfo: BuildFilePathInfo = diff.oldDiffRegistry.FindFile(fileName)
                         if oldInfo != None:
                             thing.fileCounts[BuildFileStatus.Removed.value] += 1
                         if util.DeleteFileOrPath(fileName):
