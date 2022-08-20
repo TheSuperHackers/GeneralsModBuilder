@@ -412,7 +412,7 @@ def __RunPyInstaller(buildStep: BuildStep) -> None:
     if postDeleteFiles:
         for file in postDeleteFiles:
             absFile: str = buildStep.MakeAbsPath(file)
-            print("Delete '{absFile}'")
+            print(f"Delete '{absFile}'")
             DeleteFileOrPath(absFile)
 
     if makeArchive:
