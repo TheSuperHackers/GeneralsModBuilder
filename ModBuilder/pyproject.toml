@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "generalsmodbuilder"
-version = "1.6"
+version = "1.7"
 description = "Mod Builder for Generals: Zero Hour"
 authors = ["TheSuperHackers"]
 license = "MIT"
