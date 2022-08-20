@@ -28,10 +28,14 @@ FileHashDictT = dict[str, FileHash]
 class FileHashRegistry:
     fileHashes: FileHashDictT
     posixPath: bool
+    encoding: str
+
 
     def __init__(self):
         self.fileHashes = FileHashDictT()
         self.posixPath = True
+        self.encoding = "ascii"
+
 
     def __ProcessPath(self, path: str) -> str:
         if self.posixPath:
@@ -39,11 +43,14 @@ class FileHashRegistry:
         else:
             return path.replace("/", "\\")
 
+
     def Clear(self) -> None:
         self.fileHashes.clear()
 
+
     def Merge(self, other: Any) -> None:
         self.fileHashes.update(other.fileHashes)
+
 
     def AddFile(self, relFile: str, size: int = 0, md5: str = "", sha256: str = "") -> None:
         relFile = self.__ProcessPath(relFile)
@@ -53,21 +60,25 @@ class FileHashRegistry:
             md5=md5,
             sha256=sha256)
 
+
     def FindFile(self, relFile: str) -> FileHash | None:
         relFile = self.__ProcessPath(relFile)
         return self.fileHashes.get(relFile)
 
+
     def SaveRegistry(self, path: str, name: str) -> bool:
         print(f"Save File Hash Registry {path} {name}")
+
         if not self.fileHashes:
             return False
         filePath: str = os.path.join(path, name + ".csv")
-        with open(filePath, "w", encoding="ascii", newline="") as file:
+        with open(filePath, "w", encoding=self.encoding, newline="") as file:
             writer: csv._writer = csv.writer(file, lineterminator="\n")
             writer.writerow(FileHash.GetRowNameList())
             for value in self.fileHashes.values():
                 writer.writerow(value.GetAsList())
         return True
+
 
     def __ParseRegistry(self, file: Any) -> None:
         reader: csv._reader = csv.reader(file, lineterminator="\n")
@@ -77,9 +88,10 @@ class FileHashRegistry:
         for row in reader:
             self.AddFile(row[0], int(row[1]), row[2], row[3])
 
+
     def LoadRegistry(self, path: str, name: str) -> bool:
         print(f"Load File Hash Registry {name}")
-        success = False
+
         filePath: str = os.path.join(path, name + ".zip")
         try:
             with zipfile.ZipFile(filePath) as zip:
@@ -88,7 +100,7 @@ class FileHashRegistry:
                 for zipinfo in zip.infolist():
                     print(f"Reading {zipinfo.filename} in archive")
                     with zip.open(zipinfo, "r") as file:
-                        textFile = io.TextIOWrapper(file, encoding="ascii")
+                        textFile = io.TextIOWrapper(file, encoding=self.encoding)
                         self.__ParseRegistry(textFile)
             return bool(self.fileHashes)
         except OSError:
@@ -96,7 +108,7 @@ class FileHashRegistry:
 
         filePath = os.path.join(path, name + ".csv")
         try:
-            with open(filePath, "r", encoding="ascii") as file:
+            with open(filePath, "r", encoding=self.encoding) as file:
                 print(f"Reading {filePath}")
                 self.Clear()
                 self.__ParseRegistry(file)
