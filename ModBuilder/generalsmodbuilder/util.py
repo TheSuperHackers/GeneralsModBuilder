@@ -205,6 +205,16 @@ def MakeDirsForFile(file: str) -> None:
     os.makedirs(GetAbsFileDir(file), exist_ok=True)
 
 
+def DeleteFile(path: str) -> bool:
+    if os.path.islink(path):
+        os.unlink(path)
+        return True
+    if os.path.isfile(path):
+        os.remove(path)
+        return True
+    return False
+
+
 def DeleteFileOrPath(path: str) -> bool:
     if os.path.islink(path):
         os.unlink(path)
@@ -212,11 +222,10 @@ def DeleteFileOrPath(path: str) -> bool:
     if os.path.isfile(path):
         os.remove(path)
         return True
-    elif os.path.isdir(path):
+    if os.path.isdir(path):
         shutil.rmtree(path)
         return True
-    else:
-        return False
+    return False
 
 
 def JoinPathIfValid(default: Any, *paths: str) -> Any:

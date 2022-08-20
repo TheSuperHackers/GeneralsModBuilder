@@ -728,20 +728,20 @@ class BuildEngine:
             for buildFile in thing.files:
                 if buildFile.sourceStatus == BuildFileStatus.Irrelevant:
                     fileName = buildFile.AbsTarget(thing.absParentDir)
-                    oldInfo: BuildFilePathInfo = diff.oldDiffRegistry.FindFile(fileName)
-                    if oldInfo != None:
-                        thing.fileCounts[BuildFileStatus.Removed.value] += 1
-                    if util.DeleteFileOrPath(fileName):
+                    if util.DeleteFile(fileName):
+                        oldInfo: BuildFilePathInfo = diff.oldDiffRegistry.FindFile(fileName)
+                        if oldInfo != None and oldInfo.md5:
+                            thing.fileCounts[BuildFileStatus.Removed.value] += 1
                         print("Deleted", fileName)
 
             for fileName in fileNames:
                 if os.path.lexists(fileName):
                     newInfo: BuildFilePathInfo = diff.newDiffRegistry.FindFile(fileName)
                     if newInfo == None:
-                        oldInfo: BuildFilePathInfo = diff.oldDiffRegistry.FindFile(fileName)
-                        if oldInfo != None:
-                            thing.fileCounts[BuildFileStatus.Removed.value] += 1
                         if util.DeleteFileOrPath(fileName):
+                            oldInfo: BuildFilePathInfo = diff.oldDiffRegistry.FindFile(fileName)
+                            if oldInfo != None and oldInfo.md5:
+                                thing.fileCounts[BuildFileStatus.Removed.value] += 1
                             print("Deleted", fileName)
 
 
