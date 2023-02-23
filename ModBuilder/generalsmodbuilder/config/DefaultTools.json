@@ -43,6 +43,28 @@
                         "runnable": true
                     }
                 ]
+            },
+            {
+                "name": "blender",
+                "version": 3.4,
+                "info": "3D Model Software",
+                "files": [
+                    {
+                        "url": "https://ftp.halifax.rwth-aachen.de/blender/release/Blender3.4/blender-3.4.1-windows-x64.zip",
+                        "target": ".tools/blender-3.4.1-windows-x64.zip",
+                        "sha256": "02377977bee5691bda45c3a80f60b16a07efe3b2eb02941ca2bead975361f124",
+                        "size": 317703549,
+                        "extractDir": ".tools",
+                        "autoDeleteAfterInstall": true,
+                        "skipIfRunnableExists": true
+                    },
+                    {
+                        "target": ".tools/blender-3.4.1-windows-x64/blender.exe",
+                        "sha256": "c03e2bb20d3b04abe36a2de4976c38519d38744af2aa8009570bd29dca4685f5",
+                        "size": 209297120,
+                        "runnable": true
+                    }
+                ]
             }
         ]
     }
