@@ -3,10 +3,28 @@ import os.path
 import urllib.request
 import http.client
 import zipfile
+from enum import Enum, auto
 from logging import warning
 from dataclasses import dataclass
 from generalsmodbuilder.util import JsonFile
 from generalsmodbuilder import util
+
+
+class InstallResultCode(Enum):
+    Ok = auto()
+    NoInstall = auto()
+    SizeMismatch = auto()
+    HashMismatch = auto()
+    HttpError = auto()
+
+
+@dataclass
+class InstallResult:
+    code: InstallResultCode
+    httpCode: int
+
+    def Ok(self) -> bool:
+        return self.code == InstallResultCode.Ok
 
 
 @dataclass(init=False)
@@ -16,7 +34,7 @@ class ToolFile:
     absExtractDir: str
     md5: str
     sha256: str
-    size: str
+    size: int
     runnable: bool
     autoDeleteAfterInstall: bool
     skipIfRunnableExists: bool
@@ -83,24 +101,39 @@ class ToolFile:
         self.isInstalledCached = os.path.isfile(self.absTarget) and self.SizeOk() and self.HashOk()
         return self.isInstalledCached
 
-    def Install(self) -> bool:
-        success = self.IsInstalled()
-        if not success:
+    def Install(self) -> InstallResult:
+        result = InstallResult(InstallResultCode.Ok, 0)
+
+        if not self.IsInstalled():
+            result = InstallResult(InstallResultCode.NoInstall, 0)
+
+        if not result.Ok():
             if self.url:
                 response: http.client.HTTPResponse = urllib.request.urlopen(self.url)
                 if response.code == 200:
                     sizeOk: bool = self.size < 0
+                    len: str = response.headers['Content-Length']
 
                     if not sizeOk:
-                        len: str = response.headers['Content-Length']
                         sizeOk = len and int(len) == self.size
 
                     if sizeOk:
+                        size = int(len) if len else self.size
+                        print(f"Downloading {int(size / 1024)} kb from '{self.url}' ...")
                         util.MakeDirsForFile(self.absTarget)
                         ToolFile.DownloadToFile(response, self.absTarget)
-                        success = self.IsInstalled()
+                        if self.IsInstalled():
+                            result = InstallResult(InstallResultCode.Ok, response.code)
+                        elif not self.SizeOk():
+                            result = InstallResult(InstallResultCode.SizeMismatch, response.code)
+                        elif not self.HashOk():
+                            result = InstallResult(InstallResultCode.HashMismatch, response.code)
+                    else:
+                        result = InstallResult(InstallResultCode.SizeMismatch, response.code)
+                else:
+                    result = InstallResult(InstallResultCode.HttpError, response.code)
 
-            if success:
+            if result.Ok():
                 if self.absExtractDir:
                     os.makedirs(self.absExtractDir, exist_ok=True)
 
@@ -111,7 +144,7 @@ class ToolFile:
                 if self.autoDeleteAfterInstall:
                     util.DeleteFile(self.absTarget)
 
-        return success
+        return result
 
     @staticmethod
     def DownloadToFile(response: http.client.HTTPResponse, absTarget: str) -> None:
@@ -183,14 +216,19 @@ class Tool:
         for file in self.files:
             if file.skipIfRunnableExists and runnablesInstalled > 0:
                 continue
-            installed: bool = file.Install()
-            if installed:
+            result: InstallResult = file.Install()
+            if result.Ok():
                 print(f"Tool '{self.name} {self.versionStr}' file '{file.absTarget}' is installed")
                 if file.absExtractDir:
                     print(f"File '{file.absTarget}' is extracted to '{file.absExtractDir}'")
             else:
                 warning(f"Tool '{self.name} {self.versionStr}' file '{file.absTarget}' was not installed")
-                success = False
+                if result.code == InstallResultCode.SizeMismatch:
+                    warning(f"Size mismatch was detected")
+                elif result.code == InstallResultCode.HashMismatch:
+                    warning(f"Hash mismatch was detected")
+                elif result.code == InstallResultCode.HttpError:
+                    warning(f"Http returned error code {result.httpCode}")
 
         return success
 
