@@ -96,10 +96,8 @@ class ToolFile:
                         sizeOk = len and int(len) == self.size
 
                     if sizeOk:
-                        data: bytes = response.read()
                         util.MakeDirsForFile(self.absTarget)
-                        with open(self.absTarget, 'wb') as wfile:
-                            wfile.write(data)
+                        ToolFile.DownloadToFile(response, self.absTarget)
                         success = self.IsInstalled()
 
             if success:
@@ -114,6 +112,22 @@ class ToolFile:
                     util.DeleteFile(self.absTarget)
 
         return success
+
+    @staticmethod
+    def DownloadToFile(response: http.client.HTTPResponse, absTarget: str) -> None:
+        BUF_SIZE = 1024 * 16
+        with open(absTarget, 'wb', buffering=BUF_SIZE) as wfile:
+            fullbuf = bytearray(BUF_SIZE)
+            while True:
+                readsize: int = response.readinto(fullbuf)
+                if readsize == 0:
+                    break
+                if readsize != BUF_SIZE:
+                    readbuf: bytearray = fullbuf[:readsize]
+                    wfile.write(readbuf)
+                    break
+                else:
+                    wfile.write(fullbuf)
 
 
 @dataclass(init=False)
