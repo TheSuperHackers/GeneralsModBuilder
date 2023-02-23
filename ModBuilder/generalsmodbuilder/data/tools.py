@@ -20,6 +20,7 @@ class ToolFile:
     runnable: bool
     autoDeleteAfterInstall: bool
     skipIfRunnableExists: bool
+    isInstalledCached: bool
 
     def __init__(self):
         self.url = ""
@@ -31,6 +32,7 @@ class ToolFile:
         self.runnable = False
         self.autoDeleteAfterInstall = False
         self.skipIfRunnableExists = False
+        self.isInstalledCached = False
 
     def Normalize(self) -> None:
         if self.absTarget:
@@ -76,7 +78,10 @@ class ToolFile:
         return self.size < 0 or self.size == util.GetFileSize(self.absTarget)
 
     def IsInstalled(self) -> bool:
-        return os.path.isfile(self.absTarget) and self.SizeOk() and self.HashOk()
+        if self.isInstalledCached:
+            return True
+        self.isInstalledCached = os.path.isfile(self.absTarget) and self.SizeOk() and self.HashOk()
+        return self.isInstalledCached
 
     def Install(self) -> bool:
         success = self.IsInstalled()
