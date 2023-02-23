@@ -121,11 +121,13 @@ class Tool:
     name: str
     files: list[ToolFile]
     version: float
+    versionStr: str
 
     def __init__(self):
         self.name = None
         self.files = list[ToolFile]()
         self.version = 0.0
+        self.versionStr = ""
 
     def Normalize(self) -> None:
         for file in self.files:
@@ -134,6 +136,7 @@ class Tool:
     def VerifyTypes(self) -> None:
         util.VerifyType(self.name, str, "Tool.name")
         util.VerifyType(self.version, float, "Tool.version")
+        util.VerifyType(self.versionStr, str, "Tool.versionStr")
         util.VerifyType(self.files, list, "Tool.files")
         for file in self.files:
             file.VerifyTypes()
@@ -168,11 +171,11 @@ class Tool:
                 continue
             installed: bool = file.Install()
             if installed:
-                print(f"Tool '{self.name}' file '{file.absTarget}' is installed")
+                print(f"Tool '{self.name} {self.versionStr}' file '{file.absTarget}' is installed")
                 if file.absExtractDir:
                     print(f"File '{file.absTarget}' is extracted to '{file.absExtractDir}'")
             else:
-                warning(f"Tool '{self.name}' file '{file.absTarget}' was not installed")
+                warning(f"Tool '{self.name} {self.versionStr}' file '{file.absTarget}' was not installed")
                 success = False
 
         return success
@@ -195,10 +198,13 @@ def __MakeToolFileFromDict(jFile: dict, jsonDir: str) -> ToolFile:
     return toolFile
 
 
-def __MakeToolFromDict(jTool: dict, jsonDir: str) -> Tool:
+def __MakeToolFromDict(jTool: dict, jsonDir: str, jVersion: int) -> Tool:
     tool = Tool()
     tool.name = jTool.get("name")
-    tool.version = jTool.get("version", tool.version)
+    if jVersion <= 1:
+        tool.version = jTool.get("version", tool.version)
+    else:
+        tool.versionStr = jTool.get("version", tool.versionStr)
 
     jFiles: dict = jTool.get("files")
     if jFiles:
@@ -218,11 +224,13 @@ def MakeToolsFromJsons(jsonFiles: list[JsonFile]) -> ToolsT:
         jsonDir: str = util.GetAbsSmartFileDir(jsonFile.path)
         jTools: dict = jsonFile.data.get("tools")
         if jTools:
+            LATEST_VERSION = 2
+            jVersion: int = jTools.get("version", LATEST_VERSION)
             jList: dict = jTools.get("list")
             if jList:
                 jTool: dict
                 for jTool in jList:
-                    tool = __MakeToolFromDict(jTool, jsonDir)
+                    tool = __MakeToolFromDict(jTool, jsonDir, jVersion)
                     tools[tool.name] = tool
 
     for tool in tools.values():
