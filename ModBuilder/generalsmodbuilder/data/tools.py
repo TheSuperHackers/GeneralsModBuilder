@@ -133,16 +133,16 @@ class ToolFile:
                 else:
                     result = InstallResult(InstallResultCode.HttpError, response.code)
 
-            if result.Ok():
-                if self.absExtractDir:
-                    os.makedirs(self.absExtractDir, exist_ok=True)
+        if result.Ok():
+            if self.absExtractDir:
+                os.makedirs(self.absExtractDir, exist_ok=True)
+                if util.HasFileExt(self.absTarget, "zip"):
+                    with zipfile.ZipFile(self.absTarget, "r") as zfile:
+                        zfile.extractall(self.absExtractDir)
 
-                    if util.HasFileExt(self.absTarget, "zip"):
-                        with zipfile.ZipFile(self.absTarget, "r") as zfile:
-                            zfile.extractall(self.absExtractDir)
-
-                if self.autoDeleteAfterInstall:
-                    util.DeleteFile(self.absTarget)
+        if result.Ok():
+            if self.autoDeleteAfterInstall:
+                util.DeleteFile(self.absTarget)
 
         return result
 
