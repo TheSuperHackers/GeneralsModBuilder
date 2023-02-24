@@ -229,6 +229,8 @@ class Tool:
                     warning(f"Hash mismatch was detected")
                 elif result.code == InstallResultCode.HttpError:
                     warning(f"Http returned error code {result.httpCode}")
+                success = False
+                break
 
         return success
 
