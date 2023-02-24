@@ -40,6 +40,7 @@ class ToolFile:
     skipIfRunnableExists: bool
     isInstalledCached: bool
 
+
     def __init__(self):
         self.url = ""
         self.absTarget = None
@@ -52,11 +53,13 @@ class ToolFile:
         self.skipIfRunnableExists = False
         self.isInstalledCached = False
 
+
     def Normalize(self) -> None:
         if self.absTarget:
             self.absTarget = os.path.normpath(self.absTarget)
         if self.absExtractDir:
             self.absExtractDir = os.path.normpath(self.absExtractDir)
+
 
     def VerifyTypes(self) -> None:
         util.VerifyType(self.url, str, "ToolFile.url")
@@ -69,11 +72,13 @@ class ToolFile:
         util.VerifyType(self.autoDeleteAfterInstall, bool, "ToolFile.autoDeleteAfterInstall")
         util.VerifyType(self.skipIfRunnableExists, bool, "ToolFile.skipIfRunnableExists")
 
+
     def VerifyValues(self) -> None:
         # TODO Verify url format?
         util.Verify(util.IsValidPathName(self.absTarget), f"ToolFile.absTarget '{self.absTarget}' is not a valid file name")
         if self.absExtractDir:
             util.Verify(util.IsValidPathName(self.absExtractDir), f"ToolFile.absExtractDir '{self.absExtractDir}' is not a valid file name")
+
 
     def VerifyInstall(self) -> None:
         util.Verify(os.path.isfile(self.absTarget), f"ToolFile.absTarget file '{self.absTarget}' does not exist")
@@ -87,19 +92,23 @@ class ToolFile:
             actual: int = util.GetFileSize(self.absTarget)
             util.Verify(self.size == actual, f"ToolFile.size '{self.size}' does not match size '{actual}' of target file '{self.absTarget}'")
 
+
     def HashOk(self) -> bool:
         md5Ok = (not self.md5 or self.md5 == util.GetFileMd5(self.absTarget))
         shaOk = (not self.sha256 or self.sha256 == util.GetFileSha256(self.absTarget))
         return md5Ok and shaOk
 
+
     def SizeOk(self) -> bool:
         return self.size < 0 or self.size == util.GetFileSize(self.absTarget)
+
 
     def IsInstalled(self) -> bool:
         if self.isInstalledCached:
             return True
         self.isInstalledCached = os.path.isfile(self.absTarget) and self.SizeOk() and self.HashOk()
         return self.isInstalledCached
+
 
     def Install(self) -> InstallResult:
         result = InstallResult(InstallResultCode.Ok, 0)
@@ -146,6 +155,7 @@ class ToolFile:
 
         return result
 
+
     @staticmethod
     def DownloadToFile(response: http.client.HTTPResponse, absTarget: str) -> None:
         BUF_SIZE = 1024 * 16
@@ -170,15 +180,18 @@ class Tool:
     version: float
     versionStr: str
 
+
     def __init__(self):
         self.name = None
         self.files = list[ToolFile]()
         self.version = 0.0
         self.versionStr = ""
 
+
     def Normalize(self) -> None:
         for file in self.files:
             file.Normalize()
+
 
     def VerifyTypes(self) -> None:
         util.VerifyType(self.name, str, "Tool.name")
@@ -188,14 +201,17 @@ class Tool:
         for file in self.files:
             file.VerifyTypes()
 
+
     def VerifyValues(self) -> None:
         util.Verify(self.GetExecutable() != None, "Tool.files contains no runnable file")
         for file in self.files:
             file.VerifyValues()
 
+
     def VerifyInstall(self) -> None:
         for file in self.files:
             file.VerifyInstall()
+
 
     def GetExecutable(self) -> str:
         file: ToolFile
@@ -203,6 +219,7 @@ class Tool:
             if file.runnable:
                 return file.absTarget
         return None
+
 
     def Install(self) -> bool:
         file: ToolFile
@@ -233,6 +250,8 @@ class Tool:
                 break
 
         return success
+
+
 
 
 ToolsT = dict[str, Tool]
