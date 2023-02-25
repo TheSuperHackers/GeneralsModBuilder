@@ -53,5 +53,5 @@ def main():
         bpy.ops.preferences.addon_enable(module=args.name)
 
 
-if __name__ == '__main__': 
+if __name__ == '__main__':
     main()
