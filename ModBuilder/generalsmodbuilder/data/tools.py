@@ -1,13 +1,16 @@
 import os
 import os.path
+import subprocess
 import urllib.request
 import http.client
 import zipfile
 from enum import Enum, auto
 from logging import warning
 from dataclasses import dataclass
-from generalsmodbuilder.util import JsonFile
 from generalsmodbuilder import util
+from generalsmodbuilder.util import JsonFile
+from generalsmodbuilder.data.common import ParamsT, ProcessParams, VerifyParamsType
+from generalsmodbuilder.build.common import ParamsToArgs
 
 
 class InstallResultCode(Enum):
@@ -35,6 +38,8 @@ class ToolFile:
     md5: str
     sha256: str
     size: int
+    absCall: str
+    callArgs: ParamsT
     runnable: bool
     autoDeleteAfterInstall: bool
     skipIfRunnableExists: bool
@@ -48,6 +53,8 @@ class ToolFile:
         self.md5 = ""
         self.sha256 = ""
         self.size = -1
+        self.absCall = ""
+        self.callArgs = ParamsT()
         self.runnable = False
         self.autoDeleteAfterInstall = False
         self.skipIfRunnableExists = False
@@ -59,6 +66,8 @@ class ToolFile:
             self.absTarget = os.path.normpath(self.absTarget)
         if self.absExtractDir:
             self.absExtractDir = os.path.normpath(self.absExtractDir)
+        if self.absCall:
+            self.absCall = os.path.normpath(self.absCall)
 
 
     def VerifyTypes(self) -> None:
@@ -68,6 +77,8 @@ class ToolFile:
         util.VerifyType(self.md5, str, "ToolFile.md5")
         util.VerifyType(self.sha256, str, "ToolFile.sha256")
         util.VerifyType(self.size, int, "ToolFile.size")
+        util.VerifyType(self.absCall, str, "ToolFile.absCall")
+        VerifyParamsType(self.callArgs, "ToolFile.callArgs")
         util.VerifyType(self.runnable, bool, "ToolFile.runnable")
         util.VerifyType(self.autoDeleteAfterInstall, bool, "ToolFile.autoDeleteAfterInstall")
         util.VerifyType(self.skipIfRunnableExists, bool, "ToolFile.skipIfRunnableExists")
@@ -78,6 +89,8 @@ class ToolFile:
         util.Verify(util.IsValidPathName(self.absTarget), f"ToolFile.absTarget '{self.absTarget}' is not a valid file name")
         if self.absExtractDir:
             util.Verify(util.IsValidPathName(self.absExtractDir), f"ToolFile.absExtractDir '{self.absExtractDir}' is not a valid file name")
+        if self.absCall:
+            util.Verify(util.IsValidPathName(self.absCall), f"ToolFile.absCall '{self.absCall}' is not a valid file name")
 
 
     def VerifyInstall(self) -> None:
@@ -148,6 +161,12 @@ class ToolFile:
                 if util.HasFileExt(self.absTarget, "zip"):
                     with zipfile.ZipFile(self.absTarget, "r") as zfile:
                         zfile.extractall(self.absExtractDir)
+
+        if result.Ok():
+            if self.absCall:
+                args: list[str] = [self.absCall]
+                args.extend(ParamsToArgs(self.callArgs))
+                subprocess.run(args=args, check=True)
 
         if result.Ok():
             if self.autoDeleteAfterInstall:
@@ -265,6 +284,9 @@ def __MakeToolFileFromDict(jFile: dict, jsonDir: str) -> ToolFile:
     toolFile.md5 = jFile.get("md5", toolFile.md5)
     toolFile.sha256 = jFile.get("sha256", toolFile.sha256)
     toolFile.size = jFile.get("size", toolFile.size)
+    toolFile.absCall = util.JoinPathIfValid(toolFile.absCall, jsonDir, jFile.get("call"))
+    toolFile.callArgs = jFile.get("callArgs", toolFile.callArgs)
+    toolFile.callArgs = ProcessParams(toolFile.callArgs, jsonDir)
     toolFile.runnable = jFile.get("runnable", toolFile.runnable)
     toolFile.autoDeleteAfterInstall = jFile.get("autoDeleteAfterInstall", toolFile.autoDeleteAfterInstall)
     toolFile.skipIfRunnableExists = jFile.get("skipIfRunnableExists", toolFile.skipIfRunnableExists)
