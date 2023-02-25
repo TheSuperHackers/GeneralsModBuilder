@@ -8,7 +8,7 @@ ParamsT = dict[str, Union[str, int, float, bool, list[ParamT]]]
 
 
 def __MakeAbsolutePathIfApplicable(path: str, absDir: str) -> str | None:
-    newpath = path.removeprefix("{MAKE_ABSOLUTE}")
+    newpath = path.removeprefix("{THIS_DIR}")
     if newpath != path:
         newpath = newpath.removeprefix("/")
         newpath = newpath.removeprefix("\\")
