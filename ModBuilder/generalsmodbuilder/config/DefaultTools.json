@@ -59,6 +59,22 @@
                         "skipIfRunnableExists": true
                     },
                     {
+                        "url": "https://github.com/TheSuperHackers/OpenSAGE.BlenderPlugin/releases/download/v0.6.8/io_mesh_w3d.zip",
+                        "target": ".tools/io_mesh_w3d.zip",
+                        "sha256": "f234a5c97f663c1c78e284407dc276fb13aa5cfcf336d860dd479be90da20911",
+                        "size": 1133208,
+                        "call": ".tools/blender-3.4.1-windows-x64/blender.exe",
+                        "callArgs": {
+                            "--background": "",
+                            "--python": "{MAKE_ABSOLUTE}/../script/installblenderplugin.py",
+                            "--": "",
+                            "--name": "io_mesh_w3d",
+                            "--file": "{MAKE_ABSOLUTE}/.tools/io_mesh_w3d.zip"
+                        },
+                        "autoDeleteAfterInstall": true,
+                        "skipIfRunnableExists": true
+                    },
+                    {
                         "target": ".tools/blender-3.4.1-windows-x64/blender.exe",
                         "sha256": "c03e2bb20d3b04abe36a2de4976c38519d38744af2aa8009570bd29dca4685f5",
                         "size": 209297120,
