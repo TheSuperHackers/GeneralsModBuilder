@@ -88,9 +88,9 @@ def BuildFileHashRegistry(inputPaths: list[str], outputPath: str, outputName: st
         cleanInputPath = os.path.normpath(cleanInputPath)
         inputFiles: list[str] = glob(inputPath, recursive=True)
         for inputFile in inputFiles:
-            relFile = util.RemoveLeadingString(inputFile, cleanInputPath)
-            relFile = util.RemoveLeadingString(relFile, "/")
-            relFile = util.RemoveLeadingString(relFile, "\\")
+            relFile = inputFile.removeprefix(cleanInputPath)
+            relFile = relFile.removeprefix("/")
+            relFile = relFile.removeprefix("\\")
             registry.AddFile(
                 relFile=relFile,
                 size=util.GetFileSize(inputFile),
