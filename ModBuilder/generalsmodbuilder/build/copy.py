@@ -12,8 +12,9 @@ from PIL.Image import Resampling
 from dataclasses import dataclass, field
 from generalsmodbuilder.data.bundles import ParamsT
 from generalsmodbuilder.data.tools import ToolsT
-from generalsmodbuilder.build.thing import BuildFile, BuildThing
+from generalsmodbuilder.build.caseinsensitivedict import CaseInsensitiveDict
 from generalsmodbuilder.build.common import ParamsToArgs
+from generalsmodbuilder.build.thing import BuildFile, BuildThing
 from generalsmodbuilder import util
 
 
@@ -230,16 +231,17 @@ class BuildCopy:
 
 
     def __CopyToCSF(self, source: str, target: str, params: ParamsT) -> bool:
+        iparams = CaseInsensitiveDict(params)
         exec: str = self.__GetToolExePath("gametextcompiler")
-        args = [exec,
+        args: list[str] = [exec,
             "-LOAD_STR", source,
             "-SAVE_CSF", target]
 
-        language: str = params.get("language")
+        language: str = iparams.get("language")
         if isinstance(language, str) and bool(language):
             args.extend(["-LOAD_STR_LANGUAGES", language])
 
-        swapAndSetLanguage: str = params.get("swapAndSetLanguage")
+        swapAndSetLanguage: str = iparams.get("swapAndSetLanguage")
         if isinstance(swapAndSetLanguage, str) and bool(swapAndSetLanguage):
             args.extend(["-SWAP_AND_SET_LANGUAGE", swapAndSetLanguage])
 
@@ -250,12 +252,13 @@ class BuildCopy:
 
 
     def __CopyToSTR(self, source: str, target: str, params: ParamsT) -> bool:
+        iparams = CaseInsensitiveDict(params)
         exec: str = self.__GetToolExePath("gametextcompiler")
         args: list[str] = [exec,
             "-LOAD_CSF", source,
             "-SAVE_STR", target]
 
-        language: str = params.get("language")
+        language: str = iparams.get("language")
         if isinstance(language, str) and bool(language):
             args.extend(["-SAVE_STR_LANGUAGES", language])
 
@@ -401,16 +404,18 @@ class BuildCopy:
 
     @staticmethod
     def __HasResizeParams(params: ParamsT) -> bool:
-        return (params.get("resize") != None) or (params.get("rescale") != None)
+        iparams = CaseInsensitiveDict(params)
+        return (iparams.get("resize") != None) or (iparams.get("rescale") != None)
 
 
     @staticmethod
     def __ResizeImageWithParams(img: PILImage, params: ParamsT) -> PILImage:
+        iparams = CaseInsensitiveDict(params)
         size: tuple[int, int] = img.size
 
         # Resize, for example 512 512 to 1024 1024
 
-        resize: list[int, int] = params.get("resize")
+        resize: list[int, int] = iparams.get("resize")
         if isinstance(resize, list):
             if len(resize) == 1:
                 size = (int(resize[0]), int(resize[0]))
@@ -421,7 +426,7 @@ class BuildCopy:
 
         # Rescale, for example 512*2 512*2
 
-        rescale: list[float, float] = params.get("rescale")
+        rescale: list[float, float] = iparams.get("rescale")
         if isinstance(rescale, list):
             if len(rescale) == 1:
                 size = (int(rescale[0] * size[0]), int(rescale[0] * size[1]))
@@ -439,7 +444,7 @@ class BuildCopy:
         # LANCZOS
 
         resample = Resampling.BILINEAR
-        resampling: str = params.get("resampling")
+        resampling: str = iparams.get("resampling")
         if isinstance(resampling, str):
             resampling = resampling.lower()
             for option in Resampling:
@@ -503,9 +508,10 @@ class BuildCopy:
 
 
     def __CopyToProcessedScript(self, source: str, target: str, params: ParamsT) -> bool:
-        forceEOL: str = params.get("forceEOL")
-        deleteComments: str = params.get("deleteComments")
-        deleteWhitespace: int = params.get("deleteWhitespace")
+        iparams = CaseInsensitiveDict(params)
+        forceEOL: str = iparams.get("forceEOL")
+        deleteComments: str = iparams.get("deleteComments")
+        deleteWhitespace: int = iparams.get("deleteWhitespace")
         doForceEOL: bool = isinstance(forceEOL, str) and bool(forceEOL)
         doDeleteComments: bool = isinstance(deleteComments, str) and bool(deleteComments)
         doDeleteWhitespace: bool = isinstance(deleteWhitespace, int) and deleteWhitespace > 0
