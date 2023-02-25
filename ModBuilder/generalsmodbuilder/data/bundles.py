@@ -230,8 +230,8 @@ class BundleItem:
             sourceExtraPathPair: list[str] = source.split(basePath)
             if len(sourceExtraPathPair) > 1:
                 sourceExtraPath = os.path.dirname(sourceExtraPathPair[-1])
-                sourceExtraPath = util.RemoveLeadingString(sourceExtraPath, "/")
-                sourceExtraPath = util.RemoveLeadingString(sourceExtraPath, "\\")
+                sourceExtraPath = sourceExtraPath.removeprefix("/")
+                sourceExtraPath = sourceExtraPath.removeprefix("\\")
             else:
                 sourceExtraPath = ""
             newPath = targetPath.replace("**", sourceExtraPath)
@@ -240,8 +240,8 @@ class BundleItem:
             newPath = os.path.normpath(targetPath)
 
         newTarget = os.path.join(newPath, newName + newExtn)
-        newTarget = util.RemoveLeadingString(newTarget, "./")
-        newTarget = util.RemoveLeadingString(newTarget, ".\\")
+        newTarget = newTarget.removeprefix("./")
+        newTarget = newTarget.removeprefix(".\\")
         return newTarget
 
 

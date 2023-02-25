@@ -183,24 +183,6 @@ def CreateRelPaths(paths: list[str], start: str) -> list[str]:
     return relPaths
 
 
-def RemoveLeadingString(s: str, remove: str):
-    if s.startswith(remove):
-        s = s[len(remove):]
-    return s
-
-
-def RemoveTrailingString(s: str, remove: str):
-    if s.endswith(remove):
-        s = s[:-len(remove)]
-    return s
-
-
-def RemoveLeadingAndTrailingString(s: str, remove: str):
-    s = RemoveLeadingString(s, remove)
-    s = RemoveTrailingString(s, remove)
-    return s
-
-
 def MakeDirsForFile(file: str) -> None:
     os.makedirs(GetAbsFileDir(file), exist_ok=True)
 
