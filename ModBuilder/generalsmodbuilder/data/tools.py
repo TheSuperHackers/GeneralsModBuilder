@@ -276,8 +276,24 @@ class Tool:
 ToolsT = dict[str, Tool]
 
 
-def __MakeToolFileFromDict(jFile: dict, jsonDir: str) -> ToolFile:
+def __ProcessAliases(thing: str | ParamsT, jAliases: dict) -> str | ParamsT:
+    if isinstance(jAliases, dict):
+
+        if isinstance(thing, str):
+            for aKey,aVal in jAliases.items():
+                thing = thing.replace(aKey, aVal)
+
+        if isinstance(thing, dict):
+            for tKey,tVal in thing.items():
+                for aKey,aVal in jAliases.items():
+                    thing[tKey] = tVal.replace(aKey, aVal)
+
+    return thing
+
+
+def __MakeToolFileFromDict(jFile: dict, jsonDir: str, jAliases: dict) -> ToolFile:
     toolFile = ToolFile()
+
     toolFile.url = jFile.get("url", toolFile.url)
     toolFile.absTarget = util.JoinPathIfValid(None, jsonDir, jFile.get("target"))
     toolFile.absExtractDir = util.JoinPathIfValid(toolFile.absExtractDir, jsonDir, jFile.get("extractDir"))
@@ -286,14 +302,20 @@ def __MakeToolFileFromDict(jFile: dict, jsonDir: str) -> ToolFile:
     toolFile.size = jFile.get("size", toolFile.size)
     toolFile.absCall = util.JoinPathIfValid(toolFile.absCall, jsonDir, jFile.get("call"))
     toolFile.callArgs = jFile.get("callArgs", toolFile.callArgs)
-    toolFile.callArgs = ProcessParams(toolFile.callArgs, jsonDir)
     toolFile.runnable = jFile.get("runnable", toolFile.runnable)
     toolFile.autoDeleteAfterInstall = jFile.get("autoDeleteAfterInstall", toolFile.autoDeleteAfterInstall)
     toolFile.skipIfRunnableExists = jFile.get("skipIfRunnableExists", toolFile.skipIfRunnableExists)
+
+    toolFile.absTarget = __ProcessAliases(toolFile.absTarget, jAliases)
+    toolFile.absExtractDir = __ProcessAliases(toolFile.absExtractDir, jAliases)
+    toolFile.absCall = __ProcessAliases(toolFile.absCall, jAliases)
+    toolFile.callArgs = __ProcessAliases(toolFile.callArgs, jAliases)
+    toolFile.callArgs = ProcessParams(toolFile.callArgs, jsonDir)
+
     return toolFile
 
 
-def __MakeToolFromDict(jTool: dict, jsonDir: str, jVersion: int) -> Tool:
+def __MakeToolFromDict(jTool: dict, jsonDir: str, jVersion: int, jAliases: dict) -> Tool:
     tool = Tool()
     tool.name = jTool.get("name")
     if jVersion <= 1:
@@ -305,7 +327,7 @@ def __MakeToolFromDict(jTool: dict, jsonDir: str, jVersion: int) -> Tool:
     if jFiles:
         jFile: dict
         for jFile in jFiles:
-            toolFile = __MakeToolFileFromDict(jFile, jsonDir)
+            toolFile = __MakeToolFileFromDict(jFile, jsonDir, jAliases)
             tool.files.append(toolFile)
 
     return tool
@@ -321,11 +343,12 @@ def MakeToolsFromJsons(jsonFiles: list[JsonFile]) -> ToolsT:
         if jTools:
             LATEST_VERSION = 2
             jVersion: int = jTools.get("version", LATEST_VERSION)
+            jAliases: dict = jTools.get("aliases")
             jList: dict = jTools.get("list")
             if jList:
                 jTool: dict
                 for jTool in jList:
-                    tool = __MakeToolFromDict(jTool, jsonDir, jVersion)
+                    tool = __MakeToolFromDict(jTool, jsonDir, jVersion, jAliases)
                     tools[tool.name] = tool
 
     for tool in tools.values():
