@@ -2,8 +2,7 @@
     "tools": {
         "version": 2,
         "aliases": {
-            "{TOOLS_DIR}": ".tools",
-            "{SCRIPT_DIR}": "../script"
+            "{TOOLS_DIR}": ".tools"
         },
         "list": [
             {
@@ -67,14 +66,15 @@
                         "target": "{TOOLS_DIR}/io_mesh_w3d.zip",
                         "sha256": "f234a5c97f663c1c78e284407dc276fb13aa5cfcf336d860dd479be90da20911",
                         "size": 1133208,
-                        "call": "{TOOLS_DIR}/blender-3.4.1-windows-x64/blender.exe",
-                        "callArgs": {
-                            "--background": "",
-                            "--python": "{THIS_DIR}/{SCRIPT_DIR}/installblenderplugin_v3.4.1.py",
-                            "--": "",
-                            "--name": "io_mesh_w3d",
-                            "--file": "{THIS_DIR}/{TOOLS_DIR}/io_mesh_w3d.zip"
-                        },
+                        "callList": [
+                            {
+                                "call": "{TOOLS_DIR}/blender-3.4.1-windows-x64/blender.exe",
+                                "callArgs": {
+                                    "--background": "",
+                                    "--python-expr": "import bpy; import os; fp=os.path.normpath('{THIS_DIR}/{TOOLS_DIR}/io_mesh_w3d.zip'); bpy.ops.preferences.addon_install(overwrite=True, filepath=fp)"
+                                }
+                            }
+                        ],
                         "autoDeleteAfterInstall": true,
                         "skipIfRunnableExists": true
                     },
