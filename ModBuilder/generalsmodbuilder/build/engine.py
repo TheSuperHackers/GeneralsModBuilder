@@ -23,6 +23,8 @@ from generalsmodbuilder import util
 
 @dataclass
 class BuildFilePathInfo:
+    # This class is serialized and therefore may be missing attributes.
+    modifiedTime: float
     md5: str
     params: ParamsT
 
@@ -31,6 +33,12 @@ class BuildFilePathInfo:
             return self.md5 == other.md5 and self.params == other.params
         except AttributeError:
             return False
+
+    def GetModifiedTime(self) -> float:
+        try:
+            return self.modifiedTime
+        except AttributeError:
+            return 0.0
 
 
 BuildFilePathInfosT = dict[str, BuildFilePathInfo]
@@ -49,9 +57,9 @@ class BuildDiffRegistry:
             filepath = filepath.lower()
         return filepath
 
-    def AddFile(self, filepath: str, md5: str = "", params: ParamsT = None) -> BuildFilePathInfo:
+    def AddFile(self, filepath: str, time = 0.0, md5: str = "", params: ParamsT = None) -> BuildFilePathInfo:
         filepath = self.__ProcessPath(filepath)
-        pathinfo = BuildFilePathInfo(md5, params)
+        pathinfo = BuildFilePathInfo(time, md5, params)
         self.filePathInfos[filepath] = pathinfo
         return pathinfo
 
@@ -560,47 +568,61 @@ class BuildEngine:
         for thing in things.values():
             print(f"Create file infos for {thing.name} ...")
 
-            BuildEngine.__PopulateFilePathInfosFromThing(diff.newDiffRegistry, thing)
+            BuildEngine.__PopulateFilePathInfosFromThing(diff, thing)
 
             if diff.includesParentDiff and thing.parentThing != None:
-                BuildEngine.__PopulateFilePathInfosFromThing(diff.newDiffRegistry, thing.parentThing)
+                BuildEngine.__PopulateFilePathInfosFromThing(diff, thing.parentThing)
 
 
     @staticmethod
-    def __PopulateFilePathInfosFromThing(diffRegistry: BuildDiffRegistry, thing: BuildThing) -> None:
+    def __PopulateFilePathInfosFromThing(diff: BuildDiff, thing: BuildThing) -> None:
         file: BuildFile
 
         for file in thing.files:
             absRealSource = file.AbsRealSource()
             absSource = file.AbsSource()
+            sourceTime: float = 0.0
             sourceMd5: str = ""
             sourceParams: ParamsT = None
 
-            if not diffRegistry.FindFile(absRealSource):
-                sourceMd5 = util.GetFileMd5(absRealSource)
+            if not diff.newDiffRegistry.FindFile(absRealSource):
+                sourceTime = util.GetFileModifiedTime(absRealSource)
                 sourceParams = deepcopy(file.params)
-                diffRegistry.AddFile(absRealSource, md5=sourceMd5, params=sourceParams)
+                # Optimization: Use old hash when file modification time is unchanged.
+                oldInfo: BuildFilePathInfo = diff.oldDiffRegistry.FindFile(absRealSource)
+                if oldInfo != None and sourceTime > 0.0 and sourceTime == oldInfo.GetModifiedTime():
+                    sourceMd5 = oldInfo.md5
+                else:
+                    sourceMd5 = util.GetFileMd5(absRealSource)
+                diff.newDiffRegistry.AddFile(absRealSource, time=sourceTime, md5=sourceMd5, params=sourceParams)
 
-            if not diffRegistry.FindFile(absSource):
-                diffRegistry.AddFile(absSource, md5=sourceMd5, params=sourceParams)
+            if not diff.newDiffRegistry.FindFile(absSource):
+                diff.newDiffRegistry.AddFile(absSource, time=sourceTime, md5=sourceMd5, params=sourceParams)
 
         for file in thing.files:
             absRealTarget = file.AbsRealTarget(thing.absParentDir)
             absTarget = file.AbsTarget(thing.absParentDir)
             absTargetDirs: list[str] = util.GetAbsFileDirs(absTarget, thing.absParentDir)
             absTargetDir: str
+            targetTime: float = 0.0
             targetMd5: str = ""
 
             for absTargetDir in absTargetDirs:
-                if not diffRegistry.FindFile(absTargetDir):
-                    diffRegistry.AddFile(absTargetDir)
+                if not diff.newDiffRegistry.FindFile(absTargetDir):
+                    diff.newDiffRegistry.AddFile(absTargetDir)
 
-            if not diffRegistry.FindFile(absRealTarget):
-                targetMd5 = util.GetFileMd5(absRealTarget)
-                diffRegistry.AddFile(absRealTarget, md5=targetMd5)
+            if not diff.newDiffRegistry.FindFile(absRealTarget):
+                targetTime = util.GetFileModifiedTime(absRealTarget)
+                # Optimization: Use old hash when file modification time is unchanged.
+                oldInfo: BuildFilePathInfo = diff.oldDiffRegistry.FindFile(absRealTarget)
+                if oldInfo != None and targetTime > 0.0 and targetTime == oldInfo.GetModifiedTime():
+                    targetMd5 = oldInfo.md5
+                else:
+                    targetMd5 = util.GetFileMd5(absRealTarget)
+                diff.newDiffRegistry.AddFile(absRealTarget, time=targetTime, md5=targetMd5)
 
-            if not diffRegistry.FindFile(absTarget):
-                diffRegistry.AddFile(absTarget, md5=targetMd5)
+            if not diff.newDiffRegistry.FindFile(absTarget):
+                diff.newDiffRegistry.AddFile(absTarget, time=targetTime, md5=targetMd5)
 
 
     @staticmethod
