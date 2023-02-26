@@ -246,6 +246,13 @@ def GetFileHash(path: str, hashFunc: Callable) -> str:
     return hashStr
 
 
+def GetFileModifiedTime(path: str) -> float:
+    if os.path.isfile(path):
+        return os.path.getmtime(path)
+    else:
+        return 0.0
+
+
 # Windows-specific error code indicating an invalid pathname.
 # https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes--0-499-
 ERROR_INVALID_NAME = 123
