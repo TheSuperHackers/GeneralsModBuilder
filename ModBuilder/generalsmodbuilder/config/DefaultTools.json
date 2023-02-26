@@ -2,7 +2,8 @@
     "tools": {
         "version": 2,
         "aliases": {
-            "{TOOLS_DIR}": ".tools"
+            "{TOOLS_DIR}": ".tools",
+            "{SCRIPT_DIR}": "../script"
         },
         "list": [
             {
@@ -69,7 +70,7 @@
                         "call": "{TOOLS_DIR}/blender-3.4.1-windows-x64/blender.exe",
                         "callArgs": {
                             "--background": "",
-                            "--python": "{THIS_DIR}/../script/installblenderplugin_v3.4.1.py",
+                            "--python": "{THIS_DIR}/{SCRIPT_DIR}/installblenderplugin_v3.4.1.py",
                             "--": "",
                             "--name": "io_mesh_w3d",
                             "--file": "{THIS_DIR}/{TOOLS_DIR}/io_mesh_w3d.zip"
