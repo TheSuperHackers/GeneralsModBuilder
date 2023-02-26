@@ -19,7 +19,8 @@ from generalsmodbuilder import util
 
 
 class BuildFileType(Enum):
-    csf = 0
+    blend = enum.auto()
+    csf = enum.auto()
     str = enum.auto()
     big = enum.auto()
     zip = enum.auto()
@@ -30,6 +31,7 @@ class BuildFileType(Enum):
     tga = enum.auto()
     dds = enum.auto()
     ini = enum.auto()
+    w3d = enum.auto()
     wnd = enum.auto()
     Any = enum.auto()
     Auto = enum.auto()
@@ -212,6 +214,9 @@ class BuildCopy:
 
         if targetT == BuildFileType.dds and (sourceT == BuildFileType.psd or sourceT == BuildFileType.tga):
             return self.__CopyToDDS
+
+        if targetT == BuildFileType.w3d and sourceT == BuildFileType.blend:
+            return self.__CopyToW3D
 
         return self.__CopyTo
 
@@ -549,3 +554,54 @@ class BuildCopy:
                     return True
 
         return False
+
+
+    def __CopyToW3D(self, source: str, target: str, params: ParamsT) -> bool:
+        iparams = CaseInsensitiveDict(params)
+        w3dExportHierarchy: bool = iparams.get("w3dExportHierarchy", True)
+        w3dExportAnimation: bool = iparams.get("w3dExportAnimation", False)
+        w3dExportMesh : bool = iparams.get("w3dExportMesh", True)
+        w3dUseExistingSkeleton: bool = iparams.get("w3dUseExistingSkeleton", False)
+        w3dCompressTimeCoded: bool = iparams.get("w3dCompressTimeCoded", False)
+        w3dForceVertexMaterials: bool = iparams.get("w3dForceVertexMaterials", False)
+        w3dCreateIndividualFiles: bool = iparams.get("w3dCreateIndividualFiles", False)
+        w3dCreateTextureXmls: bool = iparams.get("w3dCreateTextureXmls", False)
+
+        if w3dExportHierarchy and w3dExportAnimation and w3dExportMesh:
+            export_mode = "HAM"
+        elif w3dExportHierarchy and w3dExportMesh:
+            export_mode = "HM"
+        elif w3dExportHierarchy:
+            export_mode = "H"
+        elif w3dExportAnimation:
+            export_mode = "A"
+        elif w3dExportMesh:
+            export_mode = "M"
+        else:
+            raise Exception(f"Source '{source}' has unrecognized export setup")
+
+        if w3dCompressTimeCoded:
+            animation_compression = "TC"
+        else:
+            animation_compression = "U"
+
+        code = (""
+        f"import bpy\n"
+        f"bpy.ops.export_mesh.westwood_w3d("
+        f"filepath='{target}',"
+        f"check_existing=False,"
+        f"file_format='W3D',"
+        f"export_mode='{export_mode}',"
+        f"use_existing_skeleton={w3dUseExistingSkeleton},"
+        f"animation_compression='{animation_compression}',"
+        f"force_vertex_materials={w3dForceVertexMaterials},"
+        f"individual_files={w3dCreateIndividualFiles},"
+        f"create_texture_xmls={w3dCreateTextureXmls})")
+
+        exec: str = self.__GetToolExePath("blender")
+        args: list[str] = [exec, source, "--background", "--python-expr", code]
+
+        subprocess.run(args=args, check=True)
+
+        BuildCopy.__PrintMakeResult(source, target)
+        return True

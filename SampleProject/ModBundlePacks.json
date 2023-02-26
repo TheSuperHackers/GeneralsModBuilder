@@ -12,6 +12,8 @@
                     "SampleEmpty",
                     "SampleINI",
                     "SampleLanguages",
+                    "SampleModels",
+                    "SampleTexturesDDS512",
                     "SampleTexturesTGA256",
                     "SampleWindow",
                     "Misc"
@@ -35,8 +37,11 @@
             {
                 "name": "SampleProjectDDS512",
                 "itemNames": [
+                    "SampleAudio",
+                    "SampleEmpty",
                     "SampleINI",
                     "SampleLanguages",
+                    "SampleModels",
                     "SampleTexturesDDS512",
                     "SampleWindow",
                     "Misc"

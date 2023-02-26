@@ -20,7 +20,9 @@ Find more information about [Configuration Settings](SETTINGS.md).
 
 ## Supported file conversions
 
-As of Release 1.0, the following file conversions are supported:
+The following file conversions are supported:
+
+**Since Release 1.0**
 
 * Any to BIG (Game Archive)
 * Any to ZIP (Archive)
@@ -33,6 +35,10 @@ As of Release 1.0, the following file conversions are supported:
 * PSD to BMP (24)
 * TGA to DDS (DXT1 and DXT5)
 * TGA to BMP (24)
+
+**Since Release 1.8**
+
+* BLEND to W3D
 
 ## Run the Mod Builder
 
