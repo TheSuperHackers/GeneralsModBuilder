@@ -180,6 +180,31 @@
                 ]
             },
             {
+                "name": "SampleModels",
+                "big": true,
+                "files": [
+                    {
+                        "parent": "GameFilesEdited",
+                        "sourceTargetList": [
+                            {
+                                "source": "Art/Models/AVSentry.blend",
+                                "target": "Art/W3D/*.w3d"
+                            }
+                        ],
+                        "params": {
+                            "w3dExportHierarchy": true,
+                            "w3dExportAnimation": true,
+                            "w3dExportMesh": true,
+                            "w3dUseExistingSkeleton": false,
+                            "w3dCompressTimeCoded": false,
+                            "w3dForceVertexMaterials": false,
+                            "w3dCreateIndividualFiles": false,
+                            "w3dCreateTextureXmls": false
+                        }
+                    }
+                ]
+            },
+            {
                 "name": "Misc",
                 "big": false,
                 "files": [
