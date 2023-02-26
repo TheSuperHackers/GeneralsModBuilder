@@ -204,7 +204,7 @@ class ToolFile:
 
     @staticmethod
     def DownloadToFile(response: http.client.HTTPResponse, absTarget: str) -> None:
-        BUF_SIZE = 1024 * 16
+        BUF_SIZE = 1024 * 64
         with open(absTarget, 'wb', buffering=BUF_SIZE) as wfile:
             fullbuf = bytearray(BUF_SIZE)
             while True:
