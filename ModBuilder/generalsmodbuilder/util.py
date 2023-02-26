@@ -232,11 +232,12 @@ def GetFileSha256(path: str) -> str:
 g_fileHashCount: int = 0
 
 def GetFileHash(path: str, hashFunc: Callable) -> str:
+    BUF_SIZE = 1024 * 64
     hashStr: str = ""
     if os.path.isfile(path):
         hashObj: hashlib._Hash = hashFunc()
-        with open(path, "rb") as rfile:
-            for chunk in iter(lambda: rfile.read(4096), b""):
+        with open(path, "rb", buffering=BUF_SIZE) as rfile:
+            for chunk in iter(lambda: rfile.read(BUF_SIZE), b""):
                 hashObj.update(chunk)
         hashStr = hashObj.hexdigest()
 
