@@ -194,7 +194,8 @@ class BundleItem:
         for curFile in self.files:
             if not os.path.isfile(curFile.absSourceFile) and "*" in curFile.absSourceFile:
                 globFiles = glob(curFile.absSourceFile, recursive=True)
-                util.Verify(bool(globFiles), f"Wildcard '{curFile.absSourceFile}' matches nothing")
+                if not bool(globFiles):
+                    print(f"Note: Wildcard '{curFile.absSourceFile}' currently matches nothing")
 
                 for globFile in globFiles:
                     if os.path.isfile(globFile):
