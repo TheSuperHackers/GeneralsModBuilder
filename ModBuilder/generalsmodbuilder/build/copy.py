@@ -634,6 +634,7 @@ for obj in bpy.data.objects:
                             print(f'    texture: {node.image.name}')
 """
         code += f"""
+bpy.ops.preferences.addon_enable(module='io_mesh_w3d')
 bpy.ops.export_mesh.westwood_w3d(
     filepath='{target}',
     check_existing=False,
