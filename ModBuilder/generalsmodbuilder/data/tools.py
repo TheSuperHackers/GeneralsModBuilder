@@ -31,6 +31,32 @@ class InstallResult:
 
 
 @dataclass(init=False)
+class ToolCallInstruction:
+    absCall: str
+    callArgs: ParamsT
+
+
+    def __init__(self):
+        self.absCall = ""
+        self.callArgs = ParamsT
+
+
+    def Normalize(self) -> None:
+        if self.absCall:
+            self.absCall = os.path.normpath(self.absCall)
+
+
+    def VerifyTypes(self) -> None:
+        util.VerifyType(self.absCall, str, "ToolCallInstruction.absCall")
+        VerifyParamsType(self.callArgs, "ToolCallInstruction.callArgs")
+
+
+    def VerifyValues(self) -> None:
+        if self.absCall:
+            util.Verify(util.IsValidPathName(self.absCall), f"ToolCallInstruction.absCall '{self.absCall}' is not a valid file name")
+
+
+@dataclass(init=False)
 class ToolFile:
     url: str
     absTarget: str
@@ -38,8 +64,7 @@ class ToolFile:
     md5: str
     sha256: str
     size: int
-    absCall: str
-    callArgs: ParamsT
+    callInstructions: list[ToolCallInstruction]
     runnable: bool
     autoDeleteAfterInstall: bool
     skipIfRunnableExists: bool
@@ -53,8 +78,7 @@ class ToolFile:
         self.md5 = ""
         self.sha256 = ""
         self.size = -1
-        self.absCall = ""
-        self.callArgs = ParamsT()
+        self.callInstructions = list[ToolCallInstruction]()
         self.runnable = False
         self.autoDeleteAfterInstall = False
         self.skipIfRunnableExists = False
@@ -66,8 +90,8 @@ class ToolFile:
             self.absTarget = os.path.normpath(self.absTarget)
         if self.absExtractDir:
             self.absExtractDir = os.path.normpath(self.absExtractDir)
-        if self.absCall:
-            self.absCall = os.path.normpath(self.absCall)
+        for instruction in self.callInstructions:
+            instruction.Normalize()
 
 
     def VerifyTypes(self) -> None:
@@ -77,11 +101,12 @@ class ToolFile:
         util.VerifyType(self.md5, str, "ToolFile.md5")
         util.VerifyType(self.sha256, str, "ToolFile.sha256")
         util.VerifyType(self.size, int, "ToolFile.size")
-        util.VerifyType(self.absCall, str, "ToolFile.absCall")
-        VerifyParamsType(self.callArgs, "ToolFile.callArgs")
+        util.VerifyType(self.callInstructions, list, "ToolFile.callInstructions")
         util.VerifyType(self.runnable, bool, "ToolFile.runnable")
         util.VerifyType(self.autoDeleteAfterInstall, bool, "ToolFile.autoDeleteAfterInstall")
         util.VerifyType(self.skipIfRunnableExists, bool, "ToolFile.skipIfRunnableExists")
+        for instruction in self.callInstructions:
+            instruction.VerifyTypes()
 
 
     def VerifyValues(self) -> None:
@@ -89,8 +114,8 @@ class ToolFile:
         util.Verify(util.IsValidPathName(self.absTarget), f"ToolFile.absTarget '{self.absTarget}' is not a valid file name")
         if self.absExtractDir:
             util.Verify(util.IsValidPathName(self.absExtractDir), f"ToolFile.absExtractDir '{self.absExtractDir}' is not a valid file name")
-        if self.absCall:
-            util.Verify(util.IsValidPathName(self.absCall), f"ToolFile.absCall '{self.absCall}' is not a valid file name")
+        for instruction in self.callInstructions:
+            instruction.VerifyValues()
 
 
     def VerifyInstall(self) -> None:
@@ -163,10 +188,12 @@ class ToolFile:
                         zfile.extractall(self.absExtractDir)
 
         if result.Ok():
-            if self.absCall:
-                args: list[str] = [self.absCall]
-                args.extend(ParamsToArgs(self.callArgs))
-                subprocess.run(args=args, check=True)
+            instruction: ToolCallInstruction
+            for instruction in self.callInstructions:
+                if instruction.absCall:
+                    args: list[str] = [instruction.absCall]
+                    args.extend(ParamsToArgs(instruction.callArgs))
+                    subprocess.run(args=args, check=True)
 
         if result.Ok():
             if self.autoDeleteAfterInstall:
@@ -301,16 +328,24 @@ def __MakeToolFileFromDict(jFile: dict, jsonDir: str, aliases: dict) -> ToolFile
     toolFile.md5 = jFile.get("md5", toolFile.md5)
     toolFile.sha256 = jFile.get("sha256", toolFile.sha256)
     toolFile.size = jFile.get("size", toolFile.size)
-    toolFile.absCall = util.JoinPathIfValid(toolFile.absCall, jsonDir, jFile.get("call"))
-    toolFile.callArgs = jFile.get("callArgs", toolFile.callArgs)
+    jCallList: list = jFile.get("callList", None)
     toolFile.runnable = jFile.get("runnable", toolFile.runnable)
     toolFile.autoDeleteAfterInstall = jFile.get("autoDeleteAfterInstall", toolFile.autoDeleteAfterInstall)
     toolFile.skipIfRunnableExists = jFile.get("skipIfRunnableExists", toolFile.skipIfRunnableExists)
 
     toolFile.absTarget = __ProcessAliases(toolFile.absTarget, aliases)
     toolFile.absExtractDir = __ProcessAliases(toolFile.absExtractDir, aliases)
-    toolFile.absCall = __ProcessAliases(toolFile.absCall, aliases)
-    toolFile.callArgs = __ProcessAliases(toolFile.callArgs, aliases)
+
+    if jCallList is not None:
+        toolFile.callInstructions.clear()
+        jCall: dict
+        for jCall in jCallList:
+            instruction = ToolCallInstruction()
+            instruction.absCall = util.JoinPathIfValid(instruction.absCall, jsonDir,jCall.get("call", instruction.absCall))
+            instruction.callArgs = jCall.get("callArgs", instruction.callArgs)
+            instruction.absCall = __ProcessAliases(instruction.absCall, aliases)
+            instruction.callArgs = __ProcessAliases(instruction.callArgs, aliases)
+            toolFile.callInstructions.append(instruction)
 
     return toolFile
 
