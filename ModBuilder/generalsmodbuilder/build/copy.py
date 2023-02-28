@@ -1,5 +1,4 @@
 import os
-import subprocess
 import shutil
 import enum
 import PIL.Image
@@ -250,10 +249,11 @@ class BuildCopy:
         if isinstance(swapAndSetLanguage, str) and bool(swapAndSetLanguage):
             args.extend(["-SWAP_AND_SET_LANGUAGE", swapAndSetLanguage])
 
-        subprocess.run(args, check=True)
+        success: bool = util.RunProcess(args)
+        if success:
+            BuildCopy.__PrintMakeResult(source, target)
 
-        BuildCopy.__PrintMakeResult(source, target)
-        return True
+        return success
 
 
     def __CopyToSTR(self, source: str, target: str, params: ParamsT) -> bool:
@@ -267,10 +267,11 @@ class BuildCopy:
         if isinstance(language, str) and bool(language):
             args.extend(["-SAVE_STR_LANGUAGES", language])
 
-        subprocess.run(args, check=True)
+        success: bool = util.RunProcess(args)
+        if success:
+            BuildCopy.__PrintMakeResult(source, target)
 
-        BuildCopy.__PrintMakeResult(source, target)
-        return True
+        return success
 
 
     def __CopyToBIG(self, source: str, target: str, params: ParamsT) -> bool:
@@ -279,10 +280,11 @@ class BuildCopy:
             "-source", source,
             "-dest", target]
 
-        subprocess.run(args=args, check=True)
+        success: bool = util.RunProcess(args)
+        if success:
+            BuildCopy.__PrintMakeResult(source, target)
 
-        BuildCopy.__PrintMakeResult(source, target)
-        return True
+        return success
 
 
     def __CopyToZIP(self, source: str, target: str, params: ParamsT) -> bool:
@@ -397,14 +399,16 @@ class BuildCopy:
         args.extend(ParamsToArgs(params, includeRegex="^-"))
         args.append("-DXT5" if hasAlpha else "-DXT1")
 
-        subprocess.run(args=args, check=True)
+        success: bool = util.RunProcess(args)
 
         if tmpSource != source:
             if os.path.isfile(tmpSource):
                 os.remove(tmpSource)
 
-        BuildCopy.__PrintMakeResult(tmpSource, target)
-        return True
+        if success:
+            BuildCopy.__PrintMakeResult(tmpSource, target)
+
+        return success
 
 
     @staticmethod
@@ -650,7 +654,8 @@ bpy.ops.export_mesh.westwood_w3d(
         exec: str = self.__GetToolExePath("blender")
         args: list[str] = [exec, source, "--background", "--python-expr", code]
 
-        subprocess.run(args=args, check=True)
+        success: bool = util.RunProcess(args)
+        if success:
+            BuildCopy.__PrintMakeResult(source, target)
 
-        BuildCopy.__PrintMakeResult(source, target)
-        return True
+        return success

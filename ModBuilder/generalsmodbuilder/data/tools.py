@@ -1,6 +1,5 @@
 import os
 import os.path
-import subprocess
 import urllib.request
 import http.client
 import zipfile
@@ -19,6 +18,7 @@ class InstallResultCode(Enum):
     SizeMismatch = auto()
     HashMismatch = auto()
     HttpError = auto()
+    CallError = auto()
 
 
 @dataclass
@@ -193,7 +193,8 @@ class ToolFile:
                 if instruction.absCall:
                     args: list[str] = [instruction.absCall]
                     args.extend(ParamsToArgs(instruction.callArgs))
-                    subprocess.run(args=args, check=True)
+                    if not util.RunProcess(args):
+                        result = InstallResult(InstallResultCode.CallError, 0)
 
         if result.Ok():
             if self.autoDeleteAfterInstall:
