@@ -3,6 +3,7 @@ import traceback
 from argparse import ArgumentParser
 from generalsmodbuilder.__version__ import __version__
 from generalsmodbuilder.buildfunctions import RunWithConfig, BuildFileHashRegistry
+from generalsmodbuilder.gui.gui import Gui
 from generalsmodbuilder import util
 
 
@@ -19,6 +20,7 @@ def Main(args=None):
     parser.add_argument('-o', '--install-list', type=str, nargs="*", help='Installs specified bundle pack names.')
     parser.add_argument('-u', '--uninstall', action='store_true')
     parser.add_argument('-r', '--run', action='store_true')
+    parser.add_argument('-g', '--gui', action='store_true')
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--print-config', action='store_true')
     parser.add_argument('--file-hash-registry-input', type=str, action="append", help='Path to generate file hash registry from. Multiples can be specified.')
@@ -72,10 +74,23 @@ def Main(args=None):
     for i in range(len(configPaths)):
         configPaths[i] = os.path.abspath(configPaths[i])
 
+    useGui = bool(args.gui)
     debug = bool(args.debug)
     printConfig = bool(args.print_config)
 
-    if debug:
+    if useGui:
+        gui: Gui = Gui()
+        gui.RunWithConfig(
+            configPaths=configPaths,
+            installList=installList,
+            clean=clean,
+            build=build,
+            release=release,
+            install=install,
+            uninstall=uninstall,
+            run=run,
+            printConfig=printConfig)
+    elif debug:
         RunWithConfig(
             configPaths=configPaths,
             installList=installList,

@@ -11,7 +11,7 @@ from generalsmodbuilder.util import JsonFile
 from generalsmodbuilder import util
 
 
-def __CreateJsonFiles(configPaths: list[str]) -> list[JsonFile]:
+def CreateJsonFiles(configPaths: list[str]) -> list[JsonFile]:
     jsonFiles: list[JsonFile] = []
     for configPath in configPaths:
         if (util.HasFileExt(configPath, "json")):
@@ -20,7 +20,7 @@ def __CreateJsonFiles(configPaths: list[str]) -> list[JsonFile]:
     return jsonFiles
 
 
-def __CreateBuildStep(clean: bool, build: bool, release: bool, install: bool, uninstall: bool, run: bool) -> BuildStep:
+def CreateBuildStep(clean: bool, build: bool, release: bool, install: bool, uninstall: bool, run: bool) -> BuildStep:
     buildStep = BuildStep.Zero
     if clean:
         buildStep |= BuildStep.Clean
@@ -38,7 +38,7 @@ def __CreateBuildStep(clean: bool, build: bool, release: bool, install: bool, un
     return buildStep
 
 
-def __PatchBundlesInstall(bundles: Bundles, installList: list[str]) -> None:
+def PatchBundlesInstall(bundles: Bundles, installList: list[str]) -> None:
     pack: BundlePack
     for pack in bundles.packs:
         if pack.name in installList:
@@ -56,15 +56,15 @@ def RunWithConfig(
         run: bool=False,
         printConfig: bool=False) -> None:
 
-    jsonFiles: list[JsonFile] = __CreateJsonFiles(configPaths)
-    buildStep: BuildStep = __CreateBuildStep(clean, build, release, install, uninstall, run)
+    jsonFiles: list[JsonFile] = CreateJsonFiles(configPaths)
+    buildStep: BuildStep = CreateBuildStep(clean, build, release, install, uninstall, run)
 
     folders: Folders = MakeFoldersFromJsons(jsonFiles)
     runner: Runner = MakeRunnerFromJsons(jsonFiles) if (install or uninstall or run) else Runner()
     bundles: Bundles = MakeBundlesFromJsons(jsonFiles)
     tools: ToolsT = MakeToolsFromJsons(jsonFiles)
 
-    __PatchBundlesInstall(bundles, installList)
+    PatchBundlesInstall(bundles, installList)
 
     setup = BuildSetup(
         step=buildStep,
