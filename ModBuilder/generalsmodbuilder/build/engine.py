@@ -254,7 +254,7 @@ class BuildEngine:
         if self.setup.step & (BuildStep.Build):
             self.setup.step |= BuildStep.PostBuild
 
-        if self.setup.step & (BuildStep.Build | BuildStep.Install | BuildStep.Uninstall):
+        if self.setup.step & (BuildStep.Build | BuildStep.Install | BuildStep.Uninstall | BuildStep.Run):
             self.setup.step |= BuildStep.PreBuild
 
         success = True
