@@ -1,7 +1,9 @@
 import os
 import traceback
+from threading import Thread
 from tkinter import *
 from tkinter.ttk import *
+from typing import Callable
 from generalsmodbuilder.__version__ import __version__
 from generalsmodbuilder.buildfunctions import CreateJsonFiles, RunWithConfig
 from generalsmodbuilder.data.bundles import BundlePack, Bundles, MakeBundlesFromJsons
@@ -9,8 +11,11 @@ from generalsmodbuilder.util import JsonFile
 
 
 class Gui:
+    workThread: Thread
+
     configPaths: list[str]
     installList: list[str]
+
     clean: BooleanVar
     build: BooleanVar
     release: BooleanVar
@@ -19,11 +24,19 @@ class Gui:
     run: BooleanVar
     printConfig: BooleanVar
     clearConsole: BooleanVar
+
     bundlePackList: Listbox
+    executeButton: Button
+    cleanButton: Button
+    buildButton: Button
+    releaseButton: Button
+    installButton: Button
+    runButton: Button
+    uninstallButton: Button
 
 
     def __init__(self):
-        pass
+        self.workThread = None
 
 
     def RunWithConfig(self,
@@ -119,8 +132,8 @@ class Gui:
         uninstallCheck = Checkbutton(executeFrame, width = checkboxWidth, text='Uninstall', var=self.uninstall)
         uninstallCheck.pack(anchor=W)
 
-        executeButton = Button(executeFrame, width=buttonWidth, text="Execute", command=self._Execute)
-        executeButton.pack(anchor=W)
+        self.executeButton = Button(executeFrame, width=buttonWidth, text="Execute", command=lambda:self._StartThreaded(self._Execute))
+        self.executeButton.pack(anchor=W)
 
         # Options Frame
 
@@ -138,23 +151,23 @@ class Gui:
         actionsLabel = Label(actionsFrame, text = "Single actions")
         actionsLabel.pack(anchor=W)
 
-        cleanButton = Button(actionsFrame, width=buttonWidth, text="Clean", command=self._Clean)
-        cleanButton.pack(anchor=W)
+        self.cleanButton = Button(actionsFrame, width=buttonWidth, text="Clean", command=lambda:self._StartThreaded(self._Clean))
+        self.cleanButton.pack(anchor=W)
 
-        buildButton = Button(actionsFrame, width=buttonWidth, text="Build", command=self._Build)
-        buildButton.pack(anchor=W)
+        self.buildButton = Button(actionsFrame, width=buttonWidth, text="Build", command=lambda:self._StartThreaded(self._Build))
+        self.buildButton.pack(anchor=W)
 
-        releaseButton = Button(actionsFrame, width=buttonWidth, text="Release", command=self._Release)
-        releaseButton.pack(anchor=W)
+        self.releaseButton = Button(actionsFrame, width=buttonWidth, text="Release", command=lambda:self._StartThreaded(self._Release))
+        self.releaseButton.pack(anchor=W)
 
-        installButton = Button(actionsFrame, width=buttonWidth, text="Install", command=self._Install)
-        installButton.pack(anchor=W)
+        self.installButton = Button(actionsFrame, width=buttonWidth, text="Install", command=lambda:self._StartThreaded(self._Install))
+        self.installButton.pack(anchor=W)
 
-        runButton = Button(actionsFrame, width=buttonWidth, text="Run Game", command=self._RunGame)
-        runButton.pack(anchor=W)
+        self.runButton = Button(actionsFrame, width=buttonWidth, text="Run Game", command=lambda:self._StartThreaded(self._RunGame))
+        self.runButton.pack(anchor=W)
 
-        uninstallButton = Button(actionsFrame, width=buttonWidth, text="Uninstall", command=self._Uninstall)
-        uninstallButton.pack(anchor=W)
+        self.uninstallButton = Button(actionsFrame, width=buttonWidth, text="Uninstall", command=lambda:self._StartThreaded(self._Uninstall))
+        self.uninstallButton.pack(anchor=W)
 
         # Bundle Pack Frame
 
@@ -209,9 +222,7 @@ class Gui:
 
 
     def _Execute(self) -> None:
-        self.installList = Gui._GetBundlePackNamesFromList(self.bundlePackList)
-        if self.clearConsole.get():
-            Gui._ClearConsole()
+        self._OnWorkBegin()
         try:
             RunWithConfig(
                 configPaths=self.configPaths,
@@ -226,12 +237,11 @@ class Gui:
         except Exception:
             print("ERROR CALLSTACK")
             traceback.print_exc()
+        self._OnWorkEnd()
 
 
     def _Clean(self) -> None:
-        self.installList = Gui._GetBundlePackNamesFromList(self.bundlePackList)
-        if self.clearConsole.get():
-            Gui._ClearConsole()
+        self._OnWorkBegin()
         try:
             RunWithConfig(
                 configPaths=self.configPaths,
@@ -241,12 +251,11 @@ class Gui:
         except Exception:
             print("ERROR CALLSTACK")
             traceback.print_exc()
+        self._OnWorkEnd()
 
 
     def _Build(self) -> None:
-        self.installList = Gui._GetBundlePackNamesFromList(self.bundlePackList)
-        if self.clearConsole.get():
-            Gui._ClearConsole()
+        self._OnWorkBegin()
         try:
             RunWithConfig(
                 configPaths=self.configPaths,
@@ -256,12 +265,11 @@ class Gui:
         except Exception:
             print("ERROR CALLSTACK")
             traceback.print_exc()
+        self._OnWorkEnd()
 
 
     def _Release(self) -> None:
-        self.installList = Gui._GetBundlePackNamesFromList(self.bundlePackList)
-        if self.clearConsole.get():
-            Gui._ClearConsole()
+        self._OnWorkBegin()
         try:
             RunWithConfig(
                 configPaths=self.configPaths,
@@ -271,12 +279,11 @@ class Gui:
         except Exception:
             print("ERROR CALLSTACK")
             traceback.print_exc()
+        self._OnWorkEnd()
 
 
     def _Install(self) -> None:
-        self.installList = Gui._GetBundlePackNamesFromList(self.bundlePackList)
-        if self.clearConsole.get():
-            Gui._ClearConsole()
+        self._OnWorkBegin()
         try:
             RunWithConfig(
                 configPaths=self.configPaths,
@@ -286,12 +293,11 @@ class Gui:
         except Exception:
             print("ERROR CALLSTACK")
             traceback.print_exc()
+        self._OnWorkEnd()
 
 
     def _Uninstall(self) -> None:
-        self.installList = Gui._GetBundlePackNamesFromList(self.bundlePackList)
-        if self.clearConsole.get():
-            Gui._ClearConsole()
+        self._OnWorkBegin()
         try:
             RunWithConfig(
                 configPaths=self.configPaths,
@@ -301,12 +307,11 @@ class Gui:
         except Exception:
             print("ERROR CALLSTACK")
             traceback.print_exc()
+        self._OnWorkEnd()
 
 
     def _RunGame(self) -> None:
-        self.installList = Gui._GetBundlePackNamesFromList(self.bundlePackList)
-        if self.clearConsole.get():
-            Gui._ClearConsole()
+        self._OnWorkBegin()
         try:
             RunWithConfig(
                 configPaths=self.configPaths,
@@ -316,3 +321,41 @@ class Gui:
         except Exception:
             print("ERROR CALLSTACK")
             traceback.print_exc()
+        self._OnWorkEnd()
+
+
+    def _OnWorkBegin(self) -> None:
+        self.installList = Gui._GetBundlePackNamesFromList(self.bundlePackList)
+        if self.clearConsole.get():
+            Gui._ClearConsole()
+        if self.workThread != None:
+            self._DisableGuiElements()
+
+
+    def _OnWorkEnd(self) -> None:
+        if self.workThread != None:
+            self.workThread = None
+            self._EnableGuiElements()
+
+
+    def _DisableGuiElements(self) -> None:
+        self._SetGuiElementsState("disabled")
+
+
+    def _EnableGuiElements(self) -> None:
+        self._SetGuiElementsState("normal")
+
+
+    def _SetGuiElementsState(self, state: str) -> None:
+        self.executeButton["state"] = state
+        self.cleanButton["state"] = state
+        self.buildButton["state"] = state
+        self.releaseButton["state"] = state
+        self.installButton["state"] = state
+        self.runButton["state"] = state
+        self.uninstallButton["state"] = state
+
+
+    def _StartThreaded(self, func: Callable) -> None:
+        self.workThread = Thread(target=func)
+        self.workThread.start()
