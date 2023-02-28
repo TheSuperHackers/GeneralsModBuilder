@@ -10,6 +10,7 @@ from generalsmodbuilder import util
 class BuildStep(Flag):
     Zero = 0
     PreBuild = auto()
+    Clean = auto()
     Build = auto()
     PostBuild = auto()
     Release = auto()

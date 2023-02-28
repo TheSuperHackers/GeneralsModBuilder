@@ -4,8 +4,7 @@ from glob import glob
 from argparse import ArgumentParser
 from generalsmodbuilder.build.engine import BuildEngine
 from generalsmodbuilder.build.filehashregistry import FileHashRegistry
-from generalsmodbuilder.build.setup import BuildStep
-from generalsmodbuilder.build.setup import BuildSetup
+from generalsmodbuilder.build.setup import BuildStep, BuildSetup
 from generalsmodbuilder.data.bundles import Bundles, BundlePack, MakeBundlesFromJsons
 from generalsmodbuilder.data.folders import Folders, MakeFoldersFromJsons
 from generalsmodbuilder.data.runner import Runner, MakeRunnerFromJsons
@@ -24,8 +23,10 @@ def __CreateJsonFiles(configPaths: list[str]) -> list[JsonFile]:
     return jsonFiles
 
 
-def __CreateBuildStep(build: bool, release: bool, install: bool, uninstall: bool, run: bool) -> BuildStep:
+def __CreateBuildStep(clean: bool, build: bool, release: bool, install: bool, uninstall: bool, run: bool) -> BuildStep:
     buildStep = BuildStep.Zero
+    if clean:
+        buildStep |= BuildStep.Clean
     if build:
         buildStep |= BuildStep.Build
     if release:
@@ -50,6 +51,7 @@ def __PatchBundlesInstall(bundles: Bundles, installList: list[str]) -> None:
 def RunWithConfig(
         configPaths: list[str],
         installList: list[str],
+        clean: bool=False,
         build: bool=False,
         release: bool=False,
         install: bool=False,
@@ -58,7 +60,7 @@ def RunWithConfig(
         printConfig: bool=False) -> None:
 
     jsonFiles: list[JsonFile] = __CreateJsonFiles(configPaths)
-    buildStep: BuildStep = __CreateBuildStep(build, release, install, uninstall, run)
+    buildStep: BuildStep = __CreateBuildStep(clean, build, release, install, uninstall, run)
 
     folders: Folders = MakeFoldersFromJsons(jsonFiles)
     runner: Runner = MakeRunnerFromJsons(jsonFiles) if (install or uninstall or run) else Runner()
@@ -106,6 +108,7 @@ def Main(args=None):
     parser = ArgumentParser()
     parser.add_argument('-c', '--config', type=str, action="append", help='Path to a configuration file (json). Multiples can be specified.')
     parser.add_argument('-l', '--config-list', type=str, nargs="*", help='Paths to any amount of configuration files (json).')
+    parser.add_argument('-a', '--clean', action='store_true')
     parser.add_argument('-b', '--build', action='store_true')
     parser.add_argument('-z', '--release', action='store_true')
     parser.add_argument('-i', '--install', type=str, nargs="?", const="_default_", action='append', help='Can specify bundle pack name to install. Multiples can be specified.')
@@ -135,6 +138,7 @@ def Main(args=None):
         installList.extend(args.install)
 
     # Set main tool commands.
+    clean = bool(args.clean)
     build = bool(args.build)
     release = bool(args.release)
     install = bool(installList)
@@ -171,6 +175,7 @@ def Main(args=None):
         RunWithConfig(
             configPaths=configPaths,
             installList=installList,
+            clean=clean,
             build=build,
             release=release,
             install=install,
@@ -182,6 +187,7 @@ def Main(args=None):
             RunWithConfig(
                 configPaths=configPaths,
                 installList=installList,
+                clean=clean,
                 build=build,
                 release=release,
                 install=install,

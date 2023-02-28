@@ -254,13 +254,15 @@ class BuildEngine:
         if self.setup.step & (BuildStep.Build):
             self.setup.step |= BuildStep.PostBuild
 
-        if self.setup.step & (BuildStep.Build | BuildStep.Install | BuildStep.Uninstall | BuildStep.Run):
+        if self.setup.step & (BuildStep.Clean | BuildStep.Build | BuildStep.Install | BuildStep.Uninstall | BuildStep.Run):
             self.setup.step |= BuildStep.PreBuild
 
         success = True
 
         if success and self.setup.step & BuildStep.PreBuild:
             success &= self.__PreBuild()
+        if success and self.setup.step & BuildStep.Clean:
+            success &= self.__Clean()
         if success and self.setup.step & BuildStep.Build:
             success &= self.__Build()
         if success and self.setup.step & BuildStep.PostBuild:
@@ -358,6 +360,24 @@ class BuildEngine:
         BuildEngine.__PopulateStructureRawBundlePacks(self.structure, bundles, folders)
         BuildEngine.__PopulateStructureZipBundlePacks(self.structure, bundles, folders)
         BuildEngine.__PopulateStructureInstallBundlePacks(self.structure, bundles, runner)
+
+        return True
+
+
+    def __Clean(self) -> bool:
+        print("Do Clean ...")
+
+        index: BuildIndex
+        thing: BuildThing
+        file: BuildFile
+
+        for index in BuildIndex:
+            things: BuildThingsT = self.structure.GetThings(index)
+            for thingName,thing in things.items():
+                for file in thing.files:
+                    absTarget: str = file.AbsTarget(thing.absParentDir)
+                    if util.DeleteFileOrPath(absTarget):
+                        print(f"Clean {absTarget}")
 
         return True
 
