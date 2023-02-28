@@ -1,4 +1,5 @@
 import os
+import subprocess
 import sys
 import types
 import winreg
@@ -321,3 +322,14 @@ def IsValidPathName(pathname: str) -> bool:
         return False
     else:
         return True
+
+
+def RunProcess(args) -> bool:
+    process: subprocess.CompletedProcess[str] = subprocess.run(args=args, check=True, encoding="utf-8")
+
+    if process.stdout != "":
+        print(process.stdout)
+    if process.stderr != "":
+        print(process.stderr)
+
+    return process.returncode == 0
