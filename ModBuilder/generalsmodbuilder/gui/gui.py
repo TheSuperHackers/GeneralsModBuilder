@@ -1,10 +1,12 @@
 import os
+import time
 import traceback
-from threading import Thread
+from threading import Thread, RLock
 from tkinter import *
 from tkinter.ttk import *
 from typing import Callable
 from generalsmodbuilder.__version__ import __version__
+from generalsmodbuilder.build.engine import BuildEngine
 from generalsmodbuilder.buildfunctions import CreateJsonFiles, RunWithConfig
 from generalsmodbuilder.data.bundles import BundlePack, Bundles, MakeBundlesFromJsons
 from generalsmodbuilder.util import JsonFile
@@ -12,6 +14,9 @@ from generalsmodbuilder.util import JsonFile
 
 class Gui:
     workThread: Thread
+    abortThread: Thread
+    buildEngine: BuildEngine
+    buildEngineLock: RLock
 
     configPaths: list[str]
     installList: list[str]
@@ -33,10 +38,14 @@ class Gui:
     installButton: Button
     runButton: Button
     uninstallButton: Button
+    abortButton: Button
 
 
     def __init__(self):
         self.workThread = None
+        self.abortThread = None
+        self.buildEngine = None
+        self.buildEngineLock = RLock()
 
 
     def RunWithConfig(self,
@@ -64,6 +73,7 @@ class Gui:
         self.clearConsole = BooleanVar(mainWindow, value=True)
 
         self._CreateMainWindowElements(mainWindow)
+        self._SetAbortElementsState("disabled")
 
         mainWindow.mainloop()
 
@@ -169,6 +179,9 @@ class Gui:
         self.uninstallButton = Button(actionsFrame, width=buttonWidth, text="Uninstall", command=lambda:self._StartThreaded(self._Uninstall))
         self.uninstallButton.pack(anchor=W)
 
+        self.abortButton = Button(actionsFrame, width=buttonWidth, text="Abort", command=lambda:self._Abort())
+        self.abortButton.pack(anchor=W)
+
         # Bundle Pack Frame
 
         bundlePackLabel = Label(bundlePackFrame, text = "Bundle Pack list")
@@ -233,7 +246,8 @@ class Gui:
                 install=self.install.get(),
                 uninstall=self.uninstall.get(),
                 run=self.run.get(),
-                printConfig=self.printConfig.get())
+                printConfig=self.printConfig.get(),
+                engine=self.buildEngine)
         except Exception:
             print("ERROR CALLSTACK")
             traceback.print_exc()
@@ -247,7 +261,8 @@ class Gui:
                 configPaths=self.configPaths,
                 installList=self.installList,
                 clean=True,
-                printConfig=self.printConfig.get())
+                printConfig=self.printConfig.get(),
+                engine=self.buildEngine)
         except Exception:
             print("ERROR CALLSTACK")
             traceback.print_exc()
@@ -261,7 +276,8 @@ class Gui:
                 configPaths=self.configPaths,
                 installList=self.installList,
                 build=True,
-                printConfig=self.printConfig.get())
+                printConfig=self.printConfig.get(),
+                engine=self.buildEngine)
         except Exception:
             print("ERROR CALLSTACK")
             traceback.print_exc()
@@ -275,7 +291,8 @@ class Gui:
                 configPaths=self.configPaths,
                 installList=self.installList,
                 release=True,
-                printConfig=self.printConfig.get())
+                printConfig=self.printConfig.get(),
+                engine=self.buildEngine)
         except Exception:
             print("ERROR CALLSTACK")
             traceback.print_exc()
@@ -289,7 +306,8 @@ class Gui:
                 configPaths=self.configPaths,
                 installList=self.installList,
                 install=True,
-                printConfig=self.printConfig.get())
+                printConfig=self.printConfig.get(),
+                engine=self.buildEngine)
         except Exception:
             print("ERROR CALLSTACK")
             traceback.print_exc()
@@ -303,7 +321,8 @@ class Gui:
                 configPaths=self.configPaths,
                 installList=self.installList,
                 uninstall=True,
-                printConfig=self.printConfig.get())
+                printConfig=self.printConfig.get(),
+                engine=self.buildEngine)
         except Exception:
             print("ERROR CALLSTACK")
             traceback.print_exc()
@@ -317,7 +336,8 @@ class Gui:
                 configPaths=self.configPaths,
                 installList=self.installList,
                 run=True,
-                printConfig=self.printConfig.get())
+                printConfig=self.printConfig.get(),
+                engine=self.buildEngine)
         except Exception:
             print("ERROR CALLSTACK")
             traceback.print_exc()
@@ -325,14 +345,26 @@ class Gui:
 
 
     def _OnWorkBegin(self) -> None:
-        self.installList = Gui._GetBundlePackNamesFromList(self.bundlePackList)
+        with self.buildEngineLock:
+            self.buildEngine = BuildEngine()
+            self.installList = Gui._GetBundlePackNamesFromList(self.bundlePackList)
+
         if self.clearConsole.get():
             Gui._ClearConsole()
+
         if self.workThread != None:
             self._DisableGuiElements()
 
+        self._StartAbortThread()
+
 
     def _OnWorkEnd(self) -> None:
+        with self.buildEngineLock:
+            self.buildEngine = None
+
+        self.abortThread.join()
+        self.abortThread = None
+
         if self.workThread != None:
             self.workThread = None
             self._EnableGuiElements()
@@ -356,6 +388,41 @@ class Gui:
         self.uninstallButton["state"] = state
 
 
+    def _SetAbortElementsState(self, state: str) -> None:
+        self.abortButton["state"] = state
+
+
     def _StartThreaded(self, func: Callable) -> None:
         self.workThread = Thread(target=func)
         self.workThread.start()
+
+
+    def _StartAbortThread(self) -> None:
+        self.abortThread = Thread(target=self._AbortUpdateLoop)
+        self.abortThread.start()
+
+
+    def _AbortUpdateLoop(self) -> None:
+        canAbort: bool = False
+        wasAbort: bool = canAbort
+        while self.workThread != None:
+            with self.buildEngineLock:
+                if self.buildEngine == None:
+                    self._SetAbortElementsState("disabled")
+                    break
+                canAbort = self.buildEngine.CanAbort()
+                if canAbort != wasAbort:
+                    if canAbort:
+                        self._SetAbortElementsState("enabled")
+                    else:
+                        self._SetAbortElementsState("disabled")
+                wasAbort = canAbort
+
+            time.sleep(0.1)
+
+        return
+
+
+    def _Abort(self) -> None:
+        with self.buildEngineLock:
+            self.buildEngine.Abort()

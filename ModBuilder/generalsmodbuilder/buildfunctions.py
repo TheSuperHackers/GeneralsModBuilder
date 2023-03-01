@@ -54,7 +54,8 @@ def RunWithConfig(
         install: bool=False,
         uninstall: bool=False,
         run: bool=False,
-        printConfig: bool=False) -> None:
+        printConfig: bool=False,
+        engine: BuildEngine=BuildEngine()) -> None:
 
     jsonFiles: list[JsonFile] = CreateJsonFiles(configPaths)
     buildStep: BuildStep = CreateBuildStep(clean, build, release, install, uninstall, run)
@@ -74,7 +75,6 @@ def RunWithConfig(
         tools=tools,
         printConfig=printConfig)
 
-    engine = BuildEngine()
     engine.Run(setup)
 
 

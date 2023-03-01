@@ -6,6 +6,8 @@ from copy import deepcopy
 from dataclasses import dataclass
 from logging import warning
 from glob import glob
+import threading
+import time
 from typing import Any
 from enum import Enum, auto
 from generalsmodbuilder.build.common import ParamsToArgs
@@ -221,6 +223,8 @@ class BuildEngine:
     setup: BuildSetup
     structure: BuildStructure
     copyDict: dict[BuildIndex, BuildCopy]
+    processHandle: subprocess.Popen
+    processLock: threading.RLock
 
 
     def __init__(self):
@@ -231,10 +235,12 @@ class BuildEngine:
         self.setup = None
         self.structure = None
         self.copyDict = None
+        self.processHandle = None
+        self.processLock = threading.RLock()
 
 
     def Run(self, setup: BuildSetup) -> bool:
-        print("Run Build ...")
+        print("Run Build Job ...")
 
         if setup.step == BuildStep.Zero:
             warning("setup.step is Zero. Exiting.")
@@ -281,7 +287,20 @@ class BuildEngine:
 
         self.__Reset()
 
+        print("Build Job done.")
+
         return success
+
+
+    def CanAbort(self) -> bool:
+        with self.processLock:
+            return self.processHandle != None
+
+
+    def Abort(self) -> None:
+        with self.processLock:
+            if self.processHandle != None:
+                self.processHandle.terminate()
 
 
     def __CallScript(event: BundleEvent, kwargs: dict) -> bool:
@@ -895,7 +914,14 @@ class BuildEngine:
 
         BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnRun)
 
-        subprocess.run(args=args)
+        self.processHandle: subprocess.Popen = subprocess.Popen(args=args)
+
+        while True:
+            with self.processLock:
+                if self.processHandle.poll() != None:
+                    self.processHandle = None
+                    break
+            time.sleep(0.1)
 
         return True
 
