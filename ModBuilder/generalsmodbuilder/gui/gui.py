@@ -363,7 +363,7 @@ class Gui:
             Gui._ClearConsole()
 
         if self.workThread != None:
-            self._SetGuiElementsState("disabled")
+            self._SetJobElementsState("disabled")
 
         self._StartAbortThread()
 
@@ -377,10 +377,10 @@ class Gui:
 
         if self.workThread != None:
             self.workThread = None
-            self._SetGuiElementsState("normal")
+            self._SetJobElementsState("normal")
 
 
-    def _SetGuiElementsState(self, state: str) -> None:
+    def _SetJobElementsState(self, state: str) -> None:
         self.executeButton["state"] = state
         self.cleanButton["state"] = state
         self.buildButton["state"] = state
