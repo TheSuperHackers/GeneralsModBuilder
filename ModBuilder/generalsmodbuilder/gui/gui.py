@@ -97,32 +97,34 @@ class Gui:
 
         frame1000 = Frame(mainFrame)
         frame1000.grid(row=0, column=0, sticky='n')
-
         frame0100 = Frame(mainFrame)
         frame0100.grid(row=0, column=1, sticky='n')
-
         frame0010 = Frame(mainFrame)
         frame0010.grid(row=0, column=2, sticky='n')
-
         frame0001 = Frame(mainFrame)
         frame0001.grid(row=0, column=3, sticky='n')
 
+        executeLabel = Label(frame0100, text = "Execute sequence")
+        executeLabel.pack(anchor=CENTER)
         executeFrame = Frame(frame0100, padding=10, relief='solid')
         executeFrame.pack(padx=5, pady=5)
 
+        optionsLabel = Label(frame0001, text = "Options")
+        optionsLabel.pack(anchor=CENTER)
         optionsFrame = Frame(frame0001, padding=10, relief='solid')
         optionsFrame.pack(padx=5, pady=5)
 
+        actionsLabel = Label(frame0010, text = "Single actions")
+        actionsLabel.pack(anchor=CENTER)
         actionsFrame = Frame(frame0010, padding=10, relief='solid')
         actionsFrame.pack(padx=5, pady=5)
 
+        bundlePackLabel = Label(frame1000, text = "Bundle Pack list")
+        bundlePackLabel.pack(anchor=CENTER)
         bundlePackFrame = Frame(frame1000, padding=10, relief='solid')
         bundlePackFrame.pack(padx=5, pady=5)
 
         # Execute Frame
-
-        executeLabel = Label(executeFrame, text = "Execute sequence")
-        executeLabel.pack(anchor=W)
 
         cleanCheck = Checkbutton(executeFrame, width = checkboxWidth, text='Clean', var=self.clean)
         cleanCheck.pack(anchor=W)
@@ -147,9 +149,6 @@ class Gui:
 
         # Options Frame
 
-        executeLabel = Label(optionsFrame, text = "Options")
-        executeLabel.pack(anchor=W)
-
         clearLogCheck = Checkbutton(optionsFrame, width = checkboxWidth, text='Auto Clear Console', var=self.clearConsole)
         clearLogCheck.pack(anchor=W)
 
@@ -157,9 +156,6 @@ class Gui:
         printConfig.pack(anchor=W)
 
         # Actions Frame
-
-        actionsLabel = Label(actionsFrame, text = "Single actions")
-        actionsLabel.pack(anchor=W)
 
         self.cleanButton = Button(actionsFrame, width=buttonWidth, text="Clean", command=lambda:self._StartWorkThread(self._Clean))
         self.cleanButton.pack(anchor=W)
@@ -183,9 +179,6 @@ class Gui:
         self.abortButton.pack(anchor=W)
 
         # Bundle Pack Frame
-
-        bundlePackLabel = Label(bundlePackFrame, text = "Bundle Pack list")
-        bundlePackLabel.pack(anchor=W)
 
         self.bundlePackList = Listbox(bundlePackFrame, width=listboxWidth, relief='flat', selectmode='multiple')
         self.bundlePackList.pack(anchor=W)
