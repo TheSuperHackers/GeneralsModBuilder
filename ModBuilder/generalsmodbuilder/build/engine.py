@@ -218,7 +218,7 @@ class BuildStructure:
 class BuildEngine:
     setup: BuildSetup
     structure: BuildStructure
-    installCopy: BuildCopy
+    copyDict: dict[BuildIndex, BuildCopy]
 
 
     def __init__(self):
@@ -228,14 +228,14 @@ class BuildEngine:
     def __Reset(self):
         self.setup = None
         self.structure = None
-        self.installCopy = None
+        self.copyDict = None
 
 
     def Run(self, setup: BuildSetup) -> bool:
         print("Run Build ...")
 
         if setup.step == BuildStep.Zero:
-            warning("setup.step is NONE. Exiting.")
+            warning("setup.step is Zero. Exiting.")
             return True
 
         self.setup = setup
@@ -349,9 +349,14 @@ class BuildEngine:
         bundles: Bundles = self.setup.bundles
         tools: ToolsT = self.setup.tools
 
-        options = BuildCopyOption.EnableBackup | BuildCopyOption.EnableSymlinks
         self.structure = BuildStructure()
-        self.installCopy = BuildCopy(tools=tools, options=options)
+        self.copyDict = {
+            BuildIndex.RawBundleItem: BuildCopy(tools=tools, options=BuildCopyOption.EnableSymlinks),
+            BuildIndex.BigBundleItem: BuildCopy(tools=tools, options=BuildCopyOption.EnableSymlinks),
+            BuildIndex.RawBundlePack: BuildCopy(tools=tools, options=BuildCopyOption.EnableSymlinks),
+            BuildIndex.ReleaseBundlePack: BuildCopy(tools=tools),
+            BuildIndex.InstallBundlePack: BuildCopy(tools=tools, options=BuildCopyOption.EnableBackup | BuildCopyOption.EnableSymlinks),
+        }
 
         BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnPreBuild)
 
@@ -525,12 +530,9 @@ class BuildEngine:
 
         BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnBuild)
 
-        tools: ToolsT = self.setup.tools
-        copy = BuildCopy(tools=tools, options=BuildCopyOption.EnableSymlinks)
-
-        BuildEngine.__BuildWithData(self.structure, self.setup, copy, BuildIndex.RawBundleItem, diffWithFileHashRegistry=True)
-        BuildEngine.__BuildWithData(self.structure, self.setup, copy, BuildIndex.BigBundleItem)
-        BuildEngine.__BuildWithData(self.structure, self.setup, copy, BuildIndex.RawBundlePack)
+        self.__BuildWithData(BuildIndex.RawBundleItem, diffWithFileHashRegistry=True)
+        self.__BuildWithData(BuildIndex.BigBundleItem)
+        self.__BuildWithData(BuildIndex.RawBundlePack)
 
         return True
 
@@ -543,16 +545,16 @@ class BuildEngine:
         return True
 
 
-    @staticmethod
     def __BuildWithData(
-            structure: BuildStructure,
-            setup: BuildSetup,
-            copy: BuildCopy,
+            self,
             index: BuildIndex,
             deleteObsoleteFiles: bool = True,
             diffWithParentThings: bool = False,
             diffWithFileHashRegistry: bool = False) -> None:
 
+        structure: BuildStructure = self.structure
+        setup: BuildSetup = self.setup
+        copy: BuildCopy = self.copyDict[index]
         data: BuildIndexData = structure.GetIndexData(index)
 
         # Start event is sent before populating the build diff to allow for file modifications and file injections.
@@ -820,10 +822,7 @@ class BuildEngine:
 
         BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnRelease)
 
-        tools: ToolsT = self.setup.tools
-        copy = BuildCopy(tools=tools)
-
-        BuildEngine.__BuildWithData(self.structure, self.setup, copy, BuildIndex.ReleaseBundlePack, diffWithParentThings=True)
+        self.__BuildWithData(BuildIndex.ReleaseBundlePack, diffWithParentThings=True)
 
         return True
 
@@ -831,15 +830,17 @@ class BuildEngine:
     def __Install(self) -> bool:
         print("Do Install ...")
 
+        copy: BuildCopy = self.copyDict.get(BuildIndex.InstallBundlePack)
+
         # Cleanup before install to avoid duplicated consecutive installs.
-        BuildEngine.__RevertInstalledThings(self.setup, self.installCopy)
+        BuildEngine.__RevertInstalledThings(self.setup, copy)
         BuildEngine.__RestoreGameLanguage(self.setup)
 
         BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnInstall)
 
         data: BuildIndexData = self.structure.GetIndexData(BuildIndex.InstallBundlePack)
 
-        BuildEngine.__BuildWithData(self.structure, self.setup, self.installCopy, data.index, deleteObsoleteFiles=False, diffWithParentThings=True)
+        self.__BuildWithData(data.index, deleteObsoleteFiles=False, diffWithParentThings=True)
         BuildEngine.__SaveInstalledThingsInfo(data.things, self.setup)
 
         thing: BuildThing
@@ -908,9 +909,11 @@ class BuildEngine:
     def __Uninstall(self) -> bool:
         print("Do Uninstall ...")
 
+        copy: BuildCopy = self.copyDict.get(BuildIndex.InstallBundlePack)
+
         BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnUninstall)
 
-        BuildEngine.__RevertInstalledThings(self.setup, self.installCopy)
+        BuildEngine.__RevertInstalledThings(self.setup, copy)
         BuildEngine.__RestoreGameLanguage(self.setup)
 
         return True
