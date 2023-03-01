@@ -5,6 +5,7 @@ import traceback
 from tkinter import *
 from tkinter.ttk import *
 from typing import Callable
+from generalsmodbuilder import util
 from generalsmodbuilder.__version__ import __version__
 from generalsmodbuilder.build.engine import BuildEngine
 from generalsmodbuilder.buildfunctions import CreateJsonFiles, RunWithConfig
@@ -79,11 +80,27 @@ class Gui:
 
 
     @staticmethod
+    def _MakeIconFilePath(iconName: str) -> str:
+        thisDir: str = util.GetAbsFileDir(__file__)
+        iconFile: str = os.path.join(thisDir, iconName)
+        return iconFile
+
+
+    @staticmethod
+    def _AddIconToWindow(window: Tk, iconFile: str) -> None:
+        if os.path.isfile(iconFile):
+            photoImage = PhotoImage(file = iconFile)
+            window.wm_iconphoto(False, photoImage)
+
+
+    @staticmethod
     def _CreateMainWindow() -> Tk:
         window = Tk()
         window.title(f"Generals Mod Builder v{__version__} by The Super Hackers")
         window.geometry('660x260')
         window.resizable(0, 0)
+        iconFile: str =  Gui._MakeIconFilePath("icon.png")
+        Gui._AddIconToWindow(window, iconFile)
         return window
 
 

@@ -52,6 +52,10 @@
                         {
                             "src": "generalsmodbuilder/config/*.json",
                             "dst": "config"
+                        },
+                        {
+                            "src": "generalsmodbuilder/gui/icon.png",
+                            "dst": "gui"
                         }
                     ],
                     "postDeleteFiles": [
