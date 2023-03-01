@@ -146,25 +146,27 @@ def MakeDiffPath(index: BuildIndex, folders: Folders) -> str:
     return os.path.join(folders.absBuildDir, f"{GetBuildIndexName(index)}.pickle")
 
 
-g_buildIndexToStartBuildEvent = dict[BuildIndex, BundleEventType]()
-g_buildIndexToStartBuildEvent[BuildIndex.RawBundleItem] = BundleEventType.OnStartBuildRawBundleItem
-g_buildIndexToStartBuildEvent[BuildIndex.BigBundleItem] = BundleEventType.OnStartBuildBigBundleItem
-g_buildIndexToStartBuildEvent[BuildIndex.RawBundlePack] = BundleEventType.OnStartBuildRawBundlePack
-g_buildIndexToStartBuildEvent[BuildIndex.ReleaseBundlePack] = BundleEventType.OnStartBuildReleaseBundlePack
-g_buildIndexToStartBuildEvent[BuildIndex.InstallBundlePack] = BundleEventType.OnStartBuildInstallBundlePack
+g_buildIndexToStartBuildEvent: dict[BuildIndex, BundleEventType] = {
+    BuildIndex.RawBundleItem: BundleEventType.OnStartBuildRawBundleItem,
+    BuildIndex.BigBundleItem: BundleEventType.OnStartBuildBigBundleItem,
+    BuildIndex.RawBundlePack: BundleEventType.OnStartBuildRawBundlePack,
+    BuildIndex.ReleaseBundlePack: BundleEventType.OnStartBuildReleaseBundlePack,
+    BuildIndex.InstallBundlePack: BundleEventType.OnStartBuildInstallBundlePack,
+}
 
-g_buildIndexToFinishBuildEvent = dict[BuildIndex, BundleEventType]()
-g_buildIndexToFinishBuildEvent[BuildIndex.RawBundleItem] = BundleEventType.OnFinishBuildRawBundleItem
-g_buildIndexToFinishBuildEvent[BuildIndex.BigBundleItem] = BundleEventType.OnFinishBuildBigBundleItem
-g_buildIndexToFinishBuildEvent[BuildIndex.RawBundlePack] = BundleEventType.OnFinishBuildRawBundlePack
-g_buildIndexToFinishBuildEvent[BuildIndex.ReleaseBundlePack] = BundleEventType.OnFinishBuildReleaseBundlePack
-g_buildIndexToFinishBuildEvent[BuildIndex.InstallBundlePack] = BundleEventType.OnFinishBuildInstallBundlePack
+g_buildIndexToFinishBuildEvent: dict[BuildIndex, BundleEventType] = {
+    BuildIndex.RawBundleItem: BundleEventType.OnFinishBuildRawBundleItem,
+    BuildIndex.BigBundleItem: BundleEventType.OnFinishBuildBigBundleItem,
+    BuildIndex.RawBundlePack: BundleEventType.OnFinishBuildRawBundlePack,
+    BuildIndex.ReleaseBundlePack: BundleEventType.OnFinishBuildReleaseBundlePack,
+    BuildIndex.InstallBundlePack: BundleEventType.OnFinishBuildInstallBundlePack,
+}
 
 def GetStartBuildEvent(index: BuildIndex) -> BundleEventType:
-    return g_buildIndexToStartBuildEvent[index]
+    return g_buildIndexToStartBuildEvent.get(index)
 
 def GetFinishBuildEvent(index: BuildIndex) -> BundleEventType:
-    return g_buildIndexToFinishBuildEvent[index]
+    return g_buildIndexToFinishBuildEvent.get(index)
 
 
 @dataclass(init=False)
