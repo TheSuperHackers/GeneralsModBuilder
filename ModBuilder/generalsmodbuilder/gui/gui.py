@@ -1,7 +1,7 @@
 import os
 import time
+import threading
 import traceback
-from threading import Thread, RLock
 from tkinter import *
 from tkinter.ttk import *
 from typing import Callable
@@ -13,10 +13,10 @@ from generalsmodbuilder.util import JsonFile
 
 
 class Gui:
-    workThread: Thread
-    abortThread: Thread
+    workThread: threading.Thread
+    abortThread: threading.Thread
     buildEngine: BuildEngine
-    buildEngineLock: RLock
+    buildEngineLock: threading.RLock
 
     configPaths: list[str]
     installList: list[str]
@@ -45,7 +45,7 @@ class Gui:
         self.workThread = None
         self.abortThread = None
         self.buildEngine = None
-        self.buildEngineLock = RLock()
+        self.buildEngineLock = threading.RLock()
 
 
     def RunWithConfig(self,
@@ -142,7 +142,7 @@ class Gui:
         uninstallCheck = Checkbutton(executeFrame, width = checkboxWidth, text='Uninstall', var=self.uninstall)
         uninstallCheck.pack(anchor=W)
 
-        self.executeButton = Button(executeFrame, width=buttonWidth, text="Execute", command=lambda:self._StartThreaded(self._Execute))
+        self.executeButton = Button(executeFrame, width=buttonWidth, text="Execute", command=lambda:self._StartWorkThread(self._Execute))
         self.executeButton.pack(anchor=W)
 
         # Options Frame
@@ -161,22 +161,22 @@ class Gui:
         actionsLabel = Label(actionsFrame, text = "Single actions")
         actionsLabel.pack(anchor=W)
 
-        self.cleanButton = Button(actionsFrame, width=buttonWidth, text="Clean", command=lambda:self._StartThreaded(self._Clean))
+        self.cleanButton = Button(actionsFrame, width=buttonWidth, text="Clean", command=lambda:self._StartWorkThread(self._Clean))
         self.cleanButton.pack(anchor=W)
 
-        self.buildButton = Button(actionsFrame, width=buttonWidth, text="Build", command=lambda:self._StartThreaded(self._Build))
+        self.buildButton = Button(actionsFrame, width=buttonWidth, text="Build", command=lambda:self._StartWorkThread(self._Build))
         self.buildButton.pack(anchor=W)
 
-        self.releaseButton = Button(actionsFrame, width=buttonWidth, text="Release", command=lambda:self._StartThreaded(self._Release))
+        self.releaseButton = Button(actionsFrame, width=buttonWidth, text="Release", command=lambda:self._StartWorkThread(self._Release))
         self.releaseButton.pack(anchor=W)
 
-        self.installButton = Button(actionsFrame, width=buttonWidth, text="Install", command=lambda:self._StartThreaded(self._Install))
+        self.installButton = Button(actionsFrame, width=buttonWidth, text="Install", command=lambda:self._StartWorkThread(self._Install))
         self.installButton.pack(anchor=W)
 
-        self.runButton = Button(actionsFrame, width=buttonWidth, text="Run Game", command=lambda:self._StartThreaded(self._RunGame))
+        self.runButton = Button(actionsFrame, width=buttonWidth, text="Run Game", command=lambda:self._StartWorkThread(self._RunGame))
         self.runButton.pack(anchor=W)
 
-        self.uninstallButton = Button(actionsFrame, width=buttonWidth, text="Uninstall", command=lambda:self._StartThreaded(self._Uninstall))
+        self.uninstallButton = Button(actionsFrame, width=buttonWidth, text="Uninstall", command=lambda:self._StartWorkThread(self._Uninstall))
         self.uninstallButton.pack(anchor=W)
 
         self.abortButton = Button(actionsFrame, width=buttonWidth, text="Abort", command=lambda:self._Abort())
@@ -392,13 +392,13 @@ class Gui:
         self.abortButton["state"] = state
 
 
-    def _StartThreaded(self, func: Callable) -> None:
-        self.workThread = Thread(target=func)
+    def _StartWorkThread(self, func: Callable) -> None:
+        self.workThread = threading.Thread(target=func)
         self.workThread.start()
 
 
     def _StartAbortThread(self) -> None:
-        self.abortThread = Thread(target=self._AbortUpdateLoop)
+        self.abortThread = threading.Thread(target=self._AbortUpdateLoop)
         self.abortThread.start()
 
 
