@@ -353,7 +353,7 @@ class Gui:
             Gui._ClearConsole()
 
         if self.workThread != None:
-            self._DisableGuiElements()
+            self._SetGuiElementsState("disabled")
 
         self._StartAbortThread()
 
@@ -367,15 +367,7 @@ class Gui:
 
         if self.workThread != None:
             self.workThread = None
-            self._EnableGuiElements()
-
-
-    def _DisableGuiElements(self) -> None:
-        self._SetGuiElementsState("disabled")
-
-
-    def _EnableGuiElements(self) -> None:
-        self._SetGuiElementsState("normal")
+            self._SetGuiElementsState("normal")
 
 
     def _SetGuiElementsState(self, state: str) -> None:
