@@ -262,6 +262,7 @@ class BuildEngine:
         if success and self.setup.step & BuildStep.PreBuild:
             success &= self.__PreBuild()
         if success and self.setup.step & BuildStep.Clean:
+            success &= self.__Uninstall()
             success &= self.__Clean()
         if success and self.setup.step & BuildStep.Build:
             success &= self.__Build()
@@ -372,17 +373,8 @@ class BuildEngine:
     def __Clean(self) -> bool:
         print("Do Clean ...")
 
-        index: BuildIndex
-        thing: BuildThing
-        file: BuildFile
-
-        for index in BuildIndex:
-            things: BuildThingsT = self.structure.GetThings(index)
-            for thingName,thing in things.items():
-                for file in thing.files:
-                    absTarget: str = file.AbsTarget(thing.absParentDir)
-                    if util.DeleteFileOrPath(absTarget):
-                        print(f"Clean {absTarget}")
+        util.DeleteFileOrPath(self.setup.folders.absBuildDir)
+        util.DeleteFileOrPath(self.setup.folders.absReleaseDir)
 
         return True
 
