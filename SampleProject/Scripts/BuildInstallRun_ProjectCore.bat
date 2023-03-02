@@ -20,7 +20,7 @@ call "%ThisDir%\Windows\Setup.bat"
 
 call "%ModBuilderExe%" ^
   --build ^
-  --install SampleProjectTGA256 ^
+  --install ProjectCore ^
   --run ^
   --uninstall ^
   --config-list %ConfigFiles% %*
