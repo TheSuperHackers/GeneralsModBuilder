@@ -620,21 +620,19 @@ class BuildEngine:
             absSource = file.AbsSource()
             sourceTime: float = 0.0
             sourceMd5: str = ""
-            sourceParams: ParamsT = None
 
             if not diff.newDiffRegistry.FindFile(absRealSource):
                 sourceTime = util.GetFileModifiedTime(absRealSource)
-                sourceParams = deepcopy(file.params)
                 # Optimization: Use old hash when file modification time is unchanged.
                 oldInfo: BuildFilePathInfo = diff.oldDiffRegistry.FindFile(absRealSource)
                 if oldInfo != None and sourceTime > 0.0 and sourceTime == oldInfo.GetModifiedTime():
                     sourceMd5 = oldInfo.md5
                 else:
                     sourceMd5 = util.GetFileMd5(absRealSource)
-                diff.newDiffRegistry.AddFile(absRealSource, time=sourceTime, md5=sourceMd5, params=sourceParams)
+                diff.newDiffRegistry.AddFile(absRealSource, time=sourceTime, md5=sourceMd5, params=None)
 
             if not diff.newDiffRegistry.FindFile(absSource):
-                diff.newDiffRegistry.AddFile(absSource, time=sourceTime, md5=sourceMd5, params=sourceParams)
+                diff.newDiffRegistry.AddFile(absSource, time=sourceTime, md5=sourceMd5, params=None)
 
         for file in thing.files:
             absRealTarget = file.AbsRealTarget(thing.absParentDir)
@@ -643,6 +641,7 @@ class BuildEngine:
             absTargetDir: str
             targetTime: float = 0.0
             targetMd5: str = ""
+            targetParams: ParamsT = None
 
             for absTargetDir in absTargetDirs:
                 if not diff.newDiffRegistry.FindFile(absTargetDir):
@@ -650,16 +649,17 @@ class BuildEngine:
 
             if not diff.newDiffRegistry.FindFile(absRealTarget):
                 targetTime = util.GetFileModifiedTime(absRealTarget)
+                targetParams = deepcopy(file.params)
                 # Optimization: Use old hash when file modification time is unchanged.
                 oldInfo: BuildFilePathInfo = diff.oldDiffRegistry.FindFile(absRealTarget)
                 if oldInfo != None and targetTime > 0.0 and targetTime == oldInfo.GetModifiedTime():
                     targetMd5 = oldInfo.md5
                 else:
                     targetMd5 = util.GetFileMd5(absRealTarget)
-                diff.newDiffRegistry.AddFile(absRealTarget, time=targetTime, md5=targetMd5)
+                diff.newDiffRegistry.AddFile(absRealTarget, time=targetTime, md5=targetMd5, params=targetParams)
 
             if not diff.newDiffRegistry.FindFile(absTarget):
-                diff.newDiffRegistry.AddFile(absTarget, time=targetTime, md5=targetMd5)
+                diff.newDiffRegistry.AddFile(absTarget, time=targetTime, md5=targetMd5, params=targetParams)
 
 
     @staticmethod
