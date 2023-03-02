@@ -10,7 +10,7 @@ from PIL.Image import Image as PILImage
 from PIL.Image import Resampling
 from dataclasses import dataclass, field
 from generalsmodbuilder.data.bundles import ParamsT
-from generalsmodbuilder.data.tools import ToolsT
+from generalsmodbuilder.data.tools import Tool, ToolsT
 from generalsmodbuilder.build.caseinsensitivedict import CaseInsensitiveDict
 from generalsmodbuilder.build.common import ParamsToArgs
 from generalsmodbuilder.build.thing import BuildFile, BuildThing
@@ -499,7 +499,10 @@ class BuildCopy:
 
 
     def __GetToolExePath(self, name: str) -> str:
-        return self.tools.get(name).GetExecutable()
+        tool: Tool = self.tools.get(name)
+        if tool == None:
+            raise Exception(f"Tool definition for '{name}' is required but does not exist")
+        return tool.GetExecutable()
 
 
     def __CopyToINI(self, source: str, target: str, params: ParamsT) -> bool:
