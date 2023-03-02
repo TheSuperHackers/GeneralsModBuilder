@@ -1,4 +1,4 @@
-# This python script is called on build via ModBundlesItems.json configuration
+# This python script is called on build via ModBundleItems.json configuration
 
 def OnPreBuild(**kwargs) -> None:
     print("OnPreBuildItem.py called ...")
