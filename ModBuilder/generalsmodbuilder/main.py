@@ -58,12 +58,11 @@ def Main(args=None):
 
     util.pprint(args)
 
-    thisDir = util.GetAbsFileDir(__file__)
     configPaths = list[str]()
 
     # Add default configurations first to list so readers can parse them first.
-    configPaths.append(os.path.join(thisDir, "config", "DefaultRunner.json"))
-    configPaths.append(os.path.join(thisDir, "config", "DefaultTools.json"))
+    configPaths.append(os.path.join(util.g_appDir, "config", "DefaultRunner.json"))
+    configPaths.append(os.path.join(util.g_appDir, "config", "DefaultTools.json"))
 
     # Add custom configurations last so readers can write over default configurations last.
     if args.config_list:
