@@ -325,11 +325,5 @@ def IsValidPathName(pathname: str) -> bool:
 
 
 def RunProcess(args) -> bool:
-    process: subprocess.CompletedProcess[str] = subprocess.run(args=args, check=True, encoding="utf-8")
-
-    if process.stdout != "":
-        print(process.stdout)
-    if process.stderr != "":
-        print(process.stderr)
-
-    return process.returncode == 0
+    subprocess.run(args=args, check=True)
+    return True
