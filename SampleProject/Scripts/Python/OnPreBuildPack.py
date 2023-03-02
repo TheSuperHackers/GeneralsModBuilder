@@ -1,4 +1,4 @@
-# This python script is called on build via ModBundlesPacks.json configuration
+# This python script is called on build via ModBundlePacks.json configuration
 
 def OnEvent(**kwargs) -> None:
     print("OnPreBuildPack.py called ...")
