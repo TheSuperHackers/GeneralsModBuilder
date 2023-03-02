@@ -27,14 +27,14 @@
                 "${workspaceFolder}\\SampleProject\\ModRunner.json",
                 "--build",
                 "--release",
-                "--install=SampleProjectTGA256",
+                "--install=ProjectCore",
                 "--run",
                 "--uninstall",
                 "--debug"
             ]
         },
         {
-            "name": "RunModBuilderBuild",
+            "name": "RunModBuilderGui",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}\\ModBuilder\\generalsmodbuilder\\main.py",
@@ -47,7 +47,11 @@
                 "${workspaceFolder}\\SampleProject\\ModFolders.json",
                 "${workspaceFolder}\\SampleProject\\ModRunner.json",
                 "--build",
-                "--debug"
+                "--install=ProjectCore",
+                "--run",
+                "--uninstall",
+                "--debug",
+                "--gui"
             ]
         },
         {
