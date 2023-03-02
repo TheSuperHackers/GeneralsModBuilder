@@ -395,7 +395,6 @@ def MakeToolsFromJsons(jsonFiles: list[JsonFile]) -> ToolsT:
         tool.VerifyTypes()
         tool.Normalize()
         tool.VerifyValues()
-        tool.Install()
 
     return tools
 

@@ -6,7 +6,7 @@ from generalsmodbuilder.build.setup import BuildStep, BuildSetup
 from generalsmodbuilder.data.bundles import Bundles, BundlePack, MakeBundlesFromJsons
 from generalsmodbuilder.data.folders import Folders, MakeFoldersFromJsons
 from generalsmodbuilder.data.runner import Runner, MakeRunnerFromJsons
-from generalsmodbuilder.data.tools import ToolsT, MakeToolsFromJsons
+from generalsmodbuilder.data.tools import ToolsT, MakeToolsFromJsons, InstallTools
 from generalsmodbuilder.util import JsonFile
 from generalsmodbuilder import util
 
@@ -64,6 +64,8 @@ def RunWithConfig(
     runner: Runner = MakeRunnerFromJsons(jsonFiles) if (install or uninstall or run) else Runner()
     bundles: Bundles = MakeBundlesFromJsons(jsonFiles)
     tools: ToolsT = MakeToolsFromJsons(jsonFiles)
+
+    InstallTools(tools)
 
     PatchBundlesInstall(bundles, installList)
 
