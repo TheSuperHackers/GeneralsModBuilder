@@ -9,6 +9,18 @@ from Common import *
 
 g_blenderscript = """
 import bpy
+import math
+
+def IsZeroVec(v):
+    return (math.isclose(v.x, 0.0, rel_tol=1e-6) and
+            math.isclose(v.y, 0.0, rel_tol=1e-6) and
+            math.isclose(v.z, 0.0, rel_tol=1e-6))
+
+def ToDegrees(v):
+    v.x = v.x * (180/math.pi)
+    v.y = v.y * (180/math.pi)
+    v.z = v.z * (180/math.pi)
+    return v
 
 totalvertices = 0
 totalpolygons = 0
@@ -25,15 +37,21 @@ for obj in bpy.data.objects:
     vb = obj.matrix_basis.to_translation()
     vl = obj.matrix_local.to_translation()
     vw = obj.matrix_world.to_translation()
-    ab = obj.matrix_basis.to_euler()
-    al = obj.matrix_local.to_euler()
-    aw = obj.matrix_world.to_euler()
-    print('  basis.pos: [{:.03f}, {:.03f}, {:.03f}]'.format(vb.x, vb.y, vb.z))
-    print('  local.pos: [{:.03f}, {:.03f}, {:.03f}]'.format(vl.x, vl.y, vl.z))
-    print('  world.pos: [{:.03f}, {:.03f}, {:.03f}]'.format(vw.x, vw.y, vw.z))
-    print('  basis.ang: [{:.03f}, {:.03f}, {:.03f}]'.format(ab.x, ab.y, ab.z))
-    print('  local.ang: [{:.03f}, {:.03f}, {:.03f}]'.format(al.x, al.y, al.z))
-    print('  world.ang: [{:.03f}, {:.03f}, {:.03f}]'.format(aw.x, aw.y, aw.z))
+    ab = ToDegrees(obj.matrix_basis.to_euler())
+    al = ToDegrees(obj.matrix_local.to_euler())
+    aw = ToDegrees(obj.matrix_world.to_euler())
+    if not IsZeroVec(vb):
+        print('  basis.pos: [{:.06f}, {:.06f}, {:.06f}]'.format(vb.x, vb.y, vb.z))
+    if not IsZeroVec(vl):
+        print('  local.pos: [{:.06f}, {:.06f}, {:.06f}]'.format(vl.x, vl.y, vl.z))
+    if not IsZeroVec(vw):
+        print('  world.pos: [{:.06f}, {:.06f}, {:.06f}]'.format(vw.x, vw.y, vw.z))
+    if not IsZeroVec(ab):
+        print('  basis.ang: [{:.06f}, {:.06f}, {:.06f}]'.format(ab.x, ab.y, ab.z))
+    if not IsZeroVec(al):
+        print('  local.ang: [{:.06f}, {:.06f}, {:.06f}]'.format(al.x, al.y, al.z))
+    if not IsZeroVec(aw):
+        print('  world.ang: [{:.06f}, {:.06f}, {:.06f}]'.format(aw.x, aw.y, aw.z))
     if obj.type == 'MESH':
         print(f'  MESH {obj.data.name}')
         mesh = obj.data
@@ -49,7 +67,7 @@ for obj in bpy.data.objects:
                 if mat.node_tree:
                     for node in mat.node_tree.nodes:
                         if node.type=='TEX_IMAGE':
-                            print(f'    texture: {node.image.name}')
+                            print(f'      texture: {node.image.name}')
 """
 
 
