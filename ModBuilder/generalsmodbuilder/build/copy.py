@@ -573,7 +573,6 @@ class BuildCopy:
         w3dForceVertexMaterials: bool = iparams.get("w3dForceVertexMaterials", False)
         w3dCreateIndividualFiles: bool = iparams.get("w3dCreateIndividualFiles", False)
         w3dCreateTextureXmls: bool = iparams.get("w3dCreateTextureXmls", False)
-        w3dVerbose: bool = iparams.get("w3dVerbose", True)
 
         if w3dExportHierarchy and w3dExportAnimation and w3dExportMesh:
             export_mode = "HAM"
@@ -593,54 +592,8 @@ class BuildCopy:
         else:
             animation_compression = "U"
 
-        # https://docs.blender.org/api/3.4/bpy.types.Object.html
-        # https://docs.blender.org/api/3.4/bpy.types.Mesh.html
-        # https://docs.blender.org/api/3.4/bpy.types.Material.html
-        # https://docs.blender.org/api/3.4/bpy.types.NodeTree.html
-        code = """
+        expr = f"""
 import bpy
-"""
-        if w3dVerbose:
-            code += """
-totalvertices = 0
-totalpolygons = 0
-for mesh in bpy.data.meshes:
-    totalvertices += len(mesh.vertices)
-    totalpolygons += len(mesh.polygons)
-print(f'total vertices: {totalvertices}')
-print(f'total polygons: {totalpolygons}')
-for obj in bpy.data.objects:
-    print(f'{obj.name} is {obj.type}')
-    vb = obj.matrix_basis.to_translation()
-    vl = obj.matrix_local.to_translation()
-    vw = obj.matrix_world.to_translation()
-    ab = obj.matrix_basis.to_euler()
-    al = obj.matrix_local.to_euler()
-    aw = obj.matrix_world.to_euler()
-    print('  basis.pos: [{:.03f}, {:.03f}, {:.03f}]'.format(vb.x, vb.y, vb.z))
-    print('  local.pos: [{:.03f}, {:.03f}, {:.03f}]'.format(vl.x, vl.y, vl.z))
-    print('  world.pos: [{:.03f}, {:.03f}, {:.03f}]'.format(vw.x, vw.y, vw.z))
-    print('  basis.ang: [{:.03f}, {:.03f}, {:.03f}]'.format(ab.x, ab.y, ab.z))
-    print('  local.ang: [{:.03f}, {:.03f}, {:.03f}]'.format(al.x, al.y, al.z))
-    print('  world.ang: [{:.03f}, {:.03f}, {:.03f}]'.format(aw.x, aw.y, aw.z))
-    if obj.type == 'MESH':
-        print(f'  MESH {obj.data.name}')
-        mesh = obj.data
-        if mesh:
-            verticescount = len(mesh.vertices)
-            polygonscount = len(mesh.vertices)
-            print(f'    vertices: {verticescount}')
-            print(f'    polygons: {polygonscount}')
-        for mat_slot in obj.material_slots:
-            mat = mat_slot.material
-            if mat:
-                print(f'    material: {mat.name}')
-                if mat.node_tree:
-                    for node in mat.node_tree.nodes:
-                        if node.type=='TEX_IMAGE':
-                            print(f'    texture: {node.image.name}')
-"""
-        code += f"""
 bpy.ops.preferences.addon_enable(module='io_mesh_w3d')
 bpy.ops.export_mesh.westwood_w3d(
     filepath='{target}',
@@ -655,7 +608,7 @@ bpy.ops.export_mesh.westwood_w3d(
 """
 
         exec: str = self.__GetToolExePath("blender")
-        args: list[str] = [exec, source, "--background", "--python-expr", code]
+        args: list[str] = [exec, source, "--background", "--python-expr", expr]
 
         success: bool = util.RunProcess(args)
         if success:

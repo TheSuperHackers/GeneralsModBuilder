@@ -208,7 +208,10 @@
                             "Art/W3D/*.w3d"
                         ]
                     }
-                ]
+                ],
+                "onFinishBuildRawBundleItem": {
+                    "script": "Scripts/Python/OnBuildItemWithBlender3-4-1.py"
+                }
             },
             {
                 "name": "Misc",

@@ -332,6 +332,7 @@ class BuildEngine:
             event: BundleEvent = item.events.get(eventType)
             if event != None:
                 kwargs = dict()
+                kwargs["_tools"] = setup.tools
                 kwargs["_bundleItem"] = item
                 kwargs["_absBuildDir"] = folders.absBuildDir
                 kwargs["_absReleaseDir"] = folders.absReleaseDir
@@ -346,6 +347,7 @@ class BuildEngine:
             event: BundleEvent = pack.events.get(eventType)
             if event != None:
                 kwargs = dict()
+                kwargs["_tools"] = setup.tools
                 kwargs["_bundlePack"] = pack
                 kwargs["_absBuildDir"] = folders.absBuildDir
                 kwargs["_absReleaseDir"] = folders.absReleaseDir
