@@ -81,8 +81,7 @@ class Gui:
 
     @staticmethod
     def _MakeIconFilePath(iconName: str) -> str:
-        thisDir: str = util.GetAbsFileDir(__file__)
-        iconFile: str = os.path.join(thisDir, iconName)
+        iconFile: str = os.path.join(util.g_appDir, "gui", iconName)
         return iconFile
 
 

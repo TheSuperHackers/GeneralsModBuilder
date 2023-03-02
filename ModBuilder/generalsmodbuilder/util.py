@@ -130,6 +130,9 @@ def GetAbsSmartFileDir(file: str) -> str:
     return fileDir
 
 
+g_appDir: str = GetAbsSmartFileDir(__file__)
+
+
 def GetAbsFileDirs(file: str, absStopPath: str = "") -> list[str]:
     absStopPath = os.path.normpath(absStopPath)
     paths: list[str] = list()
