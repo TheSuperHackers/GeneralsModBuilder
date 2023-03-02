@@ -286,15 +286,16 @@ class Tool:
                 if file.absExtractDir:
                     print(f"File '{file.absTarget}' is extracted to '{file.absExtractDir}'")
             else:
-                warning(f"Tool '{self.name} {self.versionStr}' file '{file.absTarget}' was not installed")
+                msg: str = f"Tool '{self.name} {self.versionStr}' file '{file.absTarget}' was not installed"
                 if result.code == InstallResultCode.SizeMismatch:
-                    warning(f"Size mismatch was detected")
+                    msg += f" - Size mismatch was detected"
                 elif result.code == InstallResultCode.HashMismatch:
-                    warning(f"Hash mismatch was detected")
+                    msg += f" - Hash mismatch was detected"
                 elif result.code == InstallResultCode.HttpError:
-                    warning(f"Http returned error code {result.httpCode}")
-                success = False
-                break
+                    msg += f" - Http returned error code {result.httpCode}"
+                elif result.code == InstallResultCode.CallError:
+                    msg += f" - Error on call instruction"
+                raise Exception(msg)
 
         return success
 
