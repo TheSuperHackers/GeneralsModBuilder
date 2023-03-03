@@ -26,6 +26,8 @@ def Main(args=None):
     parser.add_argument('--file-hash-registry-input', type=str, action="append", help='Path to generate file hash registry from. Multiples can be specified.')
     parser.add_argument('--file-hash-registry-output', type=str, help='Path to save file hash registry to.')
     parser.add_argument('--file-hash-registry-name', type=str, default="FileHashRegistry", help='Name of the file hash registry.')
+    parser.add_argument('--load-default-runner', action='store_true', help='Loads the built-in runner json configuration. Is loaded before custom configurations from --config and --config-list.')
+    parser.add_argument('--load-default-tools', action='store_true', help='Loads the built-in tools json configuration. Is loaded before custom configurations from --config and --config-list.')
 
     args, unknownargs = parser.parse_known_args(args=args)
 
@@ -61,8 +63,10 @@ def Main(args=None):
     configPaths = list[str]()
 
     # Add default configurations first to list so readers can parse them first.
-    configPaths.append(os.path.join(util.g_appDir, "config", "DefaultRunner.json"))
-    configPaths.append(os.path.join(util.g_appDir, "config", "DefaultTools.json"))
+    if args.load_default_runner:
+        configPaths.append(os.path.join(util.g_appDir, "config", "DefaultRunner.json"))
+    if args.load_default_tools:
+        configPaths.append(os.path.join(util.g_appDir, "config", "DefaultTools.json"))
 
     # Add custom configurations last so readers can write over default configurations last.
     if args.config_list:

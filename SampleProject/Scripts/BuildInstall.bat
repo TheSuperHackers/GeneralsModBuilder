@@ -18,6 +18,11 @@ if %errorlevel% EQU 222 (
 
 call "%ThisDir%\Windows\Setup.bat"
 
-call "%ModBuilderExe%" --build --install --config-list %ConfigFiles% %*
+call "%ModBuilderExe%" ^
+  --load-default-runner ^
+  --load-default-tools ^
+  --build ^
+  --install ^
+  --config-list %ConfigFiles% %*
 
 endlocal
