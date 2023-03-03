@@ -825,13 +825,13 @@ class BuildEngine:
 
 
     @staticmethod
-    def __UncopyFilesOfThings(things: BuildThingsT, copy: BuildCopy) -> None:
+    def __UncopyFilesOfThings(things: BuildThingsT, copy: BuildCopy, respectBuildFileStatus=True) -> None:
         thing: BuildThing
 
         for thing in things.values():
             print(f"Remove files for {thing.name} ...")
 
-            copy.UncopyThing(thing)
+            copy.UncopyThing(thing, respectBuildFileStatus=respectBuildFileStatus)
 
 
     def __BuildRelease(self) -> bool:
