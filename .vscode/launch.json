@@ -20,6 +20,8 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
+                "--load-default-runner",
+                "--load-default-tools",
                 "--config-list",
                 "${workspaceFolder}\\SampleProject\\ModBundleItems.json",
                 "${workspaceFolder}\\SampleProject\\ModBundlePacks.json",
@@ -41,6 +43,8 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
+                "--load-default-runner",
+                "--load-default-tools",
                 "--config-list",
                 "${workspaceFolder}\\SampleProject\\ModBundleItems.json",
                 "${workspaceFolder}\\SampleProject\\ModBundlePacks.json",
@@ -62,6 +66,8 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
+                "--load-default-runner",
+                "--load-default-tools",
                 "--config-list",
                 "${workspaceFolder}\\SampleProject\\ModBundleItems.json",
                 "${workspaceFolder}\\SampleProject\\ModBundlePacks.json",
