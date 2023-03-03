@@ -120,7 +120,7 @@ class Gui:
         frame0001 = Frame(mainFrame)
         frame0001.grid(row=0, column=3, sticky='n')
 
-        executeLabel = Label(frame0100, text = "Execute sequence")
+        executeLabel = Label(frame0100, text = "Sequence execution")
         executeLabel.pack(anchor=CENTER)
         executeFrame = Frame(frame0100, padding=10, relief='solid')
         executeFrame.pack(padx=5, pady=5)
@@ -148,7 +148,7 @@ class Gui:
         buildCheck = Checkbutton(executeFrame, width = checkboxWidth, text='Build', var=self.build)
         buildCheck.pack(anchor=W)
 
-        releaseCheck = Checkbutton(executeFrame, width = checkboxWidth, text='Release', var=self.release)
+        releaseCheck = Checkbutton(executeFrame, width = checkboxWidth, text='Build Release', var=self.release)
         releaseCheck.pack(anchor=W)
 
         installCheck = Checkbutton(executeFrame, width = checkboxWidth, text='Install', var=self.install)
@@ -179,7 +179,7 @@ class Gui:
         self.buildButton = Button(actionsFrame, width=buttonWidth, text="Build", command=lambda:self._StartWorkThread(self._Build))
         self.buildButton.pack(anchor=W)
 
-        self.releaseButton = Button(actionsFrame, width=buttonWidth, text="Release", command=lambda:self._StartWorkThread(self._Release))
+        self.releaseButton = Button(actionsFrame, width=buttonWidth, text="Build Release", command=lambda:self._StartWorkThread(self._Release))
         self.releaseButton.pack(anchor=W)
 
         self.installButton = Button(actionsFrame, width=buttonWidth, text="Install", command=lambda:self._StartWorkThread(self._Install))
