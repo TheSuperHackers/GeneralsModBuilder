@@ -71,13 +71,14 @@ class BuildCopy:
         return success
 
 
-    def UncopyThing(self, thing: BuildThing) -> bool:
+    def UncopyThing(self, thing: BuildThing, respectBuildFileStatus=True) -> bool:
         success: bool = True
         file: BuildFile
 
         for file in thing.files:
-            absTarget: str = file.AbsTarget(thing.absParentDir)
-            success &= self.Uncopy(absTarget)
+            if file.RequiresRebuild() or not respectBuildFileStatus:
+                absTarget: str = file.AbsTarget(thing.absParentDir)
+                success &= self.Uncopy(absTarget)
 
         return success
 
