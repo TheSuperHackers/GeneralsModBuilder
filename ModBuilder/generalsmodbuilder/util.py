@@ -235,6 +235,11 @@ def GetFileSha256(path: str) -> str:
 
 g_fileHashCount: int = 0
 
+def ResetFileHashCount() -> None:
+    global g_fileHashCount
+    g_fileHashCount = 0
+
+
 def GetFileHash(path: str, hashFunc: Callable) -> str:
     BUF_SIZE = 1024 * 64
     hashStr: str = ""
