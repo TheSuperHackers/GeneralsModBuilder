@@ -699,7 +699,13 @@ class BuildEngine:
         file: BuildFile
 
         parentStatus: BuildFileStatus = None
-        parentThing: BuildThing = thing.parentThing
+        parentThing: BuildThing = None
+
+        # Only use the parent thing for file status checks if its parent dir is used to create new files with.
+        # Other cases are treated with file to file relationships and do not need to inherit the status of the parent thing.
+        if thing.NumberOfFilesBuildFromParentDir() > 0:
+            parentThing = thing.parentThing
+
         if parentThing != None:
             parentStatus = parentThing.GetMostSignificantFileStatus()
 
@@ -737,6 +743,8 @@ class BuildEngine:
             if IsStatusRelevantForBuild(file.targetStatus):
                 absTarget: str = file.AbsTarget(thing.absParentDir)
                 print(f"Target {absTarget} is {file.targetStatus.name}")
+
+        return
 
 
     @staticmethod

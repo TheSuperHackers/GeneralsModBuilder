@@ -100,5 +100,14 @@ class BuildThing:
                 retStatus = status
         return retStatus
 
+    def NumberOfFilesBuildFromParentDir(self) -> int:
+        count = 0
+        file: BuildFile
+        if self.parentThing != None:
+            for file in self.files:
+                if file.absSource == self.parentThing.absParentDir:
+                    count += 1
+        return count
+
 
 BuildThingsT = dict[str, BuildThing]
