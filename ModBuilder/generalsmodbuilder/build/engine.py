@@ -547,9 +547,9 @@ class BuildEngine:
 
         BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnBuild)
 
-        self.__BuildWithData(BuildIndex.RawBundleItem, diffWithFileHashRegistry=True)
-        self.__BuildWithData(BuildIndex.BigBundleItem)
-        self.__BuildWithData(BuildIndex.RawBundlePack)
+        self.__BuildWithData(BuildIndex.RawBundleItem, deleteObsoleteFiles=True, diffWithFileHashRegistry=True)
+        self.__BuildWithData(BuildIndex.BigBundleItem, deleteObsoleteFiles=True)
+        self.__BuildWithData(BuildIndex.RawBundlePack, deleteObsoleteFiles=True)
 
         return True
 
@@ -565,7 +565,7 @@ class BuildEngine:
     def __BuildWithData(
             self,
             index: BuildIndex,
-            deleteObsoleteFiles: bool = True,
+            deleteObsoleteFiles: bool = False,
             diffWithParentThings: bool = False,
             diffWithFileHashRegistry: bool = False) -> None:
 
@@ -786,10 +786,13 @@ class BuildEngine:
 
     @staticmethod
     def __DeleteObsoleteFilesOfThings(things: BuildThingsT, diff: BuildDiff) -> None:
+        """
+        Deletes all alien files in things.
+        """
         thing: BuildThing
 
         for thing in things.values():
-            print(f"Delete files for {thing.name} ...")
+            print(f"Delete obsolete files for {thing.name} ...")
 
             fileNames: list[str] = BuildEngine.__CreateListOfExistingFilesFromThing(thing)
             fileName: str
@@ -848,7 +851,7 @@ class BuildEngine:
 
         BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnRelease)
 
-        self.__BuildWithData(BuildIndex.ReleaseBundlePack, diffWithParentThings=True)
+        self.__BuildWithData(BuildIndex.ReleaseBundlePack, deleteObsoleteFiles=True, diffWithParentThings=True)
 
         return True
 
