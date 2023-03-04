@@ -1019,7 +1019,7 @@ class BuildEngine:
 
     @staticmethod
     def __RestoreGameLanguage(setup: BuildSetup) -> None:
-        print(f"Restore Game Language ...")
+        print("Restore Game Language ...")
 
         picklePath: str = BuildEngine.__MakeLanguagePicklePath(setup.folders)
         if os.path.isfile(picklePath):
@@ -1050,7 +1050,7 @@ class BuildEngine:
 
     @staticmethod
     def __SaveInstalledThingsInfo(things: BuildThingsT, setup: BuildSetup) -> None:
-        print(f"Save Installed Things ...")
+        print("Save Installed Things ...")
 
         picklePath: str = BuildEngine.__MakeInstalledThingsPicklePath(setup.folders)
         oldInstalledThings: BuildThingsT = BuildEngine.__LoadInstalledThingsInfo(setup)
@@ -1087,7 +1087,7 @@ class BuildEngine:
 
     @staticmethod
     def __RevertInstalledThings(setup: BuildSetup, copy: BuildCopy) -> None:
-        print(f"Revert Installed Things ...")
+        print("Revert Installed Things ...")
 
         installedThings: BuildThingsT = BuildEngine.__LoadInstalledThingsInfo(setup)
         BuildEngine.__UncopyFilesOfThings(installedThings, copy)
