@@ -67,6 +67,8 @@ class BuildCopy:
                 absTarget: str = file.AbsTarget(thing.absParentDir)
                 params: ParamsT = file.params
                 success &= self.Copy(absSource, absTarget, params)
+                if not success:
+                    raise Exception(f"Unable to copy source '{absSource}' to target '{absTarget}'. Was the most recent Project build before?")
 
         return success
 
