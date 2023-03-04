@@ -26,6 +26,7 @@ from generalsmodbuilder import util
 @dataclass
 class BuildFilePathInfo:
     # This class is serialized and therefore may be missing attributes.
+    path: str
     modifiedTime: float
     md5: str
     params: ParamsT
@@ -41,6 +42,12 @@ class BuildFilePathInfo:
             return self.modifiedTime
         except AttributeError:
             return 0.0
+
+    def GetPath(self) -> str:
+        try:
+            return self.path
+        except AttributeError:
+            return ""
 
 
 BuildFilePathInfosT = dict[str, BuildFilePathInfo]
@@ -60,14 +67,23 @@ class BuildDiffRegistry:
         return filepath
 
     def AddFile(self, filepath: str, time = 0.0, md5: str = "", params: ParamsT = None) -> BuildFilePathInfo:
-        filepath = self.__ProcessPath(filepath)
-        pathinfo = BuildFilePathInfo(time, md5, params)
-        self.filePathInfos[filepath] = pathinfo
+        dictpath = self.__ProcessPath(filepath)
+        pathinfo = BuildFilePathInfo(filepath, time, md5, params)
+        self.filePathInfos[dictpath] = pathinfo
         return pathinfo
 
     def FindFile(self, filepath: str) -> BuildFilePathInfo | None:
         filepath = self.__ProcessPath(filepath)
         return self.filePathInfos.get(filepath)
+
+    def GetFilePathList(self) -> list[str]:
+        filePathList = list[str]()
+        info: BuildFilePathInfo
+        for info in self.filePathInfos.values():
+            path: str = info.GetPath()
+            if path != "":
+                filePathList.append(path)
+        return filePathList
 
 
 @dataclass(init=False)
@@ -565,6 +581,7 @@ class BuildEngine:
     def __BuildWithData(
             self,
             index: BuildIndex,
+            deleteRemovedFiles: bool = False,
             deleteObsoleteFiles: bool = False,
             diffWithParentThings: bool = False,
             diffWithFileHashRegistry: bool = False) -> None:
@@ -580,6 +597,8 @@ class BuildEngine:
         BuildEngine.__PopulateDiff(data, setup.folders, diffWithParentThings, diffWithFileHashRegistry)
         BuildEngine.__PopulateBuildFileStatusInThings(data.things, data.diff)
 
+        if deleteRemovedFiles:
+            BuildEngine.__DeleteRemovedFilesOfThings(data.things, data.diff)
         if deleteObsoleteFiles:
             BuildEngine.__DeleteObsoleteFilesOfThings(data.things, data.diff)
 
@@ -785,6 +804,34 @@ class BuildEngine:
 
 
     @staticmethod
+    def __DeleteRemovedFilesOfThings(things: BuildThingsT, diff: BuildDiff) -> None:
+        """
+        Deletes files that have been removed between now and the last build.
+        """
+        thing: BuildThing
+
+        for thing in things.values():
+            print(f"Delete removed files for {thing.name} ...")
+
+            fileNames: list[str] = diff.oldDiffRegistry.GetFilePathList()
+            fileName: str
+
+            for fileName in fileNames:
+                lowerFileName: str = fileName.lower()
+                lowerAbsParentDir: str = thing.absParentDir.lower()
+
+                if lowerFileName.startswith(lowerAbsParentDir):
+                    newInfo: BuildFilePathInfo = diff.newDiffRegistry.FindFile(fileName)
+
+                    if newInfo == None:
+                        if util.DeleteFileOrPath(fileName):
+                            oldInfo: BuildFilePathInfo = diff.oldDiffRegistry.FindFile(fileName)
+                            if oldInfo != None and oldInfo.md5:
+                                thing.fileCounts[BuildFileStatus.Removed.value] += 1
+                            print("Deleted", fileName)
+
+
+    @staticmethod
     def __DeleteObsoleteFilesOfThings(things: BuildThingsT, diff: BuildDiff) -> None:
         """
         Deletes all alien files in things.
@@ -859,17 +906,11 @@ class BuildEngine:
     def __Install(self) -> bool:
         print("Do Install ...")
 
-        copy: BuildCopy = self.copyDict.get(BuildIndex.InstallBundlePack)
-
-        # Cleanup before install to avoid duplicated consecutive installs.
-        BuildEngine.__RevertInstalledThings(self.setup, copy)
-        BuildEngine.__RestoreGameLanguage(self.setup)
-
         BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnInstall)
 
         data: BuildIndexData = self.structure.GetIndexData(BuildIndex.InstallBundlePack)
 
-        self.__BuildWithData(data.index, deleteObsoleteFiles=False, diffWithParentThings=True)
+        self.__BuildWithData(data.index, deleteRemovedFiles=True, diffWithParentThings=True)
         BuildEngine.__SaveInstalledThingsInfo(data.things, self.setup)
 
         thing: BuildThing
@@ -1012,9 +1053,28 @@ class BuildEngine:
         print(f"Save Installed Things ...")
 
         picklePath: str = BuildEngine.__MakeInstalledThingsPicklePath(setup.folders)
-        installedThings: BuildThingsT = BuildEngine.__LoadInstalledThingsInfo(setup)
-        installedThings.update(things)
-        util.SavePickle(picklePath, installedThings)
+        oldInstalledThings: BuildThingsT = BuildEngine.__LoadInstalledThingsInfo(setup)
+        newInstalledThings: BuildThingsT = deepcopy(things)
+
+        # Update new installed things with the old file status.
+        # That way it can be properly uninstalled after consecutive installs.
+        newThing: BuildThing
+        oldThing: BuildThing
+        newFile: BuildFile
+        oldFile: BuildFile
+        for newThing in newInstalledThings.values():
+            oldThing = oldInstalledThings.get(newThing.name)
+            if oldThing != None:
+                for newFile in newThing.files:
+                    for oldFile in oldThing.files:
+                        lowerNewAbsTarget: str = newFile.AbsTarget(newThing.absParentDir).lower()
+                        lowerOldAbsTarget: str = oldFile.AbsTarget(oldThing.absParentDir).lower()
+                        if lowerNewAbsTarget == lowerOldAbsTarget:
+                            newFile.sourceStatus = oldFile.sourceStatus
+                            newFile.targetStatus = oldFile.targetStatus
+                            break
+
+        util.SavePickle(picklePath, newInstalledThings)
 
 
     @staticmethod
