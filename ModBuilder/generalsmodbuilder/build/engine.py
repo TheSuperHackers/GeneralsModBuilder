@@ -677,6 +677,7 @@ class BuildEngine:
                     absTarget: str = file.AbsTarget(thing.absParentDir)
                     targetInfo: BuildFilePathInfo = diffRegistry.FindFile(absTarget)
                     assert(targetInfo != None)
+                    targetInfo.modifiedTime = util.GetFileModifiedTime(absTarget)
                     targetInfo.md5 = util.GetFileMd5(absTarget)
 
 
