@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+import time
 import types
 import winreg
 import json
@@ -40,26 +41,29 @@ def pprint(obj: Any) -> None:
 
 
 def LoadPickle(path: str) -> Any:
+    timer = Timer()
     data: Any = None
     with open(path, "rb") as rfile:
         data = pickle.load(rfile)
-    print("Loaded pickle", path)
+    print(f"Loaded pickle {path} in {timer.GetElapsedSecondsString()} s")
     return data
 
 
 def SavePickle(path: str, data: Any) -> None:
+    timer = Timer()
     MakeDirsForFile(path)
     with open(path, "wb") as wfile:
         pickle.dump(data, wfile, protocol=pickle.HIGHEST_PROTOCOL)
-    print("Saved pickle", path)
+    print(f"Saved pickle {path} in {timer.GetElapsedSecondsString()} s")
 
 
 def ReadJson(path: str) -> dict:
-    print("Read json", path)
+    timer = Timer()
     data: dict = None
     with open(path, "rb") as rfile:
         text = rfile.read()
         data = json.loads(text)
+    print(f"Read json {path} in {timer.GetElapsedSecondsString()} s")
     return data
 
 
@@ -244,6 +248,7 @@ def GetFileHash(path: str, hashFunc: Callable) -> str:
     BUF_SIZE = 1024 * 64
     hashStr: str = ""
     if os.path.isfile(path):
+        timer = Timer()
         hashObj: hashlib._Hash = hashFunc()
         with open(path, "rb", buffering=BUF_SIZE) as rfile:
             for chunk in iter(lambda: rfile.read(BUF_SIZE), b""):
@@ -252,7 +257,7 @@ def GetFileHash(path: str, hashFunc: Callable) -> str:
 
         global g_fileHashCount
         g_fileHashCount += 1
-        print(f"Hashed ({g_fileHashCount}) {path} as {hashStr}")
+        print(f"Hashed ({g_fileHashCount}) {path} as {hashStr} in {timer.GetElapsedSecondsString()} s")
     return hashStr
 
 
@@ -335,3 +340,32 @@ def IsValidPathName(pathname: str) -> bool:
 def RunProcess(args) -> bool:
     subprocess.run(args=args, check=True)
     return True
+
+
+class Timer:
+    start: float
+    elapsed: float
+
+    def __init__(self):
+        self.start: float = time.time()
+        self.elapsed: float = 0.0
+
+    def Start(self) -> None:
+        self.elapsed = 0.0
+        self.start = time.time()
+
+    def Finish(self) -> None:
+        self.elapsed = time.time() - self.start
+
+    def GetElapsedSeconds(self) -> float:
+        if self.elapsed != 0.0:
+            return self.elapsed
+        else:
+            return time.time() - self.start
+
+    def GetElapsedSecondsString(self) -> str:
+        elapsed = self.GetElapsedSeconds()
+        return str.format("{:.3f}", elapsed)
+
+
+PERFORMANCE_TIMER_THRESHOLD = 0.01

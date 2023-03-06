@@ -57,6 +57,9 @@ def RunWithConfig(
         printConfig: bool=False,
         engine: BuildEngine=BuildEngine()) -> None:
 
+    timer = util.Timer()
+    print("Run Build Job ...")
+
     util.ResetFileHashCount()
 
     jsonFiles: list[JsonFile] = CreateJsonFiles(configPaths)
@@ -80,6 +83,9 @@ def RunWithConfig(
         printConfig=printConfig)
 
     engine.Run(setup)
+
+    if timer.GetElapsedSeconds() > util.PERFORMANCE_TIMER_THRESHOLD:
+        print(f"Build Job completed in {timer.GetElapsedSecondsString()} s")
 
 
 def BuildFileHashRegistry(inputPaths: list[str], outputPath: str, outputName: str) -> None:
