@@ -256,8 +256,6 @@ class BuildEngine:
 
 
     def Run(self, setup: BuildSetup) -> bool:
-        print("Run Build Job ...")
-
         if setup.step == BuildStep.Zero:
             warning("setup.step is Zero. Exiting.")
             return True
@@ -303,8 +301,6 @@ class BuildEngine:
 
         self.__Reset()
 
-        print("Build Job done.")
-
         return success
 
 
@@ -320,8 +316,13 @@ class BuildEngine:
 
 
     def __CallScript(event: BundleEvent, kwargs: dict) -> bool:
+        timer = util.Timer()
+
         scriptPath: str = event.GetScriptDir()
         scriptName: str = event.GetScriptName()
+
+        fullPath: str = os.path.join(scriptPath, scriptName)
+        print(f"Call script {fullPath} ...")
 
         if not scriptPath in sys.path:
             sys.path.append(scriptPath)
@@ -332,6 +333,9 @@ class BuildEngine:
         scriptModule: object = sys.modules.get(scriptName)
         scriptFunction = getattr(scriptModule, event.funcName)
         scriptFunction(**kwargs)
+
+        if timer.GetElapsedSeconds() > util.PERFORMANCE_TIMER_THRESHOLD:
+            print(f"Call script {fullPath} completed in {timer.GetElapsedSecondsString()} s")
 
         return True
 
@@ -382,6 +386,7 @@ class BuildEngine:
 
 
     def __PreBuild(self) -> bool:
+        timer = util.Timer()
         print("Do Pre Build ...")
 
         folders: Folders = self.setup.folders
@@ -405,6 +410,9 @@ class BuildEngine:
         BuildEngine.__PopulateStructureRawBundlePacks(self.structure, bundles, folders)
         BuildEngine.__PopulateStructureZipBundlePacks(self.structure, bundles, folders)
         BuildEngine.__PopulateStructureInstallBundlePacks(self.structure, bundles, runner)
+
+        if timer.GetElapsedSeconds() > util.PERFORMANCE_TIMER_THRESHOLD:
+            print(f"Pre Build completed in {timer.GetElapsedSecondsString()} s")
 
         return True
 
@@ -559,6 +567,7 @@ class BuildEngine:
 
 
     def __Build(self) -> bool:
+        timer = util.Timer()
         print("Do Build ...")
 
         BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnBuild)
@@ -567,13 +576,20 @@ class BuildEngine:
         self.__BuildWithData(BuildIndex.BigBundleItem, deleteObsoleteFiles=True)
         self.__BuildWithData(BuildIndex.RawBundlePack, deleteObsoleteFiles=True)
 
+        if timer.GetElapsedSeconds() > util.PERFORMANCE_TIMER_THRESHOLD:
+            print(f"Build completed in {timer.GetElapsedSecondsString()} s")
+
         return True
 
 
     def __PostBuild(self) -> bool:
+        timer = util.Timer()
         print("Do Post Build ...")
 
         BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnPostBuild)
+
+        if timer.GetElapsedSeconds() > util.PERFORMANCE_TIMER_THRESHOLD:
+            print(f"Post build completed in {timer.GetElapsedSecondsString()} s")
 
         return True
 
@@ -624,12 +640,16 @@ class BuildEngine:
         thing: BuildThing
 
         for thing in things.values():
+            timer = util.Timer()
             print(f"Create file infos for {thing.name} ...")
 
             BuildEngine.__PopulateFilePathInfosFromThing(diff, thing)
 
             if diff.includesParentDiff and thing.parentThing != None:
                 BuildEngine.__PopulateFilePathInfosFromThing(diff, thing.parentThing)
+
+            if timer.GetElapsedSeconds() > util.PERFORMANCE_TIMER_THRESHOLD:
+                print(f"Create file infos for {thing.name} completed in {timer.GetElapsedSecondsString()} s")
 
 
     @staticmethod
@@ -689,6 +709,7 @@ class BuildEngine:
         file: BuildFile
 
         for thing in things.values():
+            timer = util.Timer()
             print(f"Rehash files for {thing.name} ...")
 
             for file in thing.files:
@@ -699,18 +720,25 @@ class BuildEngine:
                     targetInfo.modifiedTime = util.GetFileModifiedTime(absTarget)
                     targetInfo.md5 = util.GetFileMd5(absTarget)
 
+            if timer.GetElapsedSeconds() > util.PERFORMANCE_TIMER_THRESHOLD:
+                print(f"Rehash files for {thing.name} completed in {timer.GetElapsedSecondsString()} s")
+
 
     @staticmethod
     def __PopulateBuildFileStatusInThings(things: BuildThingsT, diff: BuildDiff) -> None:
         thing: BuildThing
 
         for thing in things.values():
+            timer = util.Timer()
             print(f"Populate file status for {thing.name} ...")
 
             if diff.includesParentDiff and thing.parentThing != None:
                 BuildEngine.__PopulateFileStatusInThing(thing.parentThing, diff)
 
             BuildEngine.__PopulateFileStatusInThing(thing, diff)
+
+            if timer.GetElapsedSeconds() > util.PERFORMANCE_TIMER_THRESHOLD:
+                print(f"Populate file status for {thing.name} completed in {timer.GetElapsedSecondsString()} s")
 
 
     @staticmethod
@@ -811,6 +839,7 @@ class BuildEngine:
         thing: BuildThing
 
         for thing in things.values():
+            timer = util.Timer()
             print(f"Delete removed files for {thing.name} ...")
 
             fileNames: list[str] = diff.oldDiffRegistry.GetFilePathList()
@@ -830,6 +859,9 @@ class BuildEngine:
                                 thing.fileCounts[BuildFileStatus.Removed.value] += 1
                             print("Deleted", fileName)
 
+            if timer.GetElapsedSeconds() > util.PERFORMANCE_TIMER_THRESHOLD:
+                print(f"Delete removed files for {thing.name} completed in {timer.GetElapsedSecondsString()} s")
+
 
     @staticmethod
     def __DeleteObsoleteFilesOfThings(things: BuildThingsT, diff: BuildDiff) -> None:
@@ -839,6 +871,7 @@ class BuildEngine:
         thing: BuildThing
 
         for thing in things.values():
+            timer = util.Timer()
             print(f"Delete obsolete files for {thing.name} ...")
 
             fileNames: list[str] = BuildEngine.__CreateListOfExistingFilesFromThing(thing)
@@ -864,6 +897,9 @@ class BuildEngine:
                                 thing.fileCounts[BuildFileStatus.Removed.value] += 1
                             print("Deleted", fileName)
 
+            if timer.GetElapsedSeconds() > util.PERFORMANCE_TIMER_THRESHOLD:
+                print(f"Delete obsolete files for {thing.name} completed in {timer.GetElapsedSecondsString()} s")
+
 
     @staticmethod
     def __CreateListOfExistingFilesFromThing(thing: BuildThing) -> list[str]:
@@ -876,11 +912,15 @@ class BuildEngine:
         thing: BuildThing
 
         for thing in things.values():
+            timer = util.Timer()
             print(f"Copy files for {thing.name} ...")
 
             os.makedirs(thing.absParentDir, exist_ok=True)
 
             copy.CopyThing(thing)
+
+            if timer.GetElapsedSeconds() > util.PERFORMANCE_TIMER_THRESHOLD:
+                print(f"Copy files for {thing.name} completed in {timer.GetElapsedSecondsString()} s")
 
 
     @staticmethod
@@ -888,22 +928,31 @@ class BuildEngine:
         thing: BuildThing
 
         for thing in things.values():
+            timer = util.Timer()
             print(f"Remove files for {thing.name} ...")
 
             copy.UncopyThing(thing, respectBuildFileStatus=respectBuildFileStatus)
 
+            if timer.GetElapsedSeconds() > util.PERFORMANCE_TIMER_THRESHOLD:
+                print(f"Remove files for {thing.name} completed in {timer.GetElapsedSecondsString()} s")
+
 
     def __BuildRelease(self) -> bool:
+        timer = util.Timer()
         print("Do Build Release ...")
 
         BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnRelease)
 
         self.__BuildWithData(BuildIndex.ReleaseBundlePack, deleteObsoleteFiles=True, diffWithParentThings=True)
 
+        if timer.GetElapsedSeconds() > util.PERFORMANCE_TIMER_THRESHOLD:
+            print(f"Build Release completed in {timer.GetElapsedSecondsString()} s")
+
         return True
 
 
     def __Install(self) -> bool:
+        timer = util.Timer()
         print("Do Install ...")
 
         BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnInstall)
@@ -920,6 +969,9 @@ class BuildEngine:
 
         installedFiles: list[str] = BuildEngine.__GetAllTargetFilesFromThings(data.things)
         BuildEngine.__CheckGameInstallFiles(installedFiles, self.setup.runner)
+
+        if timer.GetElapsedSeconds() > util.PERFORMANCE_TIMER_THRESHOLD:
+            print(f"Install completed in {timer.GetElapsedSecondsString()} s")
 
         return True
 
@@ -984,6 +1036,7 @@ class BuildEngine:
 
 
     def __Uninstall(self) -> bool:
+        timer = util.Timer()
         print("Do Uninstall ...")
 
         copy: BuildCopy = self.copyDict.get(BuildIndex.InstallBundlePack)
@@ -992,6 +1045,9 @@ class BuildEngine:
 
         BuildEngine.__RevertInstalledThings(self.setup, copy)
         BuildEngine.__RestoreGameLanguage(self.setup)
+
+        if timer.GetElapsedSeconds() > util.PERFORMANCE_TIMER_THRESHOLD:
+            print(f"Uninstall completed in {timer.GetElapsedSecondsString()} s")
 
         return True
 
@@ -1050,6 +1106,7 @@ class BuildEngine:
 
     @staticmethod
     def __SaveInstalledThingsInfo(things: BuildThingsT, setup: BuildSetup) -> None:
+        timer = util.Timer()
         print("Save Installed Things ...")
 
         picklePath: str = BuildEngine.__MakeInstalledThingsPicklePath(setup.folders)
@@ -1076,6 +1133,9 @@ class BuildEngine:
 
         util.SavePickle(picklePath, newInstalledThings)
 
+        if timer.GetElapsedSeconds() > util.PERFORMANCE_TIMER_THRESHOLD:
+            print(f"Save Installed Things completed in {timer.GetElapsedSecondsString()} s")
+
 
     @staticmethod
     def __DeleteInstalledThingsInfo(setup: BuildSetup) -> None:
@@ -1087,8 +1147,12 @@ class BuildEngine:
 
     @staticmethod
     def __RevertInstalledThings(setup: BuildSetup, copy: BuildCopy) -> None:
+        timer = util.Timer()
         print("Revert Installed Things ...")
 
         installedThings: BuildThingsT = BuildEngine.__LoadInstalledThingsInfo(setup)
         BuildEngine.__UncopyFilesOfThings(installedThings, copy)
         BuildEngine.__DeleteInstalledThingsInfo(setup)
+
+        if timer.GetElapsedSeconds() > util.PERFORMANCE_TIMER_THRESHOLD:
+            print(f"Revert Installed Things completed in {timer.GetElapsedSecondsString()} s")

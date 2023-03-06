@@ -342,12 +342,15 @@ class Bundles:
             pack.VerifyTypes()
 
     def VerifyValues(self) -> None:
+        timer = util.Timer()
         for item in self.items:
             item.VerifyValues()
         for pack in self.packs:
             pack.VerifyValues()
         self.__VerifyUniqueItemNames()
         self.__VerifyKnownItemsInPacks()
+        if timer.GetElapsedSeconds() > util.PERFORMANCE_TIMER_THRESHOLD:
+            print(f"Bundles.VerifyValues completed in {timer.GetElapsedSecondsString()} s")
 
     def __VerifyUniqueItemNames(self) -> None:
         itemLen = len(self.items)
