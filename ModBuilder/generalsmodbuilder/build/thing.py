@@ -49,16 +49,8 @@ class BuildFile:
         path = os.path.normpath(path)
         return path
 
-    def AbsRealTarget(self, absParentDir: str) -> str:
-        path = self.AbsTarget(absParentDir)
-        path = os.path.realpath(path)
-        return path
-
     def AbsSource(self) -> str:
         return self.absSource
-
-    def AbsRealSource(self) -> str:
-        return os.path.realpath(self.absSource)
 
     def GetCombinedStatus(self) -> BuildFileStatus:
         maxValue: int = max(self.targetStatus.value, self.sourceStatus.value)
