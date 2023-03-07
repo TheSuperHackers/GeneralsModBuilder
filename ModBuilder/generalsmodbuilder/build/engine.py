@@ -24,6 +24,30 @@ from generalsmodbuilder import util
 
 
 @dataclass
+class FileInfoCacheRecord:
+    realPath: str
+
+class FileInfoCache:
+    cache: dict[str, str]
+
+    def __init__(self):
+        self.cache = dict[str, str]()
+
+    def GetRealPath(self, path: str) -> str:
+        record: FileInfoCacheRecord = self.cache.get(path)
+        if record == None:
+            realPath: str = os.path.realpath(path) # This OS call is expensive.
+            self.cache[path] = FileInfoCacheRecord(realPath=realPath)
+            return realPath
+        else:
+            if record.realPath != None:
+                return record.realPath
+            else:
+                record.realPath = os.path.realpath(path)
+                return record.realPath
+
+
+@dataclass
 class BuildFilePathInfo:
     # This class is serialized and therefore may be missing attributes.
     path: str
@@ -239,6 +263,7 @@ class BuildEngine:
     setup: BuildSetup
     structure: BuildStructure
     copyDict: dict[BuildIndex, BuildCopy]
+    fileCache: FileInfoCache
     processHandle: subprocess.Popen
     processLock: threading.RLock
 
@@ -251,6 +276,7 @@ class BuildEngine:
         self.setup = None
         self.structure = None
         self.copyDict = None
+        self.fileCache = None
         self.processHandle = None
         self.processLock = threading.RLock()
 
@@ -394,6 +420,7 @@ class BuildEngine:
             BuildIndex.ReleaseBundlePack: BuildCopy(tools=tools),
             BuildIndex.InstallBundlePack: BuildCopy(tools=tools, options=BuildCopyOption.EnableBackup | BuildCopyOption.EnableSymlinks),
         }
+        self.fileCache = FileInfoCache()
 
         BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnPreBuild)
 
@@ -602,8 +629,8 @@ class BuildEngine:
         # Start event is sent before populating the build diff to allow for file modifications and file injections.
         BuildEngine.__SendBundleEvents(structure, setup, GetStartBuildEvent(index))
 
-        BuildEngine.__PopulateDiff(data, setup.folders, diffWithParentThings, diffWithFileHashRegistry)
-        BuildEngine.__PopulateBuildFileStatusInThings(data.things, data.diff)
+        BuildEngine.__PopulateDiff(data, setup.folders, diffWithParentThings, diffWithFileHashRegistry, self.fileCache)
+        BuildEngine.__PopulateBuildFileStatusInThings(data.things, data.diff, self.fileCache)
 
         if deleteRemovedFiles:
             BuildEngine.__DeleteRemovedFilesOfThings(data.things, data.diff)
@@ -621,36 +648,42 @@ class BuildEngine:
 
 
     @staticmethod
-    def __PopulateDiff(data: BuildIndexData, folders: Folders, withParentThings: bool, useFileHashRegistry: bool) -> None:
+    def __PopulateDiff(
+            data: BuildIndexData,
+            folders: Folders,
+            withParentThings: bool,
+            useFileHashRegistry: bool,
+            fileCache: FileInfoCache) -> None:
+
         path: str = MakeDiffPath(data.index, folders)
         data.diff = BuildDiff(path, withParentThings, useFileHashRegistry)
-        BuildEngine.__PopulateDiffFromThings(data.diff, data.things)
+        BuildEngine.__PopulateDiffFromThings(data.diff, data.things, fileCache)
 
 
     @staticmethod
-    def __PopulateDiffFromThings(diff: BuildDiff, things: BuildThingsT) -> None:
+    def __PopulateDiffFromThings(diff: BuildDiff, things: BuildThingsT, fileCache: FileInfoCache) -> None:
         thing: BuildThing
 
         for thing in things.values():
             timer = util.Timer()
             print(f"Create file infos for {thing.name} ...")
 
-            BuildEngine.__PopulateFilePathInfosFromThing(diff, thing)
+            BuildEngine.__PopulateFilePathInfosFromThing(diff, thing, fileCache)
 
             if diff.includesParentDiff and thing.parentThing != None:
-                BuildEngine.__PopulateFilePathInfosFromThing(diff, thing.parentThing)
+                BuildEngine.__PopulateFilePathInfosFromThing(diff, thing.parentThing, fileCache)
 
             if timer.GetElapsedSeconds() > util.PERFORMANCE_TIMER_THRESHOLD:
                 print(f"Create file infos for {thing.name} completed in {timer.GetElapsedSecondsString()} s")
 
 
     @staticmethod
-    def __PopulateFilePathInfosFromThing(diff: BuildDiff, thing: BuildThing) -> None:
+    def __PopulateFilePathInfosFromThing(diff: BuildDiff, thing: BuildThing, fileCache: FileInfoCache) -> None:
         file: BuildFile
 
         for file in thing.files:
-            absRealSource = file.AbsRealSource()
             absSource = file.AbsSource()
+            absRealSource = fileCache.GetRealPath(absSource)
             sourceTime: float = 0.0
             sourceMd5: str = ""
 
@@ -668,8 +701,8 @@ class BuildEngine:
                 diff.newDiffRegistry.AddFile(absSource, time=sourceTime, md5=sourceMd5, params=None)
 
         for file in thing.files:
-            absRealTarget = file.AbsRealTarget(thing.absParentDir)
             absTarget = file.AbsTarget(thing.absParentDir)
+            absRealTarget = fileCache.GetRealPath(absTarget)
             absTargetDirs: list[str] = util.GetAbsFileDirs(absTarget, thing.absParentDir)
             absTargetDir: str
             targetTime: float = 0.0
@@ -717,7 +750,7 @@ class BuildEngine:
 
 
     @staticmethod
-    def __PopulateBuildFileStatusInThings(things: BuildThingsT, diff: BuildDiff) -> None:
+    def __PopulateBuildFileStatusInThings(things: BuildThingsT, diff: BuildDiff, fileCache: FileInfoCache) -> None:
         thing: BuildThing
 
         for thing in things.values():
@@ -725,16 +758,16 @@ class BuildEngine:
             print(f"Populate file status for {thing.name} ...")
 
             if diff.includesParentDiff and thing.parentThing != None:
-                BuildEngine.__PopulateFileStatusInThing(thing.parentThing, diff)
+                BuildEngine.__PopulateFileStatusInThing(thing.parentThing, diff, fileCache)
 
-            BuildEngine.__PopulateFileStatusInThing(thing, diff)
+            BuildEngine.__PopulateFileStatusInThing(thing, diff, fileCache)
 
             if timer.GetElapsedSeconds() > util.PERFORMANCE_TIMER_THRESHOLD:
                 print(f"Populate file status for {thing.name} completed in {timer.GetElapsedSecondsString()} s")
 
 
     @staticmethod
-    def __PopulateFileStatusInThing(thing: BuildThing, diff: BuildDiff) -> None:
+    def __PopulateFileStatusInThing(thing: BuildThing, diff: BuildDiff, fileCache: FileInfoCache) -> None:
         file: BuildFile
 
         parentStatus: BuildFileStatus = None
@@ -751,8 +784,8 @@ class BuildEngine:
         for file in thing.files:
             parentFile: BuildFile = file.parentFile
             parentStatus: BuildFileStatus = parentStatus if parentFile == None else parentFile.GetCombinedStatus()
-            absSource: str = file.AbsRealSource()
-            absTarget: str = file.AbsRealTarget(thing.absParentDir)
+            absSource: str = fileCache.GetRealPath(file.AbsSource())
+            absTarget: str = fileCache.GetRealPath(file.AbsTarget(thing.absParentDir))
 
             file.sourceStatus = BuildEngine.__GetStatusWithFileHashRegistry(absSource, file.relTarget, diff, file.registryDef)
             if file.sourceStatus == BuildFileStatus.Unknown:
