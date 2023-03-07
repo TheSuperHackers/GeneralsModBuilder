@@ -480,9 +480,36 @@ def __MakeBundlePackFromDict(jPack: dict, jsonDir: str) -> BundlePack:
     return pack
 
 
-def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> Bundles:
-    bundles = Bundles()
+def AddBundlePacksFromJsons(jsonFiles: list[JsonFile], bundles: Bundles) -> Bundles:
+    """
+    Parses bundle packs from all json files where present.
+    """
+    for jsonFile in jsonFiles:
+        jsonDir: str = util.GetAbsSmartFileDir(jsonFile.path)
+        jBundles: dict = jsonFile.data.get("bundles")
 
+        if jBundles:
+            jPacksPrefix: str = jBundles.get("packsPrefix")
+            jPacksSuffix: str = jBundles.get("packsSuffix")
+            jPacks: dict = jBundles.get("packs")
+            if jPacks:
+                jPack: dict
+                for jPack in jPacks:
+                    bundlePack: BundlePack = __MakeBundlePackFromDict(jPack, jsonDir)
+
+                    if not bundlePack.namePrefix and jPacksPrefix != None:
+                        bundlePack.namePrefix = jPacksPrefix
+                    if not bundlePack.nameSuffix and jPacksSuffix != None:
+                        bundlePack.nameSuffix = jPacksSuffix
+
+                    bundles.packs.append(bundlePack)
+    return
+
+
+def AddBundleItemsFromJsons(jsonFiles: list[JsonFile], bundles: Bundles) -> Bundles:
+    """
+    Parses bundle items from all json files where present.
+    """
     for jsonFile in jsonFiles:
         jsonDir: str = util.GetAbsSmartFileDir(jsonFile.path)
         jBundles: dict = jsonFile.data.get("bundles")
@@ -503,21 +530,14 @@ def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> Bundles:
                         bundleItem.nameSuffix = jItemsSuffix
 
                     bundles.items.append(bundleItem)
+    return
 
-            jPacksPrefix: str = jBundles.get("packsPrefix")
-            jPacksSuffix: str = jBundles.get("packsSuffix")
-            jPacks: dict = jBundles.get("packs")
-            if jPacks:
-                jPack: dict
-                for jPack in jPacks:
-                    bundlePack: BundlePack = __MakeBundlePackFromDict(jPack, jsonDir)
 
-                    if not bundlePack.namePrefix and jPacksPrefix != None:
-                        bundlePack.namePrefix = jPacksPrefix
-                    if not bundlePack.nameSuffix and jPacksSuffix != None:
-                        bundlePack.nameSuffix = jPacksSuffix
+def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> Bundles:
+    bundles = Bundles()
 
-                    bundles.packs.append(bundlePack)
+    AddBundleItemsFromJsons(jsonFiles, bundles)
+    AddBundlePacksFromJsons(jsonFiles, bundles)
 
     bundles.VerifyTypes()
     bundles.Normalize()
