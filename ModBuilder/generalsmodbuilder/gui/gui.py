@@ -9,7 +9,7 @@ from generalsmodbuilder import util
 from generalsmodbuilder.__version__ import __version__
 from generalsmodbuilder.build.engine import BuildEngine
 from generalsmodbuilder.buildfunctions import CreateJsonFiles, RunWithConfig
-from generalsmodbuilder.data.bundles import BundlePack, Bundles, MakeBundlesFromJsons
+from generalsmodbuilder.data.bundles import BundlePack, Bundles, AddBundlePacksFromJsons
 from generalsmodbuilder.util import JsonFile
 
 
@@ -221,7 +221,8 @@ class Gui:
     def _GetBundlePackNamesFromConfig(configPaths: list[str]) -> list[str]:
         bundlePackNames = list()
         jsonFiles: list[JsonFile] = CreateJsonFiles(configPaths)
-        bundles: Bundles = MakeBundlesFromJsons(jsonFiles)
+        bundles = Bundles()
+        AddBundlePacksFromJsons(jsonFiles, bundles)
         bundlePack: BundlePack
         for bundlePack in bundles.packs:
             bundlePackNames.append(bundlePack.name)
