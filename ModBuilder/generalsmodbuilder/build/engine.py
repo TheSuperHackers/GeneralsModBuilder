@@ -341,10 +341,9 @@ class BuildEngine:
 
 
     @staticmethod
-    def __SendBundleEvents(structure: BuildStructure, setup: BuildSetup, eventType: BundleEventType):
+    def __SendBundleEvents(structure: BuildStructure, setup: BuildSetup, eventType: BundleEventType) -> None:
         bundles: Bundles = setup.bundles
         folders: Folders = setup.folders
-        sent: bool = False
         item: BundleItem
         pack: BundlePack
 
@@ -359,9 +358,7 @@ class BuildEngine:
                 kwargs["_absReleaseUnpackedDir"] = folders.absReleaseUnpackedDir
                 kwargs["_rawBuildThing"] = structure.FindThingWithPlainName(BuildIndex.RawBundleItem, item.name)
                 kwargs["_bigBuildThing"] = structure.FindThingWithPlainName(BuildIndex.BigBundleItem, item.name)
-                sent |= BuildEngine.__CallScript(event, kwargs)
-                item.VerifyTypes()
-                item.Normalize()
+                BuildEngine.__CallScript(event, kwargs)
 
         for pack in bundles.packs:
             event: BundleEvent = pack.events.get(eventType)
@@ -375,14 +372,9 @@ class BuildEngine:
                 kwargs["_rawBuildThing"] = structure.FindThingWithPlainName(BuildIndex.RawBundlePack, pack.name)
                 kwargs["_releaseBuildThing"] = structure.FindThingWithPlainName(BuildIndex.ReleaseBundlePack, pack.name)
                 kwargs["_installBuildThing"] = structure.FindThingWithPlainName(BuildIndex.InstallBundlePack, pack.name)
-                sent |= BuildEngine.__CallScript(event, kwargs)
-                pack.VerifyTypes()
-                pack.Normalize()
+                BuildEngine.__CallScript(event, kwargs)
 
-        if sent:
-            bundles.VerifyValues()
-
-        return sent
+        return
 
 
     def __PreBuild(self) -> bool:
