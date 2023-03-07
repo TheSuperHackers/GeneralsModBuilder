@@ -40,6 +40,7 @@ class Gui:
     runButton: Button
     uninstallButton: Button
     abortButton: Button
+    bundlePackRefreshButton: Button
 
 
     def __init__(self):
@@ -60,10 +61,11 @@ class Gui:
             run: bool = False,
             printConfig: bool = False):
 
-        mainWindow: Tk = Gui._CreateMainWindow()
-
         self.configPaths = configPaths
         self.installList = installList
+
+        mainWindow: Tk = Gui._CreateMainWindow()
+
         self.clean = BooleanVar(mainWindow, value=clean)
         self.build = BooleanVar(mainWindow, value=build)
         self.release = BooleanVar(mainWindow, value=release)
@@ -75,6 +77,7 @@ class Gui:
 
         self._CreateMainWindowElements(mainWindow)
         self._SetAbortElementsState("disabled")
+        self._StartWorkThread(self._PopulateBundlePackList)
 
         mainWindow.mainloop()
 
@@ -198,10 +201,9 @@ class Gui:
 
         self.bundlePackList = Listbox(bundlePackFrame, width=listboxWidth, relief='flat', selectmode='multiple')
         self.bundlePackList.pack(anchor=W)
-        self._PopulateBundlePackList()
 
-        bundlePackRefreshButton = Button(bundlePackFrame, width=buttonWidth, text="Refresh", command=self._PopulateBundlePackList)
-        bundlePackRefreshButton.pack(anchor=W)
+        self.bundlePackRefreshButton = Button(bundlePackFrame, width=buttonWidth, text="Refresh", command=lambda:self._StartWorkThread(self._PopulateBundlePackList))
+        self.bundlePackRefreshButton.pack(anchor=W)
 
 
     @staticmethod
@@ -227,6 +229,9 @@ class Gui:
 
 
     def _PopulateBundlePackList(self) -> None:
+        if self.workThread != None:
+            self._SetJobElementsState("disabled")
+
         bundlePackNames: list[str] = Gui._GetBundlePackNamesFromConfig(self.configPaths)
         self.bundlePackList.delete(0, self.bundlePackList.size())
         self.bundlePackList.insert(0, *bundlePackNames)
@@ -236,6 +241,10 @@ class Gui:
             for index,name2 in enumerate(bundlePackNames):
                 if name1 == name2:
                     self.bundlePackList.selection_set(index)
+
+        if self.workThread != None:
+            self.workThread = None
+            self._SetJobElementsState("normal")
 
 
     @staticmethod
@@ -387,6 +396,7 @@ class Gui:
         self.installButton["state"] = state
         self.runButton["state"] = state
         self.uninstallButton["state"] = state
+        self.bundlePackRefreshButton["state"] = state
 
 
     def _SetAbortElementsState(self, state: str) -> None:
