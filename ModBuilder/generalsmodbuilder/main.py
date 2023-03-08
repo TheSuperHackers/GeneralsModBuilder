@@ -92,6 +92,7 @@ def Main(args=None):
             install=install,
             uninstall=uninstall,
             run=run,
+            debug=debug,
             printConfig=printConfig)
     elif debug:
         RunWithConfig(
