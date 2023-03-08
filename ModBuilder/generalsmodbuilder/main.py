@@ -15,9 +15,11 @@ def Main(args=None):
     parser.add_argument('-l', '--config-list', type=str, nargs="*", help='Paths to any amount of configuration files (json).')
     parser.add_argument('-a', '--clean', action='store_true')
     parser.add_argument('-b', '--build', action='store_true')
+    parser.add_argument(      '--build-pack', type=str, nargs="?", const="_default_", action='append', help='If specified, then only builds the bundle pack by name. Multiples can be specified.')
+    parser.add_argument(      '--build-pack-list', type=str, nargs="*", help='If specified, then only builds the bundle packs by name.')
     parser.add_argument('-z', '--release', action='store_true')
-    parser.add_argument('-i', '--install', type=str, nargs="?", const="_default_", action='append', help='Can specify bundle pack name to install. Multiples can be specified.')
-    parser.add_argument('-o', '--install-list', type=str, nargs="*", help='Installs specified bundle pack names.')
+    parser.add_argument('-i', '--install', type=str, nargs="?", const="_default_", action='append', help='Installs the specified bundle pack by name. Multiples can be specified.')
+    parser.add_argument('-o', '--install-list', type=str, nargs="*", help='Installs the specified bundle packs by name.')
     parser.add_argument('-u', '--uninstall', action='store_true')
     parser.add_argument('-r', '--run', action='store_true')
     parser.add_argument('-g', '--gui', action='store_true')
@@ -38,16 +40,23 @@ def Main(args=None):
             args.file_hash_registry_name)
         return
 
-    # Build install pack name list.
+    # Populate install pack name list.
     installList = list[str]()
     if args.install_list:
         installList.extend(args.install_list)
     if args.install:
         installList.extend(args.install)
 
+    # Populate build pack name list.
+    buildList = list[str]()
+    if args.build_pack_list:
+        buildList.extend(args.build_pack_list)
+    if args.build_pack:
+        buildList.extend(args.build_pack)
+
     # Set main tool commands.
     clean = bool(args.clean)
-    build = bool(args.build)
+    build = bool(args.build) or bool(buildList)
     release = bool(args.release)
     install = bool(installList)
     uninstall = bool(args.uninstall)
@@ -86,6 +95,7 @@ def Main(args=None):
         gui.RunWithConfig(
             configPaths=configPaths,
             installList=installList,
+            buildList=buildList,
             clean=clean,
             build=build,
             release=release,
@@ -98,6 +108,7 @@ def Main(args=None):
         function = lambda:RunWithConfig(
             configPaths=configPaths,
             installList=installList,
+            buildList=buildList,
             clean=clean,
             build=build,
             release=release,

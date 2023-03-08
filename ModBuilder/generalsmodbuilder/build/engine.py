@@ -426,6 +426,9 @@ class BuildEngine:
         itemFile: BundleFile
 
         for item in bundles.items:
+            if not bundles.IsItemAllowedToBuild(item.name):
+                continue
+
             newThing = BuildThing()
             newThing.name = MakeThingName(BuildIndex.RawBundleItem, item.name)
             newThing.absParentDir = os.path.join(folders.absBuildDir, "RawBundleItems", item.name)
@@ -447,6 +450,9 @@ class BuildEngine:
         item: BundleItem
 
         for item in bundles.items:
+            if not bundles.IsItemAllowedToBuild(item.name):
+                continue
+
             if item.isBig:
                 parentName: str = MakeThingName(BuildIndex.RawBundleItem, item.name)
                 parentThing: BuildThing = structure.FindAnyThing(parentName)
@@ -473,6 +479,9 @@ class BuildEngine:
         relReleaseFiles = util.CreateRelPaths(absReleaseFiles, folders.absReleaseUnpackedDir)
 
         for pack in bundles.packs:
+            if not pack.allowBuild:
+                continue
+
             newThing = BuildThing()
             newThing.name = MakeThingName(BuildIndex.RawBundlePack, pack.name)
             newThing.absParentDir = os.path.join(folders.absBuildDir, "RawBundlePacks", pack.name)
@@ -516,6 +525,9 @@ class BuildEngine:
         pack: BundlePack
 
         for pack in bundles.packs:
+            if not pack.allowBuild:
+                continue
+
             parentName: str = MakeThingName(BuildIndex.RawBundlePack, pack.name)
             parentThing: BuildThing = structure.FindAnyThing(parentName)
             assert(parentThing != None)
@@ -536,26 +548,28 @@ class BuildEngine:
         pack: BundlePack
 
         for pack in bundles.packs:
-            if pack.install:
-                parentName: str = MakeThingName(BuildIndex.RawBundlePack, pack.name)
-                parentThing: BuildThing = structure.FindAnyThing(parentName)
-                assert(parentThing != None)
-                newThing = BuildThing()
-                newThing.name = MakeThingName(BuildIndex.InstallBundlePack, pack.name)
-                newThing.absParentDir = runner.absGameInstallDir
-                newThing.files = BuildFilesT()
-                newThing.parentThing = parentThing
-                newThing.setGameLanguageOnInstall = bundles.FindFirstGameLanguageForInstall(pack.name)
+            if not pack.allowInstall:
+                continue
 
-                for parentFile in parentThing.files:
-                    # if util.HasAnyFileExt(parentFile.relTarget, runner.relevantGameDataFileTypes):
-                    #     continue
-                    newFile = BuildFile()
-                    newFile.absSource = parentFile.AbsTarget(parentThing.absParentDir)
-                    newFile.relTarget = parentFile.relTarget
-                    newThing.files.append(newFile)
+            parentName: str = MakeThingName(BuildIndex.RawBundlePack, pack.name)
+            parentThing: BuildThing = structure.FindAnyThing(parentName)
+            assert(parentThing != None)
+            newThing = BuildThing()
+            newThing.name = MakeThingName(BuildIndex.InstallBundlePack, pack.name)
+            newThing.absParentDir = runner.absGameInstallDir
+            newThing.files = BuildFilesT()
+            newThing.parentThing = parentThing
+            newThing.setGameLanguageOnInstall = bundles.FindFirstGameLanguageForInstall(pack.name)
 
-                structure.AddThing(BuildIndex.InstallBundlePack, newThing)
+            for parentFile in parentThing.files:
+                # if util.HasAnyFileExt(parentFile.relTarget, runner.relevantGameDataFileTypes):
+                #     continue
+                newFile = BuildFile()
+                newFile.absSource = parentFile.AbsTarget(parentThing.absParentDir)
+                newFile.relTarget = parentFile.relTarget
+                newThing.files.append(newFile)
+
+            structure.AddThing(BuildIndex.InstallBundlePack, newThing)
 
 
     def __Build(self) -> bool:

@@ -20,7 +20,7 @@ class Gui:
     buildEngineLock: threading.RLock
 
     configPaths: list[str]
-    installList: list[str]
+    buildAndInstallList: list[str]
     debug: bool
 
     clean: BooleanVar
@@ -54,6 +54,7 @@ class Gui:
     def RunWithConfig(self,
             configPaths: list[str] = list(),
             installList: list[str] = list(),
+            buildList: list[str] = list(),
             clean: bool = False,
             build: bool = False,
             release: bool = False,
@@ -64,7 +65,8 @@ class Gui:
             printConfig: bool = False):
 
         self.configPaths = configPaths
-        self.installList = installList
+        self.buildAndInstallList = installList
+        self.buildAndInstallList.extend(buildList)
         self.debug = debug
 
         mainWindow: Tk = Gui._CreateMainWindow()
@@ -241,7 +243,7 @@ class Gui:
         self.bundlePackList.insert(0, *bundlePackNames)
         name1: str
         name2: str
-        for name1 in self.installList:
+        for name1 in self.buildAndInstallList:
             for index,name2 in enumerate(bundlePackNames):
                 if name1 == name2:
                     self.bundlePackList.selection_set(index)
@@ -259,7 +261,8 @@ class Gui:
     def _Execute(self) -> None:
         function = lambda:RunWithConfig(
             configPaths=self.configPaths,
-            installList=self.installList,
+            installList=self.buildAndInstallList,
+            buildList=self.buildAndInstallList,
             clean=self.clean.get(),
             build=self.build.get(),
             release=self.release.get(),
@@ -275,7 +278,8 @@ class Gui:
     def _Clean(self) -> None:
         function = lambda:RunWithConfig(
             configPaths=self.configPaths,
-            installList=self.installList,
+            installList=self.buildAndInstallList,
+            buildList=self.buildAndInstallList,
             clean=True,
             printConfig=self.printConfig.get(),
             engine=self.buildEngine)
@@ -286,7 +290,8 @@ class Gui:
     def _Build(self) -> None:
         function = lambda:RunWithConfig(
             configPaths=self.configPaths,
-            installList=self.installList,
+            installList=self.buildAndInstallList,
+            buildList=self.buildAndInstallList,
             build=True,
             printConfig=self.printConfig.get(),
             engine=self.buildEngine)
@@ -297,7 +302,8 @@ class Gui:
     def _Release(self) -> None:
         function = lambda:RunWithConfig(
             configPaths=self.configPaths,
-            installList=self.installList,
+            installList=self.buildAndInstallList,
+            buildList=self.buildAndInstallList,
             release=True,
             printConfig=self.printConfig.get(),
             engine=self.buildEngine)
@@ -308,7 +314,8 @@ class Gui:
     def _Install(self) -> None:
         function = lambda:RunWithConfig(
             configPaths=self.configPaths,
-            installList=self.installList,
+            installList=self.buildAndInstallList,
+            buildList=self.buildAndInstallList,
             install=True,
             printConfig=self.printConfig.get(),
             engine=self.buildEngine)
@@ -319,7 +326,8 @@ class Gui:
     def _Uninstall(self) -> None:
         function = lambda:RunWithConfig(
             configPaths=self.configPaths,
-            installList=self.installList,
+            installList=self.buildAndInstallList,
+            buildList=self.buildAndInstallList,
             uninstall=True,
             printConfig=self.printConfig.get(),
             engine=self.buildEngine)
@@ -330,7 +338,8 @@ class Gui:
     def _RunGame(self) -> None:
         function = lambda:RunWithConfig(
             configPaths=self.configPaths,
-            installList=self.installList,
+            installList=self.buildAndInstallList,
+            buildList=self.buildAndInstallList,
             run=True,
             printConfig=self.printConfig.get(),
             engine=self.buildEngine)
@@ -356,7 +365,7 @@ class Gui:
     def _OnWorkBegin(self) -> None:
         with self.buildEngineLock:
             self.buildEngine = BuildEngine()
-            self.installList = Gui._GetBundlePackNamesFromList(self.bundlePackList)
+            self.buildAndInstallList = Gui._GetBundlePackNamesFromList(self.bundlePackList)
 
         if self.clearConsole.get():
             Gui._ClearConsole()

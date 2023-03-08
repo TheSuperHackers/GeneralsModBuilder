@@ -42,12 +42,20 @@ def PatchBundlesInstall(bundles: Bundles, installList: list[str]) -> None:
     pack: BundlePack
     for pack in bundles.packs:
         if pack.name in installList:
-            pack.install = True
+            pack.allowInstall = True
+
+
+def PatchBundlesBuild(bundles: Bundles, buildList: list[str]) -> None:
+    pack: BundlePack
+    for pack in bundles.packs:
+        if pack.name in buildList:
+            pack.allowBuild = True
 
 
 def RunWithConfig(
-        configPaths: list[str],
-        installList: list[str],
+        configPaths: list[str]=list[str](),
+        installList: list[str]=list[str](),
+        buildList: list[str]=list[str](),
         clean: bool=False,
         build: bool=False,
         release: bool=False,
@@ -72,7 +80,17 @@ def RunWithConfig(
 
     InstallTools(tools)
 
-    PatchBundlesInstall(bundles, installList)
+    if not bool(installList):
+        for pack in bundles.packs:
+            pack.allowInstall = True
+    else:
+        PatchBundlesInstall(bundles, installList)
+
+    if not bool(buildList):
+        for pack in bundles.packs:
+            pack.allowBuild = True
+    else:
+        PatchBundlesBuild(bundles, buildList)
 
     setup = BuildSetup(
         step=buildStep,
