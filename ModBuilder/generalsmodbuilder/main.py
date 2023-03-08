@@ -94,8 +94,8 @@ def Main(args=None):
             run=run,
             debug=debug,
             printConfig=printConfig)
-    elif debug:
-        RunWithConfig(
+    else:
+        function = lambda:RunWithConfig(
             configPaths=configPaths,
             installList=installList,
             clean=clean,
@@ -105,22 +105,15 @@ def Main(args=None):
             uninstall=uninstall,
             run=run,
             printConfig=printConfig)
-    else:
-        try:
-            RunWithConfig(
-                configPaths=configPaths,
-                installList=installList,
-                clean=clean,
-                build=build,
-                release=release,
-                install=install,
-                uninstall=uninstall,
-                run=run,
-                printConfig=printConfig)
-        except Exception:
-            print("ERROR CALLSTACK")
-            traceback.print_exc()
-            input("Press any key to continue...")
+        if debug:
+            function()
+        else:
+            try:
+                function()
+            except Exception:
+                print("ERROR CALLSTACK")
+                traceback.print_exc()
+                input("Press any key to continue...")
 
 
 if __name__ == "__main__":
