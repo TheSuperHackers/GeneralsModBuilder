@@ -21,6 +21,7 @@ class Gui:
 
     configPaths: list[str]
     installList: list[str]
+    debug: bool
 
     clean: BooleanVar
     build: BooleanVar
@@ -59,10 +60,12 @@ class Gui:
             install: bool = False,
             uninstall: bool = False,
             run: bool = False,
+            debug: bool = False,
             printConfig: bool = False):
 
         self.configPaths = configPaths
         self.installList = installList
+        self.debug = debug
 
         mainWindow: Tk = Gui._CreateMainWindow()
 
@@ -254,112 +257,99 @@ class Gui:
 
 
     def _Execute(self) -> None:
-        self._OnWorkBegin()
-        try:
-            RunWithConfig(
-                configPaths=self.configPaths,
-                installList=self.installList,
-                clean=self.clean.get(),
-                build=self.build.get(),
-                release=self.release.get(),
-                install=self.install.get(),
-                uninstall=self.uninstall.get(),
-                run=self.run.get(),
-                printConfig=self.printConfig.get(),
-                engine=self.buildEngine)
-        except Exception:
-            print("ERROR CALLSTACK")
-            traceback.print_exc()
-        self._OnWorkEnd()
+        function = lambda:RunWithConfig(
+            configPaths=self.configPaths,
+            installList=self.installList,
+            clean=self.clean.get(),
+            build=self.build.get(),
+            release=self.release.get(),
+            install=self.install.get(),
+            uninstall=self.uninstall.get(),
+            run=self.run.get(),
+            printConfig=self.printConfig.get(),
+            engine=self.buildEngine)
+
+        self._DoWork(function)
 
 
     def _Clean(self) -> None:
-        self._OnWorkBegin()
-        try:
-            RunWithConfig(
-                configPaths=self.configPaths,
-                installList=self.installList,
-                clean=True,
-                printConfig=self.printConfig.get(),
-                engine=self.buildEngine)
-        except Exception:
-            print("ERROR CALLSTACK")
-            traceback.print_exc()
-        self._OnWorkEnd()
+        function = lambda:RunWithConfig(
+            configPaths=self.configPaths,
+            installList=self.installList,
+            clean=True,
+            printConfig=self.printConfig.get(),
+            engine=self.buildEngine)
+
+        self._DoWork(function)
 
 
     def _Build(self) -> None:
-        self._OnWorkBegin()
-        try:
-            RunWithConfig(
-                configPaths=self.configPaths,
-                installList=self.installList,
-                build=True,
-                printConfig=self.printConfig.get(),
-                engine=self.buildEngine)
-        except Exception:
-            print("ERROR CALLSTACK")
-            traceback.print_exc()
-        self._OnWorkEnd()
+        function = lambda:RunWithConfig(
+            configPaths=self.configPaths,
+            installList=self.installList,
+            build=True,
+            printConfig=self.printConfig.get(),
+            engine=self.buildEngine)
+
+        self._DoWork(function)
 
 
     def _Release(self) -> None:
-        self._OnWorkBegin()
-        try:
-            RunWithConfig(
-                configPaths=self.configPaths,
-                installList=self.installList,
-                release=True,
-                printConfig=self.printConfig.get(),
-                engine=self.buildEngine)
-        except Exception:
-            print("ERROR CALLSTACK")
-            traceback.print_exc()
-        self._OnWorkEnd()
+        function = lambda:RunWithConfig(
+            configPaths=self.configPaths,
+            installList=self.installList,
+            release=True,
+            printConfig=self.printConfig.get(),
+            engine=self.buildEngine)
+
+        self._DoWork(function)
 
 
     def _Install(self) -> None:
-        self._OnWorkBegin()
-        try:
-            RunWithConfig(
-                configPaths=self.configPaths,
-                installList=self.installList,
-                install=True,
-                printConfig=self.printConfig.get(),
-                engine=self.buildEngine)
-        except Exception:
-            print("ERROR CALLSTACK")
-            traceback.print_exc()
-        self._OnWorkEnd()
+        function = lambda:RunWithConfig(
+            configPaths=self.configPaths,
+            installList=self.installList,
+            install=True,
+            printConfig=self.printConfig.get(),
+            engine=self.buildEngine)
+
+        self._DoWork(function)
 
 
     def _Uninstall(self) -> None:
-        self._OnWorkBegin()
-        try:
-            RunWithConfig(
-                configPaths=self.configPaths,
-                installList=self.installList,
-                uninstall=True,
-                printConfig=self.printConfig.get(),
-                engine=self.buildEngine)
-        except Exception:
-            print("ERROR CALLSTACK")
-            traceback.print_exc()
-        self._OnWorkEnd()
+        function = lambda:RunWithConfig(
+            configPaths=self.configPaths,
+            installList=self.installList,
+            uninstall=True,
+            printConfig=self.printConfig.get(),
+            engine=self.buildEngine)
+
+        self._DoWork(function)
 
 
     def _RunGame(self) -> None:
+        function = lambda:RunWithConfig(
+            configPaths=self.configPaths,
+            installList=self.installList,
+            run=True,
+            printConfig=self.printConfig.get(),
+            engine=self.buildEngine)
+
+        self._DoWork(function)
+
+
+    def _DoWork(self, function: Callable) -> None:
         self._OnWorkBegin()
-        try:
-            RunWithConfig(
-                configPaths=self.configPaths,
-                installList=self.installList,
-                run=True,
-                printConfig=self.printConfig.get(),
-                engine=self.buildEngine)
-        except Exception:
-            print("ERROR CALLSTACK")
-            traceback.print_exc()
+
+        if self.debug:
+            function()
+        else:
+            try:
+                function()
+            except Exception:
+                print("ERROR CALLSTACK")
+                traceback.print_exc()
+
         self._OnWorkEnd()
 
 
