@@ -252,7 +252,8 @@ class BundlePack:
     itemNames: list[str]
     namePrefix: str
     nameSuffix: str
-    install: bool
+    allowBuild: bool
+    allowInstall: bool
     setGameLanguageOnInstall: str
     events: BundleEventsT
 
@@ -261,7 +262,8 @@ class BundlePack:
         self.itemNames = list[str]()
         self.namePrefix = ""
         self.nameSuffix = ""
-        self.install = False
+        self.allowBuild = False
+        self.allowInstall = False
         self.setGameLanguageOnInstall = ""
         self.events = BundleEventsT()
 
@@ -270,7 +272,8 @@ class BundlePack:
         util.VerifyType(self.itemNames, list, "BundlePack.itemNames")
         util.VerifyType(self.namePrefix, str, "BundlePack.namePrefix")
         util.VerifyType(self.nameSuffix, str, "BundlePack.nameSuffix")
-        util.VerifyType(self.install, bool, "BundlePack.install")
+        util.VerifyType(self.allowBuild, bool, "BundlePack.allowBuild")
+        util.VerifyType(self.allowInstall, bool, "BundlePack.allowInstall")
         util.VerifyType(self.setGameLanguageOnInstall, str, "BundlePack.setGameLanguageOnInstall")
         util.VerifyType(self.events, dict, "BundlePack.events")
         for itemName in self.itemNames:
@@ -330,6 +333,24 @@ class Bundles:
                     return item.setGameLanguageOnInstall
 
         return ""
+
+    def GetPackListContainingItem(self, itemName: str) -> list[BundlePack]:
+        pack: BundlePack
+        packItemName: str
+        packs = list[BundlePack]()
+        for pack in self.packs:
+            for packItemName in pack.itemNames:
+                if packItemName == itemName:
+                    packs.append(pack)
+        return packs
+
+    def IsItemAllowedToBuild(self, itemName: str) -> bool:
+        pack: BundlePack
+        packs: list[BundlePack] = self.GetPackListContainingItem(itemName)
+        for pack in packs:
+            if pack.allowBuild:
+                return True
+        return False
 
     def VerifyTypes(self) -> None:
         util.VerifyType(self.items, list, "Bundles.items")
@@ -473,7 +494,8 @@ def __MakeBundlePackFromDict(jPack: dict, jsonDir: str) -> BundlePack:
     pack.namePrefix = jPack.get("namePrefix", pack.namePrefix)
     pack.nameSuffix = jPack.get("nameSuffix", pack.nameSuffix)
     pack.itemNames = jPack.get("itemNames")
-    pack.install = jPack.get("install", pack.install)
+    pack.allowInstall = jPack.get("install", pack.allowInstall)
+    pack.allowBuild = pack.allowInstall
     pack.setGameLanguageOnInstall = jPack.get("setGameLanguageOnInstall", pack.setGameLanguageOnInstall)
     pack.events = __MakeBundleEventsFromDict(jPack, jsonDir)
 
