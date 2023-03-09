@@ -83,8 +83,8 @@ def Main(args=None):
     if args.config:
         configPaths.extend(args.config)
 
-    for i in range(len(configPaths)):
-        configPaths[i] = os.path.abspath(configPaths[i])
+    for i, path in enumerate(configPaths):
+        configPaths[i] = os.path.abspath(path)
 
     useGui = bool(args.gui)
     debug = bool(args.debug)
@@ -105,22 +105,23 @@ def Main(args=None):
             debug=debug,
             printConfig=printConfig)
     else:
-        function = lambda:RunWithConfig(
-            configPaths=configPaths,
-            installList=installList,
-            buildList=buildList,
-            clean=clean,
-            build=build,
-            release=release,
-            install=install,
-            uninstall=uninstall,
-            run=run,
-            printConfig=printConfig)
+        def RunWithConfigWrapper():
+            RunWithConfig(
+                configPaths=configPaths,
+                installList=installList,
+                buildList=buildList,
+                clean=clean,
+                build=build,
+                release=release,
+                install=install,
+                uninstall=uninstall,
+                run=run,
+                printConfig=printConfig)
         if debug:
-            function()
+            RunWithConfigWrapper()
         else:
             try:
-                function()
+                RunWithConfigWrapper()
             except Exception:
                 print("ERROR CALLSTACK")
                 traceback.print_exc()

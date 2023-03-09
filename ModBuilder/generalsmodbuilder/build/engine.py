@@ -66,9 +66,9 @@ class BuildDiffRegistry:
             filepath = filepath.lower()
         return filepath
 
-    def AddFile(self, filepath: str, time = 0.0, md5: str = "", params: ParamsT = None) -> BuildFilePathInfo:
+    def AddFile(self, filepath: str, modifiedTime = 0.0, md5: str = "", params: ParamsT = None) -> BuildFilePathInfo:
         dictpath = self.__ProcessPath(filepath)
-        pathinfo = BuildFilePathInfo(filepath, time, md5, params)
+        pathinfo = BuildFilePathInfo(filepath, modifiedTime, md5, params)
         self.filePathInfos[dictpath] = pathinfo
         return pathinfo
 
@@ -456,7 +456,7 @@ class BuildEngine:
             if item.isBig:
                 parentName: str = MakeThingName(BuildIndex.RawBundleItem, item.name)
                 parentThing: BuildThing = structure.FindAnyThing(parentName)
-                assert(parentThing != None)
+                assert parentThing != None
                 newThing = BuildThing()
                 newThing.name = MakeThingName(BuildIndex.BigBundleItem, item.name)
                 newThing.absParentDir = os.path.join(folders.absBuildDir, "BigBundleItems")
@@ -502,7 +502,7 @@ class BuildEngine:
                 if parentThing == None:
                     parentName = MakeThingName(BuildIndex.RawBundleItem, itemName)
                     parentThing = structure.FindAnyThing(parentName)
-                    assert(parentThing != None)
+                    assert parentThing != None
 
                 newThing.parentThing = parentThing
 
@@ -530,7 +530,7 @@ class BuildEngine:
 
             parentName: str = MakeThingName(BuildIndex.RawBundlePack, pack.name)
             parentThing: BuildThing = structure.FindAnyThing(parentName)
-            assert(parentThing != None)
+            assert parentThing != None
             newThing = BuildThing()
             newThing.name = MakeThingName(BuildIndex.ReleaseBundlePack, pack.name)
             newThing.absParentDir = folders.absReleaseDir
@@ -553,7 +553,7 @@ class BuildEngine:
 
             parentName: str = MakeThingName(BuildIndex.RawBundlePack, pack.name)
             parentThing: BuildThing = structure.FindAnyThing(parentName)
-            assert(parentThing != None)
+            assert parentThing != None
             newThing = BuildThing()
             newThing.name = MakeThingName(BuildIndex.InstallBundlePack, pack.name)
             newThing.absParentDir = runner.absGameInstallDir
@@ -680,7 +680,7 @@ class BuildEngine:
                     sourceMd5 = oldInfo.md5
                 else:
                     sourceMd5 = util.GetFileMd5(absSource)
-                diff.newDiffRegistry.AddFile(absSource, time=sourceTime, md5=sourceMd5, params=None)
+                diff.newDiffRegistry.AddFile(absSource, modifiedTime=sourceTime, md5=sourceMd5, params=None)
 
         for file in thing.files:
             absTarget = file.AbsTarget(thing.absParentDir)
@@ -703,7 +703,7 @@ class BuildEngine:
                     targetMd5 = oldInfo.md5
                 else:
                     targetMd5 = util.GetFileMd5(absTarget)
-                diff.newDiffRegistry.AddFile(absTarget, time=targetTime, md5=targetMd5, params=targetParams)
+                diff.newDiffRegistry.AddFile(absTarget, modifiedTime=targetTime, md5=targetMd5, params=targetParams)
 
 
     @staticmethod
@@ -719,7 +719,7 @@ class BuildEngine:
                 if file.RequiresRebuild():
                     absTarget: str = file.AbsTarget(thing.absParentDir)
                     targetInfo: BuildFilePathInfo = diffRegistry.FindFile(absTarget)
-                    assert(targetInfo != None)
+                    assert targetInfo != None
                     targetInfo.modifiedTime = util.GetFileModifiedTime(absTarget)
                     targetInfo.md5 = util.GetFileMd5(absTarget)
 

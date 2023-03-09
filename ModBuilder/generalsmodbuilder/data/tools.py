@@ -156,29 +156,30 @@ class ToolFile:
 
         if not result.Ok():
             if self.url:
-                response: http.client.HTTPResponse = urllib.request.urlopen(self.url)
-                if response.code == 200:
-                    sizeOk: bool = self.size < 0
-                    len: str = response.headers['Content-Length']
+                response: http.client.HTTPResponse
+                with urllib.request.urlopen(self.url) as response:
+                    if response.code == 200:
+                        sizeOk: bool = self.size < 0
+                        len: str = response.headers['Content-Length']
 
-                    if not sizeOk:
-                        sizeOk = len and int(len) == self.size
+                        if not sizeOk:
+                            sizeOk = len and int(len) == self.size
 
-                    if sizeOk:
-                        size = int(len) if len else self.size
-                        print(f"Downloading {int(size / 1024)} kb from '{self.url}' ...")
-                        util.MakeDirsForFile(self.absTarget)
-                        ToolFile.DownloadToFile(response, self.absTarget)
-                        if self.IsInstalled():
-                            result = InstallResult(InstallResultCode.Ok, response.code)
-                        elif not self.SizeOk():
+                        if sizeOk:
+                            size = int(len) if len else self.size
+                            print(f"Downloading {int(size / 1024)} kb from '{self.url}' ...")
+                            util.MakeDirsForFile(self.absTarget)
+                            ToolFile.DownloadToFile(response, self.absTarget)
+                            if self.IsInstalled():
+                                result = InstallResult(InstallResultCode.Ok, response.code)
+                            elif not self.SizeOk():
+                                result = InstallResult(InstallResultCode.SizeMismatch, response.code)
+                            elif not self.HashOk():
+                                result = InstallResult(InstallResultCode.HashMismatch, response.code)
+                        else:
                             result = InstallResult(InstallResultCode.SizeMismatch, response.code)
-                        elif not self.HashOk():
-                            result = InstallResult(InstallResultCode.HashMismatch, response.code)
                     else:
-                        result = InstallResult(InstallResultCode.SizeMismatch, response.code)
-                else:
-                    result = InstallResult(InstallResultCode.HttpError, response.code)
+                        result = InstallResult(InstallResultCode.HttpError, response.code)
 
         if result.Ok():
             if self.absExtractDir:
@@ -288,14 +289,14 @@ class Tool:
             else:
                 msg: str = f"Tool '{self.name} {self.versionStr}' file '{file.absTarget}' was not installed"
                 if result.code == InstallResultCode.SizeMismatch:
-                    msg += f" - Size mismatch was detected"
+                    msg += " - Size mismatch was detected"
                 elif result.code == InstallResultCode.HashMismatch:
-                    msg += f" - Hash mismatch was detected"
+                    msg += " - Hash mismatch was detected"
                 elif result.code == InstallResultCode.HttpError:
-                    msg += f" - Http returned error code {result.httpCode}"
+                    msg += " - Http returned error code {result.httpCode}"
                 elif result.code == InstallResultCode.CallError:
-                    msg += f" - Error on call instruction"
-                raise Exception(msg)
+                    msg += " - Error on call instruction"
+                raise RuntimeError(msg)
 
         return success
 
@@ -309,12 +310,12 @@ def __ProcessAliases(thing: str | ParamsT, aliases: dict) -> str | ParamsT:
     if isinstance(aliases, dict):
 
         if isinstance(thing, str):
-            for aliasKey,aliasVal in aliases.items():
+            for aliasKey, aliasVal in aliases.items():
                 thing = thing.replace(aliasKey, aliasVal)
 
         if isinstance(thing, dict):
-            for thingKey,thingVal in thing.items():
-                for aliasKey,aliasVal in aliases.items():
+            for thingKey, thingVal in thing.items():
+                for aliasKey, aliasVal in aliases.items():
                     thingVal = thingVal.replace(aliasKey, aliasVal)
                 thing[thingKey] = thingVal
 

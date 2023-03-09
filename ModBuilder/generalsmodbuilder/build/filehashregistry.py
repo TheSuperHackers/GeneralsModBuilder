@@ -3,8 +3,8 @@ import io
 import os
 import zipfile
 from dataclasses import dataclass
-from generalsmodbuilder import util
 from typing import Any
+from generalsmodbuilder import util
 
 
 @dataclass
@@ -80,7 +80,7 @@ class FileHashRegistry:
             return False
         filePath: str = os.path.join(path, name + ".csv")
         with open(filePath, "w", encoding=self.encoding, newline="") as file:
-            writer: csv._writer = csv.writer(file, lineterminator="\n")
+            writer: csv.DictWriter = csv.writer(file, lineterminator="\n")
             writer.writerow(FileHash.GetRowNameList())
             for value in self.fileHashes.values():
                 writer.writerow(value.GetAsList())
@@ -88,7 +88,7 @@ class FileHashRegistry:
 
 
     def __ParseRegistry(self, file: Any) -> None:
-        reader: csv._reader = csv.reader(file, lineterminator="\n")
+        reader: csv.DictReader = csv.reader(file, lineterminator="\n")
         rowExpected = FileHash.GetRowNameList()
         row0 = next(reader)
         util.Verify(row0[:len(rowExpected)] == rowExpected, "Registry")
@@ -101,12 +101,12 @@ class FileHashRegistry:
 
         filePath: str = os.path.join(path, name + ".zip")
         try:
-            with zipfile.ZipFile(filePath) as zip:
+            with zipfile.ZipFile(filePath) as zipf:
                 print(f"Reading {filePath}")
                 self.Clear()
-                for zipinfo in zip.infolist():
+                for zipinfo in zipf.infolist():
                     print(f"Reading {zipinfo.filename} in archive")
-                    with zip.open(zipinfo, "r") as file:
+                    with zipf.open(zipinfo, "r") as file:
                         textFile = io.TextIOWrapper(file, encoding=self.encoding)
                         self.__ParseRegistry(textFile)
             return bool(self.fileHashes)

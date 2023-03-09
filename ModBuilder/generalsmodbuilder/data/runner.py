@@ -110,8 +110,8 @@ def MakeRunnerFromJsons(jsonFiles: list[JsonFile]) -> Runner:
     runner.VerifyTypes()
     runner.Normalize()
 
-    for i in range(len(runner.absRegularGameDataFiles)):
-        runner.absRegularGameDataFiles[i] = os.path.join(runner.absGameInstallDir, runner.absRegularGameDataFiles[i])
+    for i, file in enumerate(runner.absRegularGameDataFiles):
+        runner.absRegularGameDataFiles[i] = os.path.join(runner.absGameInstallDir, file)
 
     runner.VerifyValues()
     runner.ResolveWildcards()
