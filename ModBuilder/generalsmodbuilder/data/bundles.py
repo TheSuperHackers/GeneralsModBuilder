@@ -530,22 +530,25 @@ def AddBundlePacksFromJsons(jsonFiles: list[JsonFile], bundles: Bundles) -> Bund
     """
     Parses bundle packs from all json files where present.
     """
+    jPacksPrefix: str = ""
+    jPacksSuffix: str = ""
+
     for jsonFile in jsonFiles:
         jsonDir: str = util.GetAbsSmartFileDir(jsonFile.path)
         jBundles: dict = jsonFile.data.get("bundles")
 
         if jBundles:
-            jPacksPrefix: str = jBundles.get("packsPrefix")
-            jPacksSuffix: str = jBundles.get("packsSuffix")
+            jPacksPrefix: str = jBundles.get("packsPrefix", jPacksPrefix)
+            jPacksSuffix: str = jBundles.get("packsSuffix", jPacksSuffix)
             jPacks: dict = jBundles.get("packs")
             if jPacks:
                 jPack: dict
                 for jPack in jPacks:
                     bundlePack: BundlePack = __MakeBundlePackFromDict(jPack, jsonDir)
 
-                    if not bundlePack.namePrefix and jPacksPrefix != None:
+                    if not bundlePack.namePrefix and jPacksPrefix:
                         bundlePack.namePrefix = jPacksPrefix
-                    if not bundlePack.nameSuffix and jPacksSuffix != None:
+                    if not bundlePack.nameSuffix and jPacksSuffix:
                         bundlePack.nameSuffix = jPacksSuffix
 
                     bundles.packs.append(bundlePack)
@@ -556,13 +559,16 @@ def AddBundleItemsFromJsons(jsonFiles: list[JsonFile], bundles: Bundles) -> Bund
     """
     Parses bundle items from all json files where present.
     """
+    jItemsPrefix: str = ""
+    jItemsSuffix: str = ""
+
     for jsonFile in jsonFiles:
         jsonDir: str = util.GetAbsSmartFileDir(jsonFile.path)
         jBundles: dict = jsonFile.data.get("bundles")
 
         if jBundles:
-            jItemsPrefix: str = jBundles.get("itemsPrefix")
-            jItemsSuffix: str = jBundles.get("itemsSuffix")
+            jItemsPrefix: str = jBundles.get("itemsPrefix", jItemsPrefix)
+            jItemsSuffix: str = jBundles.get("itemsSuffix", jItemsSuffix)
             jItems: dict = jBundles.get("items")
 
             if jItems:
@@ -570,9 +576,9 @@ def AddBundleItemsFromJsons(jsonFiles: list[JsonFile], bundles: Bundles) -> Bund
                 for jItem in jItems:
                     bundleItem: BundleItem = __MakeBundleItemFromDict(jItem, jsonDir)
 
-                    if not bundleItem.namePrefix and jItemsPrefix != None:
+                    if not bundleItem.namePrefix and jItemsPrefix:
                         bundleItem.namePrefix = jItemsPrefix
-                    if not bundleItem.nameSuffix and jItemsSuffix != None:
+                    if not bundleItem.nameSuffix and jItemsSuffix:
                         bundleItem.nameSuffix = jItemsSuffix
 
                     bundles.items.append(bundleItem)
