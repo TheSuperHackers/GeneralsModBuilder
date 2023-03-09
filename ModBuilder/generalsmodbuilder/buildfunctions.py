@@ -80,13 +80,13 @@ def RunWithConfig(
 
     InstallTools(tools)
 
-    if not bool(installList):
+    if not bool(installList) and not bundles.HasPackToInstall():
         for pack in bundles.packs:
             pack.allowInstall = True
     else:
         PatchBundlesInstall(bundles, installList)
 
-    if not bool(buildList):
+    if not bool(buildList) and not bundles.HasPackToBuild():
         for pack in bundles.packs:
             pack.allowBuild = True
     else:
