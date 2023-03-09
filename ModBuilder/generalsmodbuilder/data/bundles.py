@@ -344,6 +344,22 @@ class Bundles:
                     packs.append(pack)
         return packs
 
+    def GetPackListToBuild(self) -> list[BundlePack]:
+        pack: BundlePack
+        packs = list[BundlePack]()
+        for pack in self.packs:
+            if pack.allowBuild:
+                packs.append(pack)
+        return packs
+
+    def GetPackListToInstall(self) -> list[BundlePack]:
+        pack: BundlePack
+        packs = list[BundlePack]()
+        for pack in self.packs:
+            if pack.allowInstall:
+                packs.append(pack)
+        return packs
+
     def IsItemAllowedToBuild(self, itemName: str) -> bool:
         pack: BundlePack
         packs: list[BundlePack] = self.GetPackListContainingItem(itemName)
@@ -351,6 +367,14 @@ class Bundles:
             if pack.allowBuild:
                 return True
         return False
+
+    def HasPackToBuild(self) -> bool:
+        packs: list[BundlePack] = self.GetPackListToBuild()
+        return bool(packs)
+
+    def HasPackToInstall(self) -> bool:
+        packs: list[BundlePack] = self.GetPackListToInstall()
+        return bool(packs)
 
     def VerifyTypes(self) -> None:
         util.VerifyType(self.items, list, "Bundles.items")
