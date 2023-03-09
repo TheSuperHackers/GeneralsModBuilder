@@ -1,11 +1,11 @@
+from re import search, Match
 from generalsmodbuilder.data.common import ParamT, ParamsT
 
 
 def ParamsToArgs(params: ParamsT, includeRegex: str = None, excludeRegex: str = None) -> list[str]:
-    from re import search, Match
     args = list()
 
-    for key,value in params.items():
+    for key, value in params.items():
 
         if includeRegex:
             reKey: Match = search(includeRegex, key)

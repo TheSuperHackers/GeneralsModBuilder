@@ -63,7 +63,7 @@ class BundleEvent:
 
     def VerifyValues(self) -> None:
         util.Verify(os.path.isfile(self.absScript), f"BundleEvent.absScript '{self.absScript}' is not a valid file")
-        util.Verify(len(self.funcName) > 0, f"BundleEvent.functionName cannot be empty")
+        util.Verify(len(self.funcName) > 0, "BundleEvent.functionName cannot be empty")
 
     def Normalize(self) -> None:
         self.absScript = os.path.normpath(self.absScript)
@@ -166,8 +166,8 @@ class BundleItem:
         for file in self.files:
             util.VerifyType(file, BundleFile, "BundleItem.files.value")
             file.VerifyTypes()
-        for type,event in self.events.items():
-            util.VerifyType(type, BundleEventType, "BundleItem.events.key")
+        for etype, event in self.events.items():
+            util.VerifyType(etype, BundleEventType, "BundleItem.events.key")
             util.VerifyType(event, BundleEvent, "BundleItem.events.value")
             event.VerifyTypes()
 
@@ -328,7 +328,7 @@ class Bundles:
             itemName: str
             for itemName in pack.itemNames:
                 item = self.FindItemByName(itemName)
-                assert(item != None)
+                assert item != None
                 if item.setGameLanguageOnInstall:
                     return item.setGameLanguageOnInstall
 

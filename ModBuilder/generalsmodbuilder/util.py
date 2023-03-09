@@ -8,7 +8,6 @@ import json
 import hashlib
 import pickle
 import shutil
-import errno
 from copy import copy
 from typing import Any, Callable, Union
 
@@ -89,8 +88,7 @@ def GetRegKeyValue(path, root=winreg.HKEY_LOCAL_MACHINE) -> Union[int, str, None
             if valuePair:
                 print(f"Get registry key {path} : {name} as '{valuePair[0]}'")
                 return valuePair[0]
-            else:
-                return None
+            return None
     except OSError:
         return None
 
@@ -116,10 +114,10 @@ def SetRegKeyValue(path: str, value: Union[int, str], root=winreg.HKEY_LOCAL_MAC
 
 
 def GetAbsFileDir(file: str) -> str:
-    dir: str
-    dir = os.path.dirname(file)
-    dir = os.path.abspath(dir)
-    return dir
+    fdir: str
+    fdir = os.path.dirname(file)
+    fdir = os.path.abspath(fdir)
+    return fdir
 
 
 g_isFrozen: bool = getattr(sys, 'frozen', False)

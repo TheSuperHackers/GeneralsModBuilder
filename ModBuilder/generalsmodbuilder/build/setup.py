@@ -35,9 +35,9 @@ class BuildSetup:
         util.VerifyType(self.bundles, Bundles, "BuildSetup.bundles")
         util.VerifyType(self.tools, dict, "BuildSetup.tools")
         util.VerifyType(self.printConfig, bool, "BuildSetup.printConfig")
-        for k,v in self.tools.items():
-            util.VerifyType(k, str, "BuildSetup.tools.key")
-            util.VerifyType(v, Tool, "BuildSetup.tools.value")
+        for key, value in self.tools.items():
+            util.VerifyType(key, str, "BuildSetup.tools.key")
+            util.VerifyType(value, Tool, "BuildSetup.tools.value")
 
     def VerifyValues(self) -> None:
         util.Verify(self.tools.get("crunch") != None, "BuildSetup.tools is missing a definition for 'crunch'")
