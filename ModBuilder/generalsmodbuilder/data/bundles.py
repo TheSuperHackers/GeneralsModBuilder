@@ -495,7 +495,7 @@ def __MakeBundlePackFromDict(jPack: dict, jsonDir: str) -> BundlePack:
     pack.nameSuffix = jPack.get("nameSuffix", pack.nameSuffix)
     pack.itemNames = jPack.get("itemNames")
     pack.allowInstall = jPack.get("install", pack.allowInstall)
-    pack.allowBuild = pack.allowInstall
+    pack.allowBuild = jPack.get("build", pack.allowBuild)
     pack.setGameLanguageOnInstall = jPack.get("setGameLanguageOnInstall", pack.setGameLanguageOnInstall)
     pack.events = __MakeBundleEventsFromDict(jPack, jsonDir)
 
