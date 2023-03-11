@@ -53,7 +53,7 @@ class Runner:
         globFiles: list[str]
         newFiles = list[str]()
         for file in fileList:
-            if not os.path.isfile(file) and "*" in file:
+            if "*" in file and not os.path.isfile(file):
                 globFiles = glob(file, recursive=True)
                 # It is ok if globFiles is empty.
                 for globFile in globFiles:
