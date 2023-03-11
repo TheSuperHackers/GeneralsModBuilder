@@ -1,6 +1,6 @@
-import copy
 import os
 import zlib
+from copy import copy
 from glob import glob
 from dataclasses import dataclass
 from enum import Enum, auto
@@ -192,14 +192,14 @@ class BundleItem:
         curFile: BundleFile
 
         for curFile in self.files:
-            if not os.path.isfile(curFile.absSourceFile) and "*" in curFile.absSourceFile:
+            if "*" in curFile.absSourceFile and not os.path.isfile(curFile.absSourceFile):
                 globFiles = glob(curFile.absSourceFile, recursive=True)
                 if not bool(globFiles):
                     print(f"Note: Wildcard '{curFile.absSourceFile}' currently matches nothing")
 
                 for globFile in globFiles:
                     if os.path.isfile(globFile):
-                        newFile = copy.copy(curFile)
+                        newFile: BundleFile = copy(curFile)
                         newFile.absSourceFile = globFile
                         newFiles.append(newFile)
             else:
