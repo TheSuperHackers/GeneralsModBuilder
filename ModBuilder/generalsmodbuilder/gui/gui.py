@@ -18,6 +18,7 @@ class Gui:
     abortThread: threading.Thread
     buildEngine: BuildEngine
     buildEngineLock: threading.RLock
+    mainWindowLock: threading.RLock
 
     configPaths: list[str]
     buildAndInstallList: list[str]
@@ -49,6 +50,11 @@ class Gui:
         self.abortThread = None
         self.buildEngine = None
         self.buildEngineLock = threading.RLock()
+        self.mainWindowLock = threading.RLock()
+        self.configPaths = None
+        self.buildAndInstallList = None
+        self.debug = False
+        self._ClearMainWindowElements()
 
 
     def RunWithConfig(self,
@@ -85,6 +91,11 @@ class Gui:
         self._StartWorkThread(self._PopulateBundlePackList)
 
         mainWindow.mainloop()
+
+        with self.mainWindowLock:
+            self._ClearMainWindowElements()
+
+        self.workThread.join()
 
 
     @staticmethod
@@ -211,6 +222,27 @@ class Gui:
         self.bundlePackRefreshButton.pack(anchor=W)
 
 
+    def _ClearMainWindowElements(self) -> None:
+        self.clean = None
+        self.build = None
+        self.release = None
+        self.install = None
+        self.uninstall = None
+        self.run = None
+        self.printConfig = None
+        self.clearConsole = None
+        self.bundlePackList = None
+        self.executeButton = None
+        self.cleanButton = None
+        self.buildButton = None
+        self.releaseButton = None
+        self.installButton = None
+        self.runButton = None
+        self.uninstallButton = None
+        self.abortButton = None
+        self.bundlePackRefreshButton = None
+
+
     @staticmethod
     def _GetBundlePackNamesFromList(bundlePackList: Listbox) -> list[str]:
         bundlePackNames = list()
@@ -235,7 +267,7 @@ class Gui:
 
 
     def _PopulateBundlePackList(self) -> None:
-        if self.workThread != None:
+        with self.mainWindowLock:
             self._SetJobElementsState("disabled")
 
         bundlePackNames: list[str] = Gui._GetBundlePackNamesFromConfig(self.configPaths)
@@ -248,8 +280,7 @@ class Gui:
                 if name1 == name2:
                     self.bundlePackList.selection_set(index)
 
-        if self.workThread != None:
-            self.workThread = None
+        with self.mainWindowLock:
             self._SetJobElementsState("normal")
 
 
@@ -370,7 +401,7 @@ class Gui:
         if self.clearConsole.get():
             Gui._ClearConsole()
 
-        if self.workThread != None:
+        with self.mainWindowLock:
             self._SetJobElementsState("disabled")
 
         self._StartAbortThread()
@@ -383,24 +414,25 @@ class Gui:
         self.abortThread.join()
         self.abortThread = None
 
-        if self.workThread != None:
-            self.workThread = None
+        with self.mainWindowLock:
             self._SetJobElementsState("normal")
 
 
     def _SetJobElementsState(self, state: str) -> None:
-        self.executeButton["state"] = state
-        self.cleanButton["state"] = state
-        self.buildButton["state"] = state
-        self.releaseButton["state"] = state
-        self.installButton["state"] = state
-        self.runButton["state"] = state
-        self.uninstallButton["state"] = state
-        self.bundlePackRefreshButton["state"] = state
+        if self.executeButton != None:
+            self.executeButton["state"] = state
+            self.cleanButton["state"] = state
+            self.buildButton["state"] = state
+            self.releaseButton["state"] = state
+            self.installButton["state"] = state
+            self.runButton["state"] = state
+            self.uninstallButton["state"] = state
+            self.bundlePackRefreshButton["state"] = state
 
 
     def _SetAbortElementsState(self, state: str) -> None:
-        self.abortButton["state"] = state
+        if self.abortButton != None:
+            self.abortButton["state"] = state
 
 
     def _StartWorkThread(self, func: Callable) -> None:
@@ -416,17 +448,20 @@ class Gui:
     def _AbortUpdateLoop(self) -> None:
         canAbort: bool = False
         wasAbort: bool = canAbort
-        while self.workThread != None:
+        while True:
             with self.buildEngineLock:
                 if self.buildEngine == None:
-                    self._SetAbortElementsState("disabled")
+                    with self.mainWindowLock:
+                        self._SetAbortElementsState("disabled")
                     break
                 canAbort = self.buildEngine.CanAbort()
                 if canAbort != wasAbort:
                     if canAbort:
-                        self._SetAbortElementsState("enabled")
+                        with self.mainWindowLock:
+                            self._SetAbortElementsState("enabled")
                     else:
-                        self._SetAbortElementsState("disabled")
+                        with self.mainWindowLock:
+                            self._SetAbortElementsState("disabled")
                 wasAbort = canAbort
 
             time.sleep(0.1)
