@@ -279,9 +279,9 @@ def GetFileHash(path: str, hashFunc: Callable) -> str:
 
 
 def GetFileModifiedTime(path: str) -> float:
-    if os.path.isfile(path):
+    try:
         return os.path.getmtime(path)
-    else:
+    except OSError:
         return 0.0
 
 
