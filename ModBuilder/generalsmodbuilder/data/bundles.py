@@ -124,7 +124,7 @@ class BundleFile:
         util.VerifyType(self.registryDef, Union[BundleRegistryDefinition, None], "BundleFile.registry")
 
     def VerifyValues(self) -> None:
-        util.Verify(os.path.isfile(self.absSourceFile), f"BundleFile.absSourceFile '{self.absSourceFile}' is not a valid file")
+        # self.absSourceFile is already verified in ResolveWildcards function.
         util.Verify(util.IsValidPathName(self.relTargetFile), f"BundleFile.relTargetFile '{self.relTargetFile}' is not a valid file name")
         util.Verify(not os.path.isabs(self.relTargetFile), f"BundleFile.relTargetFile '{self.relTargetFile}' is not a relative path")
 
@@ -203,6 +203,7 @@ class BundleItem:
                         newFile.absSourceFile = globFile
                         newFiles.append(newFile)
             else:
+                util.Verify(os.path.isfile(curFile.absSourceFile), f"BundleFile.absSourceFile '{curFile.absSourceFile}' is not a valid file")
                 newFiles.append(curFile)
 
         for curFile in newFiles:
