@@ -193,26 +193,45 @@ def MakeDirsForFile(file: str) -> None:
     os.makedirs(GetAbsFileDir(file), exist_ok=True)
 
 
+# This implementation is
+# - about 25% faster than testing os.path.islink, os.path.isfile before unlink or remove.
+# - about 10% faster than unlink with a new pathlib.Path instance.
 def DeleteFile(path: str) -> bool:
-    if os.path.islink(path):
+    """
+    Delete file or symlink.
+    """
+    try:
         os.unlink(path)
         return True
-    if os.path.isfile(path):
+    except OSError:
+        pass
+    try:
         os.remove(path)
         return True
+    except OSError:
+        pass
     return False
 
 
 def DeleteFileOrPath(path: str) -> bool:
-    if os.path.islink(path):
+    """
+    Delete file, symlink or directory tree.
+    """
+    try:
         os.unlink(path)
         return True
-    if os.path.isfile(path):
+    except OSError:
+        pass
+    try:
         os.remove(path)
         return True
-    if os.path.isdir(path):
+    except OSError:
+        pass
+    try:
         shutil.rmtree(path)
         return True
+    except OSError:
+        pass
     return False
 
 
