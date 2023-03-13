@@ -147,25 +147,31 @@ def GetAbsFileDirs(file: str, absStopPath: str = "") -> list[str]:
     return paths
 
 
-def GetFileName(file: str) -> str:
-    path, file = os.path.split(file)
+def GetFileName(filepath: str) -> str:
+    path, file = os.path.split(filepath)
     return file
 
 
-def GetFileExt(file: str) -> str:
-    path, ext = os.path.splitext(file)
+def GetFileNameNoExt(filepath: str) -> str:
+    path, file = os.path.split(filepath)
+    name, ext = os.path.splitext(file)
+    return name
+
+
+def GetFileExt(filepath: str) -> str:
+    path, ext = os.path.splitext(filepath)
     if ext and ext[0] == '.':
         ext = ext[1:]
     return ext
 
 
-def GetFileDir(file: str) -> str:
-    path, ext = os.path.split(file)
+def GetFileDir(filepath: str) -> str:
+    path, file = os.path.split(filepath)
     return path
 
 
-def GetFileDirAndName(file: str) -> str:
-    path, ext = os.path.splitext(file)
+def GetFileDirAndName(filepath: str) -> str:
+    path, ext = os.path.splitext(filepath)
     return path
 
 
