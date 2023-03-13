@@ -1,0 +1,30 @@
+---
+date: 2004-12-31
+
+title: USA Sentry Drone art fixes
+
+changes:
+  - fix: avsentry model issues
+  - fix: avsentry texture issues
+
+subchanges:
+  - fix: uv mapping of several meshes with house color
+  - fix: uv mapping at the bottom of the vehicle
+  - fix: TURRETFX01 bone position
+  - fix: muzzle flash texture positions
+  - fix: muzzle flash effect position
+  - fix: muzzle smoke effect position
+  - fix: muzzle shells effect position
+  - fix: missing alpha test setting on radar dish
+
+labels:
+  - art
+  - minor
+  - usa
+
+links:
+  - https://github.com/TheSuperHackers/GeneralsGamePatch/pull/1740
+
+authors:
+  - Rich
+  - Guy

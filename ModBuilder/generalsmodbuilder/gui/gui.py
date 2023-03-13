@@ -24,6 +24,7 @@ class Gui:
     buildAndInstallList: list[str]
     debug: bool
 
+    makeChangeLog: BooleanVar
     clean: BooleanVar
     build: BooleanVar
     release: BooleanVar
@@ -35,6 +36,7 @@ class Gui:
 
     bundlePackList: Listbox
     executeButton: Button
+    makeChangeLogButton: Button
     cleanButton: Button
     buildButton: Button
     releaseButton: Button
@@ -61,6 +63,7 @@ class Gui:
             configPaths: list[str] = list(),
             installList: list[str] = list(),
             buildList: list[str] = list(),
+            makeChangeLog: bool = False,
             clean: bool = False,
             build: bool = False,
             release: bool = False,
@@ -77,6 +80,7 @@ class Gui:
 
         mainWindow: Tk = Gui._CreateMainWindow()
 
+        self.makeChangeLog = BooleanVar(mainWindow, value=makeChangeLog)
         self.clean = BooleanVar(mainWindow, value=clean)
         self.build = BooleanVar(mainWindow, value=build)
         self.release = BooleanVar(mainWindow, value=release)
@@ -115,7 +119,7 @@ class Gui:
     def _CreateMainWindow() -> Tk:
         window = Tk()
         window.title(f"Generals Mod Builder v{__version__} by The Super Hackers")
-        window.geometry('660x260')
+        window.geometry('660x270')
         window.resizable(0, 0)
         iconFile: str =  Gui._MakeIconFilePath("icon.png")
         Gui._AddIconToWindow(window, iconFile)
@@ -161,6 +165,9 @@ class Gui:
 
         # Execute Frame
 
+        makeChangeLogCheck = Checkbutton(executeFrame, width = checkboxWidth, text='Make Change Log', var=self.makeChangeLog)
+        makeChangeLogCheck.pack(anchor=W)
+
         cleanCheck = Checkbutton(executeFrame, width = checkboxWidth, text='Clean', var=self.clean)
         cleanCheck.pack(anchor=W)
 
@@ -191,6 +198,9 @@ class Gui:
         printConfig.pack(anchor=W)
 
         # Actions Frame
+
+        self.makeChangeLogButton = Button(actionsFrame, width=buttonWidth, text="Make Change Log", command=lambda:self._StartWorkThread(self._MakeChangeLog))
+        self.makeChangeLogButton.pack(anchor=W)
 
         self.cleanButton = Button(actionsFrame, width=buttonWidth, text="Clean", command=lambda:self._StartWorkThread(self._Clean))
         self.cleanButton.pack(anchor=W)
@@ -223,6 +233,7 @@ class Gui:
 
 
     def _ClearMainWindowElements(self) -> None:
+        self.makeChangeLog = None
         self.clean = None
         self.build = None
         self.release = None
@@ -233,6 +244,7 @@ class Gui:
         self.clearConsole = None
         self.bundlePackList = None
         self.executeButton = None
+        self.makeChangeLogButton = None
         self.cleanButton = None
         self.buildButton = None
         self.releaseButton = None
@@ -294,6 +306,7 @@ class Gui:
             configPaths=self.configPaths,
             installList=self.buildAndInstallList,
             buildList=self.buildAndInstallList,
+            makeChangeLog=self.makeChangeLog.get(),
             clean=self.clean.get(),
             build=self.build.get(),
             release=self.release.get(),
@@ -302,6 +315,15 @@ class Gui:
             run=self.run.get(),
             printConfig=self.printConfig.get(),
             engine=self.buildEngine)
+
+        self._DoWork(function)
+
+
+    def _MakeChangeLog(self) -> None:
+        function = lambda:RunWithConfig(
+            configPaths=self.configPaths,
+            makeChangeLog=True,
+            printConfig=self.printConfig.get())
 
         self._DoWork(function)
 
@@ -421,6 +443,7 @@ class Gui:
     def _SetJobElementsState(self, state: str) -> None:
         if self.executeButton != None:
             self.executeButton["state"] = state
+            self.makeChangeLogButton["state"] = state
             self.cleanButton["state"] = state
             self.buildButton["state"] = state
             self.releaseButton["state"] = state

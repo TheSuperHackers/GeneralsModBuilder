@@ -30,6 +30,7 @@ def Main(args=None):
     parser.add_argument('--file-hash-registry-name', type=str, default="FileHashRegistry", help='Name of the file hash registry.')
     parser.add_argument('--load-default-runner', action='store_true', help='Loads the built-in runner json configuration. Is loaded before custom configurations from --config and --config-list.')
     parser.add_argument('--load-default-tools', action='store_true', help='Loads the built-in tools json configuration. Is loaded before custom configurations from --config and --config-list.')
+    parser.add_argument('--make-change-log', action='store_true', help='Generates change log(s) according to the given change log json setup')
 
     args, unknownargs = parser.parse_known_args(args=args)
 
@@ -61,9 +62,15 @@ def Main(args=None):
     install = bool(installList)
     uninstall = bool(args.uninstall)
     run = bool(args.run)
+    makeChangeLog = bool(args.make_change_log)
 
     # Check if any work needs to be done.
-    if (not build) and (not release) and (not install) and (not uninstall) and (not run):
+    if (not build and
+        not release and
+        not install and
+        not uninstall and
+        not run and
+        not makeChangeLog):
         parser.print_help()
         return
 
@@ -96,6 +103,7 @@ def Main(args=None):
             configPaths=configPaths,
             installList=installList,
             buildList=buildList,
+            makeChangeLog=makeChangeLog,
             clean=clean,
             build=build,
             release=release,
@@ -110,6 +118,7 @@ def Main(args=None):
                 configPaths=configPaths,
                 installList=installList,
                 buildList=buildList,
+                makeChangeLog=makeChangeLog,
                 clean=clean,
                 build=build,
                 release=release,

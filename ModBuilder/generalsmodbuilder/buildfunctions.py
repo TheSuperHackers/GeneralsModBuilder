@@ -3,7 +3,10 @@ from glob import glob
 from generalsmodbuilder.build.engine import BuildEngine
 from generalsmodbuilder.build.filehashregistry import FileHashRegistry
 from generalsmodbuilder.build.setup import BuildStep, BuildSetup
+from generalsmodbuilder.changelog.generator import FilterChangeLog, GenerateChangeLogDocuments, SortChangeList
+from generalsmodbuilder.changelog.parser import ChangeLog, MakeChangelogFromChangeConfig
 from generalsmodbuilder.data.bundles import Bundles, BundlePack, MakeBundlesFromJsons
+from generalsmodbuilder.data.changeconfig import ChangeConfig, MakeChangeConfigFromJsons
 from generalsmodbuilder.data.folders import Folders, MakeFoldersFromJsons
 from generalsmodbuilder.data.runner import Runner, MakeRunnerFromJsons
 from generalsmodbuilder.data.tools import ToolsT, MakeToolsFromJsons, InstallTools
@@ -56,6 +59,7 @@ def RunWithConfig(
         configPaths: list[str]=list[str](),
         installList: list[str]=list[str](),
         buildList: list[str]=list[str](),
+        makeChangeLog: bool=False,
         clean: bool=False,
         build: bool=False,
         release: bool=False,
@@ -73,34 +77,42 @@ def RunWithConfig(
     jsonFiles: list[JsonFile] = CreateJsonFiles(configPaths)
     buildStep: BuildStep = CreateBuildStep(clean, build, release, install, uninstall, run)
 
-    folders: Folders = MakeFoldersFromJsons(jsonFiles)
-    runner: Runner = MakeRunnerFromJsons(jsonFiles) if (install or uninstall or run) else Runner()
-    bundles: Bundles = MakeBundlesFromJsons(jsonFiles)
-    tools: ToolsT = MakeToolsFromJsons(jsonFiles)
+    if makeChangeLog:
+        changeConfig: ChangeConfig = MakeChangeConfigFromJsons(jsonFiles)
+        changeLog: ChangeLog = MakeChangelogFromChangeConfig(changeConfig)
+        changeLog = FilterChangeLog(changeLog)
+        changeLog = SortChangeList(changeLog)
+        GenerateChangeLogDocuments(changeLog)
 
-    InstallTools(tools)
+    if buildStep != BuildStep.Zero:
+        folders: Folders = MakeFoldersFromJsons(jsonFiles)
+        runner: Runner = MakeRunnerFromJsons(jsonFiles) if (install or uninstall or run) else Runner()
+        bundles: Bundles = MakeBundlesFromJsons(jsonFiles)
+        tools: ToolsT = MakeToolsFromJsons(jsonFiles)
 
-    if not bool(installList) and not bundles.HasPackToInstall():
-        for pack in bundles.packs:
-            pack.allowInstall = True
-    else:
-        PatchBundlesInstall(bundles, installList)
+        InstallTools(tools)
 
-    if not bool(buildList) and not bundles.HasPackToBuild():
-        for pack in bundles.packs:
-            pack.allowBuild = True
-    else:
-        PatchBundlesBuild(bundles, buildList)
+        if not bool(installList) and not bundles.HasPackToInstall():
+            for pack in bundles.packs:
+                pack.allowInstall = True
+        else:
+            PatchBundlesInstall(bundles, installList)
 
-    setup = BuildSetup(
-        step=buildStep,
-        folders=folders,
-        runner=runner,
-        bundles=bundles,
-        tools=tools,
-        printConfig=printConfig)
+        if not bool(buildList) and not bundles.HasPackToBuild():
+            for pack in bundles.packs:
+                pack.allowBuild = True
+        else:
+            PatchBundlesBuild(bundles, buildList)
 
-    engine.Run(setup)
+        setup = BuildSetup(
+            step=buildStep,
+            folders=folders,
+            runner=runner,
+            bundles=bundles,
+            tools=tools,
+            printConfig=printConfig)
+
+        engine.Run(setup)
 
     if timer.GetElapsedSeconds() > util.PERFORMANCE_TIMER_THRESHOLD:
         print(f"Build Job completed in {timer.GetElapsedSecondsString()} s")

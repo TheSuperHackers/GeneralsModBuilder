@@ -1,0 +1,75 @@
+{
+    "changelog": {
+        "version": 1,
+        "records": [
+            {
+                "sourceList": [
+                    "Documents/Changes/*.yaml"
+                ],
+                "targetList": [
+                    "ReleaseUnpacked/Doc/SampleProjectArtAudio.md"
+                ],
+                "sortList": [
+                    {
+                        "label": "blocker",
+                        "sort": "ascending"
+                    },
+                    {
+                        "label": "critical",
+                        "sort": "ascending"
+                    },
+                    {
+                        "label": "major",
+                        "sort": "ascending"
+                    },
+                    {
+                        "label": "minor",
+                        "sort": "ascending"
+                    },
+                    {
+                        "date": "ascending"
+                    }
+                ],
+                "includeLabelList": [
+                    "art",
+                    "audio"
+                ],
+                "excludeLabelList": []
+            },
+            {
+                "sourceList": [
+                    "Documents/Changes/*.yaml"
+                ],
+                "targetList": [
+                    "ReleaseUnpacked/Doc/SampleProjectNoArtAudio.md"
+                ],
+                "sortList": [
+                    {
+                        "date": "ascending"
+                    },
+                    {
+                        "label": "blocker",
+                        "sort": "ascending"
+                    },
+                    {
+                        "label": "critical",
+                        "sort": "ascending"
+                    },
+                    {
+                        "label": "major",
+                        "sort": "ascending"
+                    },
+                    {
+                        "label": "minor",
+                        "sort": "ascending"
+                    }
+                ],
+                "includeLabelList": [],
+                "excludeLabelList": [
+                    "art",
+                    "audio"
+                ]
+            }
+        ]
+    }
+}

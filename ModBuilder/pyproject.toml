@@ -9,6 +9,8 @@ license = "MIT"
 python = ">=3.10,<3.11"
 beeprint = "^2.4.10"
 psd-tools = "^1.9.19"
+markdownmaker = "^0.4.0"
+PyYAML = "^6.0"
 
 [tool.poetry.dev-dependencies]
 

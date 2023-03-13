@@ -27,6 +27,8 @@
                 "${workspaceFolder}\\SampleProject\\ModBundlePacks.json",
                 "${workspaceFolder}\\SampleProject\\ModFolders.json",
                 "${workspaceFolder}\\SampleProject\\ModRunner.json",
+                "${workspaceFolder}\\SampleProject\\ModChangeLog.json",
+                "--make-change-log",
                 "--build",
                 "--release",
                 "--install=ProjectCore",
@@ -50,6 +52,8 @@
                 "${workspaceFolder}\\SampleProject\\ModBundlePacks.json",
                 "${workspaceFolder}\\SampleProject\\ModFolders.json",
                 "${workspaceFolder}\\SampleProject\\ModRunner.json",
+                "${workspaceFolder}\\SampleProject\\ModChangeLog.json",
+                "--make-change-log",
                 "--build",
                 "--install=ProjectCore",
                 "--run",
@@ -75,6 +79,21 @@
                 "${workspaceFolder}\\SampleProject\\ModRunner.json",
                 "--build",
                 "--release",
+                "--debug"
+            ]
+        },
+        {
+            "name": "MakeChangeLog",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}\\ModBuilder\\generalsmodbuilder\\main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--config-list",
+                "${workspaceFolder}\\SampleProject\\ModChangeLog.json",
+                "--make-change-log",
+                "--gui",
                 "--debug"
             ]
         }
