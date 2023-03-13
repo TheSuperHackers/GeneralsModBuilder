@@ -1,4 +1,6 @@
+from glob import glob
 import os
+import pathlib
 import subprocess
 import sys
 import time
@@ -8,6 +10,7 @@ import json
 import hashlib
 import pickle
 import shutil
+import yaml
 from copy import copy
 from typing import Any, Callable, Union
 
@@ -20,6 +23,19 @@ def Verify(condition: bool, message: str = "") -> None:
 def VerifyType(obj: object, expectedType: type | types.UnionType, objName: str) -> None:
     if not isinstance(obj, expectedType):
         raise AssertionError(f'Object "{objName}" is type:{type(obj).__name__} but should be type:{expectedType.__name__}')
+
+
+def GetCheckedOptional(dictionary: dict, key: str, expectedTypeIfExists: type | types.UnionType) -> Any:
+    value: Any = dictionary.get(key)
+    if value != None:
+        VerifyType(value, expectedTypeIfExists, key)
+    return value
+
+
+def GetCheckedMandatory(dictionary: dict, key: str, expectedType: type | types.UnionType) -> Any:
+    value: Any = dictionary.get(key)
+    VerifyType(value, expectedType, key)
+    return value
 
 
 def pprint(obj: Any) -> None:
@@ -66,6 +82,16 @@ def ReadJson(path: str) -> dict:
     return data
 
 
+def ReadYaml(path: str) -> dict:
+    timer = Timer()
+    data: dict = None
+    with open(path, "rb") as rfile:
+        text = rfile.read()
+        data = yaml.safe_load(text)
+    print(f"Read yaml {path} in {timer.GetElapsedSecondsString()} s")
+    return data
+
+
 class JsonFile:
     path: str
     data: dict
@@ -78,6 +104,20 @@ class JsonFile:
     def VerifyTypes(self) -> None:
         VerifyType(self.path, str, "JsonFile.path")
         VerifyType(self.data, dict, "JsonFile.data")
+
+
+class YamlFile:
+    path: str
+    data: dict
+
+    def __init__(self, path: str):
+        self.path = os.path.normpath(path)
+        self.data = ReadYaml(path)
+        self.VerifyTypes()
+
+    def VerifyTypes(self) -> None:
+        VerifyType(self.path, str, "YamlFile.path")
+        VerifyType(self.data, dict, "YamlFile.data")
 
 
 def GetRegKeyValue(path, root=winreg.HKEY_LOCAL_MACHINE) -> Union[int, str, None]:
