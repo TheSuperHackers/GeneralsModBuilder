@@ -113,6 +113,6 @@ def MakeRunnerFromJsons(jsonFiles: list[JsonFile]) -> Runner:
     for i, file in enumerate(runner.absRegularGameDataFiles):
         runner.absRegularGameDataFiles[i] = os.path.join(runner.absGameInstallDir, file)
 
-    runner.VerifyValues()
     runner.ResolveWildcards()
+    runner.VerifyValues()
     return runner
