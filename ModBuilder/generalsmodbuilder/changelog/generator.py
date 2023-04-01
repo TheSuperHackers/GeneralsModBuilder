@@ -165,6 +165,7 @@ def GenerateChangeLogMarkdown(logRecord: ChangeLogRecord, absTarget: str) -> Non
     __AddRecordsDetails(doc, logRecord)
 
     text: str = doc.write()
+    util.MakeDirsForFile(absTarget)
     with open(absTarget, "w", encoding='utf-8') as targetFile:
         targetFile.write(text)
 
