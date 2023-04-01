@@ -1,6 +1,4 @@
-from glob import glob
 import os
-import pathlib
 import subprocess
 import sys
 import time
