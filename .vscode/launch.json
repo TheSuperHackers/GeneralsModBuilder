@@ -96,6 +96,47 @@
                 "--gui",
                 "--debug"
             ]
+        },
+        {
+            "name": "GamePatch",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}\\ModBuilder\\generalsmodbuilder\\main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--load-default-runner",
+                "--load-default-tools",
+                "--config-list",
+                "${workspaceFolder}\\..\\GeneralsGamePatch\\Patch104pZH\\ModBundleItems.json",
+                "${workspaceFolder}\\..\\GeneralsGamePatch\\Patch104pZH\\ModBundleLanguageItems.json",
+                "${workspaceFolder}\\..\\GeneralsGamePatch\\Patch104pZH\\ModBundlePacks.json",
+                "${workspaceFolder}\\..\\GeneralsGamePatch\\Patch104pZH\\ModChangeLog.json",
+                "${workspaceFolder}\\..\\GeneralsGamePatch\\Patch104pZH\\ModFolders.json",
+                "${workspaceFolder}\\..\\GeneralsGamePatch\\Patch104pZH\\ModRunner.json",
+                "--build",
+                "--install=FullEnglish",
+                "--run",
+                "--uninstall",
+                "--debug",
+                "--gui"
+            ]
+        },
+        {
+            "name": "GamePatch ChangeLog",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}\\ModBuilder\\generalsmodbuilder\\main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--load-default-runner",
+                "--load-default-tools",
+                "--config-list",
+                "${workspaceFolder}\\..\\GeneralsGamePatch\\Patch104pZH\\ModChangeLog.json",
+                "--make-change-log",
+                "--debug"
+            ]
         }
     ]
 }
