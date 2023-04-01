@@ -11,20 +11,16 @@
                 ],
                 "sortList": [
                     {
-                        "label": "blocker",
-                        "sort": "ascending"
+                        "label": "blocker"
                     },
                     {
-                        "label": "critical",
-                        "sort": "ascending"
+                        "label": "critical"
                     },
                     {
-                        "label": "major",
-                        "sort": "ascending"
+                        "label": "major"
                     },
                     {
-                        "label": "minor",
-                        "sort": "ascending"
+                        "label": "minor"
                     },
                     {
                         "date": "ascending"
@@ -48,20 +44,16 @@
                         "date": "ascending"
                     },
                     {
-                        "label": "blocker",
-                        "sort": "ascending"
+                        "label": "blocker"
                     },
                     {
-                        "label": "critical",
-                        "sort": "ascending"
+                        "label": "critical"
                     },
                     {
-                        "label": "major",
-                        "sort": "ascending"
+                        "label": "major"
                     },
                     {
-                        "label": "minor",
-                        "sort": "ascending"
+                        "label": "minor"
                     }
                 ],
                 "includeLabelList": [],

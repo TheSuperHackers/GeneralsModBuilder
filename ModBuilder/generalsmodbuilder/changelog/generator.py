@@ -201,16 +201,13 @@ def __ChangeLogRecordCompare(a: ChangeLogRecordEntry, b: ChangeLogRecordEntry, d
                 less = a.date > b.date
                 greater = a.date < b.date
         elif definition.IsLabelSort():
-            if definition.sort == Sort.Ascending:
-                less = (definition.label in a.labels) and (not definition.label in b.labels)
-                greater = (not definition.label in a.labels) and (definition.label in b.labels)
-            elif definition.sort == Sort.Descending:
-                less = (not definition.label in a.labels) and (definition.label in b.labels)
-                greater = (definition.label in a.labels) and (not definition.label in b.labels)
+            less = (definition.label in a.labels) and (not definition.label in b.labels)
+            greater = (not definition.label in a.labels) and (definition.label in b.labels)
+
         if less:
-            value -= (weight - i) ** 2
-        if greater:
-            value += (weight - i) ** 2
+            value -= (weight - i) ** (weight - i)
+        elif greater:
+            value += (weight - i) ** (weight - i)
 
     return value
 

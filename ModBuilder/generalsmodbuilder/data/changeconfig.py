@@ -21,7 +21,7 @@ class SortDefinition:
     def __init__(self):
         self.isDate = False
         self.label = ""
-        self.sort = None
+        self.sort = Sort.Ascending
 
     def IsDateSort(self) -> bool:
         return self.isDate and not bool(self.label)
@@ -155,11 +155,9 @@ def __MakeSortDefinitionsFromList(jSortLabelList: list) -> list[SortDefinition]:
             continue
 
         jLabel: str = util.GetCheckedOptional(jSortLabel, "label", str)
-        jSort: str = util.GetCheckedOptional(jSortLabel, "sort", str)
-        if jLabel and jSort:
+        if jLabel:
             definition = SortDefinition()
             definition.label = jLabel
-            definition.sort = __MakeSortFromStr(jSort)
             definitions.append(definition)
 
     return definitions
