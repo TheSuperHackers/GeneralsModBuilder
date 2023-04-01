@@ -7,7 +7,7 @@ from generalsmodbuilder.changelog.parser import ChangeLog, ChangeLogRecord, Chan
 from generalsmodbuilder.data.changeconfig import ChangeConfigRecord, Sort, SortDefinition
 
 
-def __AddRecordsLabelFiltersText(doc: md.Document, configRecord: ChangeConfigRecord, labelSet: set[str]) -> None:
+def __AddRecordsLabelFiltersText(doc: md.Document, configRecord: ChangeConfigRecord, labelCounts: dict[str, int]) -> None:
     hasIncludeLabels = False
     hasExcludeLabels = False
 
@@ -22,8 +22,12 @@ def __AddRecordsLabelFiltersText(doc: md.Document, configRecord: ChangeConfigRec
         doc.add(md.Paragraph(f"Excludes changes with labels: {labelsStr}"))
 
     if not hasIncludeLabels and not hasExcludeLabels:
-        labelsStr = ", ".join(label for label in sorted(labelSet))
-        doc.add(md.Paragraph(f"Includes changes with all labels: {labelsStr}"))
+        doc.add(md.Paragraph(f"Includes changes with all labels."))
+
+    labelCountStrList = [f"{label} ({count})" for label, count in labelCounts.items()]
+    labelCountStrList = sorted(labelCountStrList)
+    doc.add(md.Paragraph(f"Occuring labels are"))
+    doc.add(md.UnorderedList(labelCountStrList))
 
 
 def __AddRecordsSortRulesText(doc: md.Document, configRecord: ChangeConfigRecord) -> None:
@@ -34,7 +38,7 @@ def __AddRecordsSortRulesText(doc: md.Document, configRecord: ChangeConfigRecord
             if definition.IsDateSort():
                 sortList.append(f"date ({definition.sort.name.lower()})")
             elif definition.IsLabelSort():
-                sortList.append(f"{definition.label} ({definition.sort.name.lower()})")
+                sortList.append(f"{definition.label}")
 
     sortStr = ", ".join(sortList)
     doc.add(md.Paragraph(f"Sorts changes by: {sortStr}"))
@@ -64,13 +68,13 @@ def __AddRecordsChangeCountsText(doc: md.Document, logRecord: ChangeLogRecord) -
 
     majorChangeCountStrList = [f"{type.upper()} ({count})" for type, count in majorChangeCountByType.items()]
     minorChangeCountStrList = [f"{type.upper()} ({count})" for type, count in minorChangeCountByType.items()]
-    majorChangeCountStr = ", ".join(majorChangeCountStrList)
-    minorChangeCountStr = ", ".join(minorChangeCountStrList)
 
-    doc.add(md.Paragraph(f"Contains {entriesCount} entries"))
+    doc.add(md.Paragraph(f"Contains {entriesCount} entries with"))
     doc.add(md.UnorderedList([
-        f"with {majorChangeCount} changes: {majorChangeCountStr}",
-        f"with {minorChangeCount} subchanges: {minorChangeCountStr}",
+        f"{majorChangeCount} changes",
+        md.UnorderedList(majorChangeCountStrList),
+        f"{minorChangeCount} subchanges",
+        md.UnorderedList(minorChangeCountStrList),
         ]))
 
 
@@ -148,18 +152,21 @@ def GenerateChangeLogMarkdown(logRecord: ChangeLogRecord, absTarget: str) -> Non
     timer = util.Timer()
     print(f"Generate change log at {absTarget}")
 
-    labelSet = set[str]()
+    labelCounts = dict[str, int]()
     logEntry: ChangeLogRecordEntry
     for logEntry in logRecord.entries:
         for label in logEntry.labels:
-            labelSet.add(label)
+            if labelCounts.get(label) != None:
+                labelCounts[label] += 1
+            else:
+                labelCounts[label] = 1
 
     doc = md.Document()
 
     fileStr: str = util.GetFileNameNoExt(absTarget)
     doc.add(md.Header(f"Auto Generated Change Log '{fileStr}'"))
 
-    __AddRecordsLabelFiltersText(doc, logRecord.configRecord, labelSet)
+    __AddRecordsLabelFiltersText(doc, logRecord.configRecord, labelCounts)
     __AddRecordsSortRulesText(doc, logRecord.configRecord)
     __AddRecordsChangeCountsText(doc, logRecord)
     __AddRecordsIndex(doc, logRecord)
