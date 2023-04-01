@@ -7,22 +7,23 @@ from generalsmodbuilder.changelog.parser import ChangeLog, ChangeLogRecord, Chan
 from generalsmodbuilder.data.changeconfig import ChangeConfigRecord, Sort, SortDefinition
 
 
-def __AddRecordsLabelFiltersText(doc: md.Document, configRecord: ChangeConfigRecord) -> None:
+def __AddRecordsLabelFiltersText(doc: md.Document, configRecord: ChangeConfigRecord, labelSet: set[str]) -> None:
     hasIncludeLabels = False
     hasExcludeLabels = False
 
     if bool(configRecord.includeLabels):
         hasIncludeLabels = True
-        labelsStr = ", ".join(label for label in configRecord.includeLabels)
+        labelsStr = ", ".join(label for label in sorted(configRecord.includeLabels))
         doc.add(md.Paragraph(f"Includes changes with labels: {labelsStr}"))
 
     if bool(configRecord.excludeLabels):
         hasExcludeLabels = True
-        labelsStr = ", ".join(label for label in configRecord.excludeLabels)
+        labelsStr = ", ".join(label for label in sorted(configRecord.excludeLabels))
         doc.add(md.Paragraph(f"Excludes changes with labels: {labelsStr}"))
 
     if not hasIncludeLabels and not hasExcludeLabels:
-        doc.add(md.Paragraph(f"Includes changes with all labels"))
+        labelsStr = ", ".join(label for label in sorted(labelSet))
+        doc.add(md.Paragraph(f"Includes changes with all labels: {labelsStr}"))
 
 
 def __AddRecordsSortRulesText(doc: md.Document, configRecord: ChangeConfigRecord) -> None:
@@ -146,12 +147,18 @@ def GenerateChangeLogMarkdown(logRecord: ChangeLogRecord, absTarget: str) -> Non
     timer = util.Timer()
     print(f"Generate change log at {absTarget}")
 
+    labelSet = set[str]()
+    logEntry: ChangeLogRecordEntry
+    for logEntry in logRecord.entries:
+        for label in logEntry.labels:
+            labelSet.add(label)
+
     doc = md.Document()
 
     fileStr: str = util.GetFileNameNoExt(absTarget)
     doc.add(md.Header(f"Auto Generated Change Log '{fileStr}'"))
 
-    __AddRecordsLabelFiltersText(doc, logRecord.configRecord)
+    __AddRecordsLabelFiltersText(doc, logRecord.configRecord, labelSet)
     __AddRecordsSortRulesText(doc, logRecord.configRecord)
     __AddRecordsChangeCountsText(doc, logRecord)
     __AddRecordsIndex(doc, logRecord)
