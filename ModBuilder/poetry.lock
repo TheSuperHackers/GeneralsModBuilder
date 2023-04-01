@@ -70,18 +70,6 @@ test = ["invoke", "pytest", "pytest-cov", "fsspec"]
 tifffile = ["tifffile"]
 
 [[package]]
-name = "lazy-loader"
-version = "0.1"
-description = "lazy_loader"
-category = "main"
-optional = false
-python-versions = ">=3.7"
-
-[package.extras]
-lint = ["pre-commit (>=2.20)"]
-test = ["pytest (>=7.1)", "pytest-cov (>=3.0)", "codecov (>=2.1)"]
-
-[[package]]
 name = "markdownmaker"
 version = "0.4.0"
 description = "An easy-to-use Python to Markdown generator."
@@ -134,7 +122,7 @@ tests = ["check-manifest", "coverage", "defusedxml", "markdown2", "olefile", "pa
 
 [[package]]
 name = "psd-tools"
-version = "1.9.24"
+version = "1.9.19"
 description = "Python package for working with Adobe Photoshop PSD files"
 category = "main"
 optional = false
@@ -170,31 +158,27 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "scikit-image"
-version = "0.20.0"
+version = "0.19.2"
 description = "Image processing in Python"
 category = "main"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.7"
 
 [package.dependencies]
 imageio = ">=2.4.1"
-lazy_loader = ">=0.1"
-networkx = ">=2.8"
-numpy = ">=1.21.1"
+networkx = ">=2.2"
+numpy = ">=1.17.0"
 packaging = ">=20.0"
-pillow = ">=9.0.1"
+pillow = ">=6.1.0,<7.1.0 || >7.1.0,<7.1.1 || >7.1.1,<8.3.0 || >8.3.0"
 PyWavelets = ">=1.1.1"
-scipy = {version = ">=1.8", markers = "python_version > \"3.9\""}
+scipy = ">=1.4.1"
 tifffile = ">=2019.7.26"
 
 [package.extras]
-build = ["meson-python (>=0.13.0rc0)", "wheel", "setuptools (>=67)", "packaging (>=20)", "ninja", "Cython (>=0.29.24)", "pythran", "numpy (>=1.21.1)", "build"]
 data = ["pooch (>=1.3.0)"]
-default = ["numpy (>=1.21.1)", "scipy (>=1.8,<1.9.2)", "scipy (>=1.8)", "networkx (>=2.8)", "pillow (>=9.0.1)", "imageio (>=2.4.1)", "tifffile (>=2019.7.26)", "PyWavelets (>=1.1.1)", "packaging (>=20.0)", "lazy_loader (>=0.1)"]
-developer = ["pre-commit", "rtoml"]
-docs = ["sphinx (>=5.2)", "sphinx-gallery (>=0.11)", "numpydoc (>=1.5)", "sphinx-copybutton", "pytest-runner", "scikit-learn", "matplotlib (>=3.6)", "dask[array] (>=2022.9.2)", "pandas (>=1.5)", "seaborn (>=0.11)", "pooch (>=1.6)", "tifffile (>=2022.8.12)", "myst-parser", "ipywidgets", "plotly (>=5.10)", "kaleido"]
-optional = ["simpleitk", "astropy (>=3.1.2)", "cloudpickle (>=0.2.1)", "dask[array] (>=1.0.0,!=2.17.0)", "matplotlib (>=3.3)", "pooch (>=1.3.0)", "pyamg"]
-test = ["asv", "codecov", "matplotlib (>=3.3)", "pooch (>=1.3.0)", "pytest (>=5.2.0)", "pytest-cov (>=2.7.0)", "pytest-localserver", "pytest-faulthandler"]
+docs = ["sphinx (>=1.8)", "sphinx-gallery (>=0.10.1)", "numpydoc (>=1.0)", "sphinx-copybutton", "pytest-runner", "scikit-learn", "matplotlib (>=3.3)", "dask[array] (>=0.15.0,!=2.17.0)", "cloudpickle (>=0.2.1)", "pandas (>=0.23.0)", "seaborn (>=0.7.1)", "pooch (>=1.3.0)", "tifffile (>=2020.5.30)", "myst-parser", "ipywidgets", "plotly (>=4.14.0)", "kaleido"]
+optional = ["simpleitk", "astropy (>=3.1.2)", "cloudpickle (>=0.2.1)", "dask[array] (>=1.0.0,!=2.17.0)", "matplotlib (>=3.0.3)", "pooch (>=1.3.0)", "pyamg", "qtpy"]
+test = ["asv", "codecov", "flake8", "matplotlib (>=3.0.3)", "pooch (>=1.3.0)", "pytest (>=5.2.0)", "pytest-cov (>=2.7.0)", "pytest-localserver", "pytest-faulthandler"]
 
 [[package]]
 name = "scipy"
@@ -237,7 +221,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.10,<3.11"
-content-hash = "870d5b651716421d0200cbcf3b652aae99accae58b10a277c5db53a9c1bd13dc"
+content-hash = "52c81ce90d93aba5ec72c349b63f979bd2cb8e4af497fbcd1722b0f606d1d862"
 
 [metadata.files]
 aggdraw = []
@@ -249,16 +233,83 @@ docopt = [
     {file = "docopt-0.6.2.tar.gz", hash = "sha256:49b3a825280bd66b3aa83585ef59c4a8c82f2c8a522dbe754a8bc8d08c85c491"},
 ]
 imageio = []
-lazy-loader = []
 markdownmaker = []
 networkx = []
 numpy = []
 packaging = []
 pillow = []
-psd-tools = []
+psd-tools = [
+    {file = "psd-tools-1.9.19.tar.gz", hash = "sha256:e57f21527357dc4065b9204ef83086067d2eedfbe9220594ee1c27fede48b357"},
+    {file = "psd_tools-1.9.19-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:0dd776362ff31b9d6c627ad438ee0e78a7c447bed155d0ddc74541480aa7986d"},
+    {file = "psd_tools-1.9.19-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:67133b6107945df006c5eb168400621fe62d462fbacab761192cce245338fd5a"},
+    {file = "psd_tools-1.9.19-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:df88a8d0364895ecee6519b9aab726b878f86bcc07e948db4e3d68cb77a65483"},
+    {file = "psd_tools-1.9.19-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:82aae55ebc87eb3ab627819b255b84d0d5b4087bb16f189da758b7bd7faa2d43"},
+    {file = "psd_tools-1.9.19-cp310-cp310-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:4e1ee18e6eb3bacb522245f45839de2bb1e7c123dc8b81013671a2b37b3cfabc"},
+    {file = "psd_tools-1.9.19-cp310-cp310-musllinux_1_1_aarch64.whl", hash = "sha256:b16bbef7d844a6ff3266460483988b1226f119d28476a0643781631db5510ae4"},
+    {file = "psd_tools-1.9.19-cp310-cp310-musllinux_1_1_i686.whl", hash = "sha256:12a967ba759442b50defd4d2b3479aa92196037240b9edb7b5391056609ff64f"},
+    {file = "psd_tools-1.9.19-cp310-cp310-musllinux_1_1_x86_64.whl", hash = "sha256:76538872b3d0c4482ec92e8fa97624c9fb6b9539bffb3af77d432f3ef9c3ca45"},
+    {file = "psd_tools-1.9.19-cp310-cp310-win32.whl", hash = "sha256:df32bfb6fcee81b7371dfa89822a8c72aef388aba20a6732f996a8ce22d4fa15"},
+    {file = "psd_tools-1.9.19-cp310-cp310-win_amd64.whl", hash = "sha256:e96c965080744cf94c30997d291cd9e2e574ba4dfe57ececb8aad311664e6300"},
+    {file = "psd_tools-1.9.19-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:b8059e9739e40bbde7b4fe99115cfaa481a70a01a6bbe732e4f96fd42f659185"},
+    {file = "psd_tools-1.9.19-cp37-cp37m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:e94172cb3924f0fca98a6e63d3d16be7435aa0a47da9ea67841def16b4f60e91"},
+    {file = "psd_tools-1.9.19-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ae42a70db5828ab0bd2912b75d3de1bbd4c0ecbe76a8877afaa3b2eaa71ccd97"},
+    {file = "psd_tools-1.9.19-cp37-cp37m-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:eb8bbd9157985e4454ca1127c39d3d9a90e550bb294912e40d68de91f5af4520"},
+    {file = "psd_tools-1.9.19-cp37-cp37m-musllinux_1_1_aarch64.whl", hash = "sha256:96c34f2ff1d32837aca22a91962da10cf7f5556346666b702ef262e8721b692f"},
+    {file = "psd_tools-1.9.19-cp37-cp37m-musllinux_1_1_i686.whl", hash = "sha256:e786b82a2f882b3b6a84509027bba65357156c5b001cfad45f1bed40a429334d"},
+    {file = "psd_tools-1.9.19-cp37-cp37m-musllinux_1_1_x86_64.whl", hash = "sha256:5dfcd8160f39cd29319fc010e01ed93ba22919883b8a1db672c2d35ad10ec593"},
+    {file = "psd_tools-1.9.19-cp37-cp37m-win32.whl", hash = "sha256:675a20236fabaab8c9390d626241768ff736a5075f29873540a4e25cb0f5335a"},
+    {file = "psd_tools-1.9.19-cp37-cp37m-win_amd64.whl", hash = "sha256:2f82bca79a14702dd5fe846448cb01f8dd2c46be700acb142f586ba8104ce028"},
+    {file = "psd_tools-1.9.19-cp38-cp38-macosx_10_9_universal2.whl", hash = "sha256:df944f1520749c3eafe7f755b6e9a9555b080a6956ed9960fe45019a943076f0"},
+    {file = "psd_tools-1.9.19-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:c2dbf8caa0c0c420bf755b077b30455540ecf1213b1049737de05974e7a5bcb6"},
+    {file = "psd_tools-1.9.19-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c405e278a3be128cfdbb4cf47bd7d5957a9694ddd7a10ace45cb20c11b584b0c"},
+    {file = "psd_tools-1.9.19-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4748c092f73c556a21b2841c710d7f91ea3dbd73a2c48ceb1b5fb3cbcf5ea799"},
+    {file = "psd_tools-1.9.19-cp38-cp38-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:042db764d4c6ae54fde080711c91515a680d7b3108b8a318a7bcd614a072836f"},
+    {file = "psd_tools-1.9.19-cp38-cp38-musllinux_1_1_aarch64.whl", hash = "sha256:7970cf47e19ad622fcebcc3b7b32756c787b24d4bf9e54b3f4947a9a346294f0"},
+    {file = "psd_tools-1.9.19-cp38-cp38-musllinux_1_1_i686.whl", hash = "sha256:d9e15610cd5f0c144bc33c3ae4d31e7182b8c870147fcc3ab498100eea234981"},
+    {file = "psd_tools-1.9.19-cp38-cp38-musllinux_1_1_x86_64.whl", hash = "sha256:eabed58908b6f8a9633f21d9751c2796e3dd33c9920e4da20cb0e44568896b92"},
+    {file = "psd_tools-1.9.19-cp38-cp38-win32.whl", hash = "sha256:0b7356eaf18d8bfb4c49f2dec5628b3bb14ffe451dece0b7f783b624497f258c"},
+    {file = "psd_tools-1.9.19-cp38-cp38-win_amd64.whl", hash = "sha256:6cc6eb48fbcf898fea619da0bd73152fa2a08617b12cd5b3560797741f6738c4"},
+    {file = "psd_tools-1.9.19-cp39-cp39-macosx_10_9_universal2.whl", hash = "sha256:96b3489316a0dd8529cc8a169d9b8d701e543af805e41cb23887e35971d5ef11"},
+    {file = "psd_tools-1.9.19-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:9a31939557ad0066e888fd6b5191addde72d081619f2132512196b93f0fabb09"},
+    {file = "psd_tools-1.9.19-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:0f2b4a4541b1ce669e938abf5aedbe7f047fd3357ea72ad543f4bd1922a4fb4d"},
+    {file = "psd_tools-1.9.19-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:c38ba10d48a1a470fe5ab9d9d4d8312897308bf7864fe3366ab950e536d77a28"},
+    {file = "psd_tools-1.9.19-cp39-cp39-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:a76522a408796bdc0e89657d1f01b1295274583d9a99fa34aa943d84a91b33ca"},
+    {file = "psd_tools-1.9.19-cp39-cp39-musllinux_1_1_aarch64.whl", hash = "sha256:cfe5e8061cd3fbc60207f641cdb7e914816acdbc8f858e145e1bcaedb290652a"},
+    {file = "psd_tools-1.9.19-cp39-cp39-musllinux_1_1_i686.whl", hash = "sha256:17102c7e316e09804622714c8a4b9f3179b200e109dfc3002c77c78fbb5264cc"},
+    {file = "psd_tools-1.9.19-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:bd87f07fd81032b1e80e71a6cbcfb874e10358b0c7b1d5cc24f1b8e01be63150"},
+    {file = "psd_tools-1.9.19-cp39-cp39-win32.whl", hash = "sha256:cfe9b21b6a2cd0a90bd14a690c6ed785878be2ad03365372c7c125a7b874d33f"},
+    {file = "psd_tools-1.9.19-cp39-cp39-win_amd64.whl", hash = "sha256:713fea4871e4010bfb15032c7ff601c8081028c7d9980c6c218edab685ec25c8"},
+]
 pywavelets = []
 pyyaml = []
-scikit-image = []
+scikit-image = [
+    {file = "scikit-image-0.19.2.tar.gz", hash = "sha256:d433b4642a6f8219e749dfbbe4b5e742d560996540c9749ede510274d061866d"},
+    {file = "scikit_image-0.19.2-cp310-cp310-macosx_10_13_x86_64.whl", hash = "sha256:935c95d207c9bcaff20b69164401089ef2efd7f89dbbbf13ab75a5f65ff695b5"},
+    {file = "scikit_image-0.19.2-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:956cb8b60f6668974cadb70b0c4f5e13dd4673ffff3d5906d5d23333c76350e9"},
+    {file = "scikit_image-0.19.2-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:4ce41df8e06724f8fdb20c555988666520c322d47df7c898422330d4e3cd3900"},
+    {file = "scikit_image-0.19.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a2a0a3df8ab2e862fda4363551801d630dc2fd7f1036f14479acde418315a38b"},
+    {file = "scikit_image-0.19.2-cp310-cp310-win_amd64.whl", hash = "sha256:0af44a48bb369be936303680511cea3c717b51218275ea5ea339a2aefa25c0ac"},
+    {file = "scikit_image-0.19.2-cp37-cp37m-macosx_10_13_x86_64.whl", hash = "sha256:9b88590c243692d21f2b772bc83ad1aacdc7d605fbf0be32ea60b1e96aac920e"},
+    {file = "scikit_image-0.19.2-cp37-cp37m-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:498d0e4fe70776238c7d1362dea7c2b41bf4a40617f6a742ffa3f59aa0392bb7"},
+    {file = "scikit_image-0.19.2-cp37-cp37m-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:66bb26ca1e9c0924557ef3e6aee9fd8c21da96c7d5ba2b8864868c53723b45df"},
+    {file = "scikit_image-0.19.2-cp37-cp37m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:56ffd1394aacd994963774e927a16f1ba2c094a9254b230da2c50147c661362a"},
+    {file = "scikit_image-0.19.2-cp37-cp37m-win32.whl", hash = "sha256:1bba9378cd77e7ff57b0f7a60ca167a728cffcac56d3e283ca7423e0c7d5e4a0"},
+    {file = "scikit_image-0.19.2-cp37-cp37m-win_amd64.whl", hash = "sha256:b98cfa8aa9aa31519d5510973362748753c5d420d5cc60112a65e000fe3d3068"},
+    {file = "scikit_image-0.19.2-cp38-cp38-macosx_10_13_x86_64.whl", hash = "sha256:5ab19b11bd5f836a3de07f087d24db5ea734365122956f53dc5c5c9e018e2ec0"},
+    {file = "scikit_image-0.19.2-cp38-cp38-macosx_12_0_arm64.whl", hash = "sha256:cabf07a7886861510d4a39ed64fc121708fb7d72a6fe601d87388d36240f4242"},
+    {file = "scikit_image-0.19.2-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:aa40f84383961a1a4afebb92f373e42a3d86e2540f012a4f7d2661a417f9e995"},
+    {file = "scikit_image-0.19.2-cp38-cp38-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:d3d0a85c6f53f0d4f704e67b35b3e8c6570846ec37eaeb1ca0f47a1088708cb8"},
+    {file = "scikit_image-0.19.2-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:cd115a4412b4561d62036e309c8cb543bfc2ca6b7b184ac23a65f6350959a716"},
+    {file = "scikit_image-0.19.2-cp38-cp38-win32.whl", hash = "sha256:d2c022044eb762d3f03ed6e08a3e06c067953393036e4ca2bf16b0bffde36acb"},
+    {file = "scikit_image-0.19.2-cp38-cp38-win_amd64.whl", hash = "sha256:b0f294ed7f0ea1e90fb6c764d04b8c298096b3403fad7539b9c6f22777d879c6"},
+    {file = "scikit_image-0.19.2-cp39-cp39-macosx_10_13_x86_64.whl", hash = "sha256:ad89c6ddbcc4d8ea8b7ebe1ae587be2067dad7927276576fe4097e42e370dadc"},
+    {file = "scikit_image-0.19.2-cp39-cp39-macosx_12_0_arm64.whl", hash = "sha256:52c683e8615e28bfe5fe6fa2ac2563898d0c0b37f231d5b59e18abb8ed3805a2"},
+    {file = "scikit_image-0.19.2-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a0025edbe1412c413d6b3251cc8ff94530cf45b31819daed1811340b93f51e38"},
+    {file = "scikit_image-0.19.2-cp39-cp39-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:477d3166da104b4914920d6db84183dd3af46430d13a0a3451a92eb58b5c9259"},
+    {file = "scikit_image-0.19.2-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f0e5c6e7c7c54c0b827e6288d9f44ae6d290c0aef979e7de1511d2f5fc6f9c0f"},
+    {file = "scikit_image-0.19.2-cp39-cp39-win32.whl", hash = "sha256:99696479cf6fd19bb06ea43269c0728bb75c2ce9cd3710829ac0f1590eecf0dc"},
+    {file = "scikit_image-0.19.2-cp39-cp39-win_amd64.whl", hash = "sha256:9d3fd65ec424de83e6fee22480db5431a9b91d280a34ab3e6bf83528e4289f5c"},
+]
 scipy = []
 tifffile = []
 urwid = [

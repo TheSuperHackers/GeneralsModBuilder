@@ -1,3 +1,4 @@
+from glob import glob
 import importlib
 import shutil
 import subprocess
@@ -412,8 +413,14 @@ def __RunPyInstaller(buildStep: BuildStep) -> None:
     if postDeleteFiles:
         for file in postDeleteFiles:
             absFile: str = buildStep.MakeAbsPath(file)
-            print(f"Delete '{absFile}'")
-            DeleteFileOrPath(absFile)
+            if "*" in absFile and not os.path.isfile(absFile):
+                globFiles: list[str] = glob(absFile, recursive=True)
+                for globFile in globFiles:
+                    print(f"Delete '{globFile}'")
+                    DeleteFileOrPath(globFile)
+            else:
+                print(f"Delete '{absFile}'")
+                DeleteFileOrPath(absFile)
 
     if makeArchive:
         try:
