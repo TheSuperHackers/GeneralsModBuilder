@@ -62,15 +62,16 @@ def __AddRecordsChangeCountsText(doc: md.Document, logRecord: ChangeLogRecord) -
             else:
                 minorChangeCountByType[type] = count
 
-    majorChangeCountStrList = [f"{type} ({count})" for type, count in majorChangeCountByType.items()]
-    minorChangeCountStrList = [f"{type} ({count})" for type, count in minorChangeCountByType.items()]
+    majorChangeCountStrList = [f"{type.upper()} ({count})" for type, count in majorChangeCountByType.items()]
+    minorChangeCountStrList = [f"{type.upper()} ({count})" for type, count in minorChangeCountByType.items()]
     majorChangeCountStr = ", ".join(majorChangeCountStrList)
     minorChangeCountStr = ", ".join(minorChangeCountStrList)
 
-    doc.add(md.Paragraph(f"Contains {entriesCount} entries with "
-        f"{majorChangeCount} major changes: [ {majorChangeCountStr} ] and "
-        f"{minorChangeCount} minor changes: [ {minorChangeCountStr} ]."))
-
+    doc.add(md.Paragraph(f"Contains {entriesCount} entries"))
+    doc.add(md.UnorderedList([
+        f"with {majorChangeCount} changes: {majorChangeCountStr}",
+        f"with {minorChangeCount} subchanges: {minorChangeCountStr}",
+        ]))
 
 
 def __MakeRecordTitle(logEntry: ChangeLogRecordEntry) -> str:
@@ -116,8 +117,8 @@ def __AddRecordsDetails(doc: md.Document, logRecord: ChangeLogRecord) -> None:
                 fileName: str = util.GetFileName(logEntry.absSourceFile)
                 title: str = __MakeRecordTitle(logEntry)
                 titleLink: str = __MakeRecordTitleLink(logEntry, i)
-                majorList = [f"{change.typeName}: {change.text}" for change in logEntry.majorChanges]
-                minorList = [f"{change.typeName}: {change.text}" for change in logEntry.minorChanges]
+                majorList = [f"{change.typeName.upper()}: {change.text}" for change in logEntry.majorChanges]
+                minorList = [f"{change.typeName.upper()}: {change.text}" for change in logEntry.minorChanges]
                 labelsStr = ", ".join(label for label in logEntry.labels)
                 authorsStr = ", ".join(author for author in logEntry.authors)
                 linkList = [__MakeMarkdownLink(link) for link in logEntry.links]
