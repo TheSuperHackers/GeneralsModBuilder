@@ -487,11 +487,12 @@ class BuildEngine:
             newThing.absParentDir = os.path.join(folders.absBuildDir, "RawBundlePacks", pack.name)
             newThing.files = BuildFilesT()
 
-            for i in range(len(absReleaseFiles)):
-                buildFile = BuildFile()
-                buildFile.absSource = absReleaseFiles[i]
-                buildFile.relTarget = relReleaseFiles[i]
-                newThing.files.append(buildFile)
+            for absReleaseFile, relReleaseFile in zip(absReleaseFiles, relReleaseFiles):
+                if os.path.isfile(absReleaseFile):
+                    buildFile = BuildFile()
+                    buildFile.absSource = absReleaseFile
+                    buildFile.relTarget = relReleaseFile
+                    newThing.files.append(buildFile)
 
             for itemName in pack.itemNames:
                 parentName: str = MakeThingName(BuildIndex.BigBundleItem, itemName)
