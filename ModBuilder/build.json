@@ -33,8 +33,7 @@
                         }
                     },
                     "pipInstalls": [
-                        "pyinstaller==4.10",
-                        "setuptools==62.1.0"
+                        "pyinstaller==5.9.0"
                     ]
                 },
                 "config": {
@@ -59,7 +58,14 @@
                         }
                     ],
                     "postDeleteFiles": [
-                        ".pyinstaller/generalsmodbuilder/skimage/data/"
+                        ".pyinstaller/generalsmodbuilder/skimage/data/*.gif",
+                        ".pyinstaller/generalsmodbuilder/skimage/data/*.jpg",
+                        ".pyinstaller/generalsmodbuilder/skimage/data/*.npz",
+                        ".pyinstaller/generalsmodbuilder/skimage/data/*.npy",
+                        ".pyinstaller/generalsmodbuilder/skimage/data/*.png",
+                        ".pyinstaller/generalsmodbuilder/skimage/data/*.tif",
+                        ".pyinstaller/generalsmodbuilder/skimage/data/*.xml",
+                        ".pyinstaller/generalsmodbuilder/scipy.libs"
                     ]
                 }
             }
