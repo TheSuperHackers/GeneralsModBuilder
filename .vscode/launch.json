@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "RunBuild",
+            "name": "ModBuilder - Build",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}\\ModBuilder\\build.py",
@@ -13,7 +13,7 @@
             "justMyCode": true
         },
         {
-            "name": "RunModBuilderFull",
+            "name": "Sample - Build Release Run Uninstall",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}\\ModBuilder\\generalsmodbuilder\\main.py",
@@ -23,11 +23,11 @@
                 "--load-default-runner",
                 "--load-default-tools",
                 "--config-list",
-                "${workspaceFolder}\\SampleProject\\ModBundleItems.json",
-                "${workspaceFolder}\\SampleProject\\ModBundlePacks.json",
-                "${workspaceFolder}\\SampleProject\\ModFolders.json",
-                "${workspaceFolder}\\SampleProject\\ModRunner.json",
-                "${workspaceFolder}\\SampleProject\\ModChangeLog.json",
+                "${workspaceFolder}\\..\\GeneralsModBuilderSample\\Project\\ModBundleItems.json",
+                "${workspaceFolder}\\..\\GeneralsModBuilderSample\\Project\\ModBundlePacks.json",
+                "${workspaceFolder}\\..\\GeneralsModBuilderSample\\Project\\ModFolders.json",
+                "${workspaceFolder}\\..\\GeneralsModBuilderSample\\Project\\ModRunner.json",
+                "${workspaceFolder}\\..\\GeneralsModBuilderSample\\Project\\ModChangeLog.json",
                 "--make-change-log",
                 "--build",
                 "--release",
@@ -38,7 +38,7 @@
             ]
         },
         {
-            "name": "RunModBuilderGui",
+            "name": "Sample - Gui",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}\\ModBuilder\\generalsmodbuilder\\main.py",
@@ -48,12 +48,11 @@
                 "--load-default-runner",
                 "--load-default-tools",
                 "--config-list",
-                "${workspaceFolder}\\SampleProject\\ModBundleItems.json",
-                "${workspaceFolder}\\SampleProject\\ModBundlePacks.json",
-                "${workspaceFolder}\\SampleProject\\ModFolders.json",
-                "${workspaceFolder}\\SampleProject\\ModRunner.json",
-                "${workspaceFolder}\\SampleProject\\ModChangeLog.json",
-                "--make-change-log",
+                "${workspaceFolder}\\..\\GeneralsModBuilderSample\\Project\\ModBundleItems.json",
+                "${workspaceFolder}\\..\\GeneralsModBuilderSample\\Project\\ModBundlePacks.json",
+                "${workspaceFolder}\\..\\GeneralsModBuilderSample\\Project\\ModFolders.json",
+                "${workspaceFolder}\\..\\GeneralsModBuilderSample\\Project\\ModRunner.json",
+                "${workspaceFolder}\\..\\GeneralsModBuilderSample\\Project\\ModChangeLog.json",
                 "--build",
                 "--install=ProjectCore",
                 "--run",
@@ -63,7 +62,7 @@
             ]
         },
         {
-            "name": "RunModBuilderBuildRelease",
+            "name": "Sample - Build Release",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}\\ModBuilder\\generalsmodbuilder\\main.py",
@@ -73,17 +72,17 @@
                 "--load-default-runner",
                 "--load-default-tools",
                 "--config-list",
-                "${workspaceFolder}\\SampleProject\\ModBundleItems.json",
-                "${workspaceFolder}\\SampleProject\\ModBundlePacks.json",
-                "${workspaceFolder}\\SampleProject\\ModFolders.json",
-                "${workspaceFolder}\\SampleProject\\ModRunner.json",
+                "${workspaceFolder}\\..\\GeneralsModBuilderSample\\Project\\ModBundleItems.json",
+                "${workspaceFolder}\\..\\GeneralsModBuilderSample\\Project\\ModBundlePacks.json",
+                "${workspaceFolder}\\..\\GeneralsModBuilderSample\\Project\\ModFolders.json",
+                "${workspaceFolder}\\..\\GeneralsModBuilderSample\\Project\\ModRunner.json",
                 "--build",
                 "--release",
                 "--debug"
             ]
         },
         {
-            "name": "MakeChangeLog",
+            "name": "Sample - Generate ChangeLog",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}\\ModBuilder\\generalsmodbuilder\\main.py",
@@ -91,14 +90,14 @@
             "justMyCode": true,
             "args": [
                 "--config-list",
-                "${workspaceFolder}\\SampleProject\\ModChangeLog.json",
+                "${workspaceFolder}\\..\\GeneralsModBuilderSample\\Project\\ModChangeLog.json",
                 "--make-change-log",
                 "--gui",
                 "--debug"
             ]
         },
         {
-            "name": "GamePatch",
+            "name": "GamePatch - Gui",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}\\ModBuilder\\generalsmodbuilder\\main.py",
@@ -109,6 +108,7 @@
                 "--load-default-tools",
                 "--config-list",
                 "${workspaceFolder}\\..\\GeneralsGamePatch\\Patch104pZH\\ModBundleItems.json",
+                "${workspaceFolder}\\..\\GeneralsGamePatch\\Patch104pZH\\ModBundleAudioItems.json",
                 "${workspaceFolder}\\..\\GeneralsGamePatch\\Patch104pZH\\ModBundleLanguageItems.json",
                 "${workspaceFolder}\\..\\GeneralsGamePatch\\Patch104pZH\\ModBundlePacks.json",
                 "${workspaceFolder}\\..\\GeneralsGamePatch\\Patch104pZH\\ModChangeLog.json",
@@ -123,7 +123,7 @@
             ]
         },
         {
-            "name": "GamePatch ChangeLog",
+            "name": "GamePatch - Generate ChangeLog",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}\\ModBuilder\\generalsmodbuilder\\main.py",
