@@ -1,8 +1,0 @@
-{
-    "folders": {
-        "version": 1,
-        "releaseUnpackedDir": "ReleaseUnpacked",
-        "releaseDir": ".Release",
-        "buildDir": ".Build"
-    }
-}
