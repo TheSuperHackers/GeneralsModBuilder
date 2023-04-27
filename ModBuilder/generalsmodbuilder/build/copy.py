@@ -599,7 +599,7 @@ class BuildCopy:
 import bpy
 bpy.ops.preferences.addon_enable(module='io_mesh_w3d')
 bpy.ops.export_mesh.westwood_w3d(
-    filepath='{target}',
+    filepath=r'{target}',
     check_existing=False,
     file_format='W3D',
     export_mode='{export_mode}',
