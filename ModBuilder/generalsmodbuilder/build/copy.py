@@ -524,44 +524,85 @@ class BuildCopy:
             return self.__CopyTo(source, target, params)
 
 
+    class Marker:
+        begin: str
+        end: str
+
+        def __init__(self, begin: str, end: str):
+            self.begin = begin
+            self.end = end
+
+
+    @staticmethod
+    def __FilterText(lines: list[str], markers: list[Marker]) -> list[str]:
+        outputLines = []
+        activeMarkers = []
+
+        for line in lines:
+            hadActiveMarkers = bool(activeMarkers)
+
+            for marker in markers:
+                if marker.begin in line:
+                    activeMarkers.append(marker)
+                if marker.end in line:
+                    activeMarkers.remove(marker)
+
+            hasActiveMarkers = bool(activeMarkers)
+            if not hadActiveMarkers and not hasActiveMarkers:
+                outputLines.append(line)
+
+        return outputLines
+
+
     def __CopyToTextFileIfNeeded(self, source: str, target: str, params: ParamsT) -> bool:
         iparams = CaseInsensitiveDict(params)
 
         forceEOL: str = iparams.get("forceEOL")
         deleteComments: str = iparams.get("deleteComments")
         deleteWhitespace: int = iparams.get("deleteWhitespace")
-        sourceEncoding: str = iparams.get("sourceEncoding")
+        sourceEncoding: str = iparams.get("sourceEncoding") # https://docs.python.org/3/library/codecs.html
         targetEncoding: str = iparams.get("targetEncoding")
+        excludeMarkersList: list[list[str]] = iparams.get("excludeMarkersList")
+        if excludeMarkersList:
+            excludeMarkers = [BuildCopy.Marker(t[0], t[1]) for t in excludeMarkersList]
+        else:
+            excludeMarkers = None
 
         doForceEOL: bool = isinstance(forceEOL, str) and bool(forceEOL)
         doDeleteComments: bool = isinstance(deleteComments, str) and bool(deleteComments)
         doDeleteWhitespace: bool = isinstance(deleteWhitespace, int) and deleteWhitespace > 0
         doEncode: bool = isinstance(sourceEncoding, str) or isinstance(targetEncoding, str)
+        doExclude: bool = isinstance(excludeMarkers, list)
 
-        if doDeleteWhitespace or doDeleteComments or doForceEOL or doEncode:
+        if doDeleteWhitespace or doDeleteComments or doForceEOL or doEncode or doExclude:
             if not sourceEncoding:
                 sourceEncoding = "utf-8"
             if not targetEncoding:
                 targetEncoding = "utf-8"
 
-            line: str
             with open(source, "r", encoding=sourceEncoding) as sourceFile:
                 with open(target, "w", encoding=targetEncoding, newline="") as targetFile:
                     sourceLines: list[str] = [line.rstrip("\r\n") for line in sourceFile]
 
+                    # Exclude text inside markers ...
+                    if doExclude:
+                        sourceLines = BuildCopy.__FilterText(sourceLines, excludeMarkers)
+
+                    # Delete comments ...
                     if doDeleteComments:
                         for i, s in enumerate(sourceLines):
                             sourceLines[i] = s.split(deleteComments, 1)[0]
 
-                    # Delete obsolete spaces
+                    # Delete obsolete spaces ...
                     if doDeleteWhitespace:
                         for i, s in enumerate(sourceLines):
                             sourceLines[i] = " ".join(s.split())
 
-                    # Delete empty lines
+                    # Delete empty lines ...
                     if doDeleteWhitespace:
                         sourceLines[:] = [line for line in sourceLines if line.strip()]
 
+                    # Set line ending ...
                     if doForceEOL:
                         for i, s in enumerate(sourceLines):
                             sourceLines[i] = s + forceEOL
@@ -569,6 +610,7 @@ class BuildCopy:
                         for i, s in enumerate(sourceLines):
                             sourceLines[i] = s + "\n"
 
+                    # Write out ...
                     for line in sourceLines:
                         targetFile.write(line)
 
