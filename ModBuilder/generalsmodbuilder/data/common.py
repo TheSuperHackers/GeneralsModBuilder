@@ -2,7 +2,7 @@ from typing import Union
 from generalsmodbuilder import util
 
 
-ParamT = Union[str, int, float, bool]
+ParamT = Union[str, int, float, bool, list]
 ParamsT = dict[str, Union[str, int, float, bool, list[ParamT]]]
 
 
@@ -13,7 +13,7 @@ def VerifyParamsType(params: ParamsT, name: str) -> None:
 
         if isinstance(value, list):
             for subValue in value:
-                util.VerifyType(subValue, (str, int, float, bool), f"{name}.value.value")
+                util.VerifyType(subValue, (str, int, float, bool, list), f"{name}.value.value")
 
 
 def VerifyStringListType(strlist: list[str], name: str) -> None:
