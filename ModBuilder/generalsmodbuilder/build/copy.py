@@ -524,17 +524,27 @@ class BuildCopy:
 
     def __CopyToProcessedScript(self, source: str, target: str, params: ParamsT) -> bool:
         iparams = CaseInsensitiveDict(params)
+
         forceEOL: str = iparams.get("forceEOL")
         deleteComments: str = iparams.get("deleteComments")
         deleteWhitespace: int = iparams.get("deleteWhitespace")
+        sourceEncoding: str = iparams.get("sourceEncoding")
+        targetEncoding: str = iparams.get("targetEncoding")
+
         doForceEOL: bool = isinstance(forceEOL, str) and bool(forceEOL)
         doDeleteComments: bool = isinstance(deleteComments, str) and bool(deleteComments)
         doDeleteWhitespace: bool = isinstance(deleteWhitespace, int) and deleteWhitespace > 0
+        doEncode: bool = isinstance(sourceEncoding, str) or isinstance(targetEncoding, str)
 
-        if doDeleteWhitespace or doDeleteComments or doForceEOL:
+        if doDeleteWhitespace or doDeleteComments or doForceEOL or doEncode:
+            if not sourceEncoding:
+                sourceEncoding = "utf-8"
+            if not targetEncoding:
+                targetEncoding = "utf-8"
+
             line: str
-            with open(source, "r", encoding="ascii") as sourceFile:
-                with open(target, "w", encoding="ascii", newline="") as targetFile:
+            with open(source, "r", encoding=sourceEncoding) as sourceFile:
+                with open(target, "w", encoding=targetEncoding, newline="") as targetFile:
                     sourceLines: list[str] = [line.rstrip("\r\n") for line in sourceFile]
 
                     if doDeleteComments:
