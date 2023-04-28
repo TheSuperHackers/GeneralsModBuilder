@@ -181,20 +181,23 @@ class BuildCopy:
 
     def __GetCopyFunction(self, sourceT: BuildFileType, targetT: BuildFileType) -> Callable:
         if targetT == BuildFileType.ini:
-            return self.__CopyToINI
+            return self.__CopyToTextFile
 
         if targetT == BuildFileType.wnd:
-            return self.__CopyToWND
+            return self.__CopyToTextFile
+
+        if targetT == BuildFileType.str and not sourceT == BuildFileType.csf:
+            return self.__CopyToTextFile
 
         # Be mindful about what comes before and after this.
         if targetT == BuildFileType.Any or sourceT == targetT:
             return self.__CopyTo
 
         if targetT == BuildFileType.csf and sourceT == BuildFileType.str:
-            return self.__CopyToCSF
+            return self.__CopySTRtoCSF
 
         if targetT == BuildFileType.str and sourceT == BuildFileType.csf:
-            return self.__CopyToSTR
+            return self.__CopyCSFtoSTR
 
         if targetT == BuildFileType.big:
             return self.__CopyToBIG
@@ -237,7 +240,11 @@ class BuildCopy:
         return True
 
 
-    def __CopyToCSF(self, source: str, target: str, params: ParamsT) -> bool:
+    def __CopySTRtoCSF(self, source: str, target: str, params: ParamsT) -> bool:
+        tmpTarget: str = target + ".tmp"
+        if self.__CopyToTextFileIfNeeded(source, tmpTarget, params):
+            source = tmpTarget
+
         iparams = CaseInsensitiveDict(params)
         exec: str = self.__GetToolExePath("gametextcompiler")
         args: list[str] = [exec,
@@ -256,10 +263,13 @@ class BuildCopy:
         if success:
             BuildCopy.__PrintMakeResult(source, target)
 
+        if tmpTarget == source:
+            util.DeleteFile(tmpTarget)
+
         return success
 
 
-    def __CopyToSTR(self, source: str, target: str, params: ParamsT) -> bool:
+    def __CopyCSFtoSTR(self, source: str, target: str, params: ParamsT) -> bool:
         iparams = CaseInsensitiveDict(params)
         exec: str = self.__GetToolExePath("gametextcompiler")
         args: list[str] = [exec,
@@ -405,8 +415,7 @@ class BuildCopy:
         success: bool = util.RunProcess(args)
 
         if tmpSource != source:
-            if os.path.isfile(tmpSource):
-                os.remove(tmpSource)
+            util.DeleteFile(tmpSource)
 
         if success:
             BuildCopy.__PrintMakeResult(tmpSource, target)
@@ -508,21 +517,14 @@ class BuildCopy:
         return tool.GetExecutable()
 
 
-    def __CopyToINI(self, source: str, target: str, params: ParamsT) -> bool:
-        if self.__CopyToProcessedScript(source, target, params):
+    def __CopyToTextFile(self, source: str, target: str, params: ParamsT) -> bool:
+        if self.__CopyToTextFileIfNeeded(source, target, params):
             return True
         else:
             return self.__CopyTo(source, target, params)
 
 
-    def __CopyToWND(self, source: str, target: str, params: ParamsT) -> bool:
-        if self.__CopyToProcessedScript(source, target, params):
-            return True
-        else:
-            return self.__CopyTo(source, target, params)
-
-
-    def __CopyToProcessedScript(self, source: str, target: str, params: ParamsT) -> bool:
+    def __CopyToTextFileIfNeeded(self, source: str, target: str, params: ParamsT) -> bool:
         iparams = CaseInsensitiveDict(params)
 
         forceEOL: str = iparams.get("forceEOL")
