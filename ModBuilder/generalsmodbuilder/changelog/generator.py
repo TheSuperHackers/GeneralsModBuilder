@@ -87,7 +87,10 @@ def __MakeRecordTitle(logEntry: ChangeLogRecordEntry) -> str:
 def __MakeRecordTitleLink(logEntry: ChangeLogRecordEntry, index: int) -> str:
     name: str = util.GetFileNameNoExt(logEntry.absSourceFile)
     name = "".join(name.split())
-    link: str = f"index__{index}__{name.lower()}"
+    date: str = logEntry.date.strftime('%Y%m%d')
+    # Not using index value to keep clean links from one generation revision to another.
+    # Instead using date to generate somewhat unique links and avoid potential collisions.
+    link: str = f"link__{date}__{name.lower()}"
     return link
 
 
@@ -103,13 +106,13 @@ def __AddRecordsIndex(doc: md.Document, logRecord: ChangeLogRecord) -> None:
 
         linkList = list[md.Link]()
 
-        for i, logEntry in enumerate(logRecord.entries):
+        for index, logEntry in enumerate(logRecord.entries):
             title: str = __MakeRecordTitle(logEntry)
-            titleLink: str = __MakeRecordTitleLink(logEntry, i)
+            titleLink: str = __MakeRecordTitleLink(logEntry, index)
             link = md.Link(label=title, url=f"#{titleLink}")
             linkList.append(link)
 
-        doc.add(md.Paragraph(md.OrderedList(linkList)))
+        doc.add(md.Paragraph(md.UnorderedList(linkList)))
 
 
 def __AddRecordsDetails(doc: md.Document, logRecord: ChangeLogRecord) -> None:
