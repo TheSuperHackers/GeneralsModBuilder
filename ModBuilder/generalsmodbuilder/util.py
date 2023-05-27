@@ -151,6 +151,24 @@ def SetRegKeyValue(path: str, value: Union[int, str], root=winreg.HKEY_LOCAL_MAC
         return False
 
 
+def GetSubdirsAndFilesRecursively(dir: str) -> tuple[list, list]:
+    subdirs, files = [], []
+
+    if os.path.isdir(dir):
+        for f in os.scandir(dir):
+            if f.is_dir():
+                subdirs.append(f.path)
+            elif f.is_file():
+                files.append(f.path)
+
+    for subdir in list(subdirs):
+        rsubdirs, rfiles = GetSubdirsAndFilesRecursively(subdir)
+        subdirs.extend(rsubdirs)
+        files.extend(rfiles)
+
+    return subdirs, files
+
+
 def GetAbsFileDir(file: str) -> str:
     fdir: str
     fdir = os.path.dirname(file)
@@ -257,7 +275,7 @@ def DeleteFile(path: str) -> bool:
     return False
 
 
-def DeleteFileOrPath(path: str) -> bool:
+def DeleteFileOrDir(path: str) -> bool:
     """
     Delete file, symlink or directory tree.
     """
@@ -271,6 +289,18 @@ def DeleteFileOrPath(path: str) -> bool:
         return True
     except OSError:
         pass
+    try:
+        shutil.rmtree(path)
+        return True
+    except OSError:
+        pass
+    return False
+
+
+def DeleteDir(path: str) -> bool:
+    """
+    Delete directory tree.
+    """
     try:
         shutil.rmtree(path)
         return True

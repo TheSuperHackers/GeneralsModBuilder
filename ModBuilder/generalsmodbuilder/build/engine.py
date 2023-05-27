@@ -412,9 +412,9 @@ class BuildEngine:
     def __Clean(self) -> bool:
         print("Do Clean ...")
 
-        if util.DeleteFileOrPath(self.setup.folders.absBuildDir):
+        if util.DeleteFileOrDir(self.setup.folders.absBuildDir):
             print(f"Deleted {self.setup.folders.absBuildDir}")
-        if util.DeleteFileOrPath(self.setup.folders.absReleaseDir):
+        if util.DeleteFileOrDir(self.setup.folders.absReleaseDir):
             print(f"Deleted {self.setup.folders.absReleaseDir}")
 
         return True
@@ -857,7 +857,7 @@ class BuildEngine:
                     newInfo: BuildFilePathInfo = diff.newDiffRegistry.FindFile(fileName)
 
                     if newInfo == None:
-                        if util.DeleteFileOrPath(fileName):
+                        if util.DeleteFileOrDir(fileName):
                             oldInfo: BuildFilePathInfo = diff.oldDiffRegistry.FindFile(fileName)
                             if oldInfo != None and oldInfo.md5:
                                 thing.fileCounts[BuildFileStatus.Removed.value] += 1
@@ -878,7 +878,6 @@ class BuildEngine:
             timer = util.Timer()
             print(f"Delete obsolete files for {thing.name} ...")
 
-            fileNames: list[str] = BuildEngine.__CreateListOfExistingFilesFromThing(thing)
             fileName: str
             buildFile: BuildFile
 
@@ -891,24 +890,42 @@ class BuildEngine:
                             thing.fileCounts[BuildFileStatus.Removed.value] += 1
                         print("Deleted", fileName)
 
+            foldersAndFiles: tuple = BuildEngine.__CreateListOfExistingFoldersAndFilesFromThing(thing)
+            folderNames: list[str] = foldersAndFiles[0]
+            fileNames: list[str] = foldersAndFiles[1]
+            # folderNames and fileNames are expected to be sorted already.
+            folderNames = list(reversed(folderNames))
+
+            # Delete obsolete files first to count the removed files.
             for fileName in fileNames:
-                if os.path.lexists(fileName):
-                    newInfo: BuildFilePathInfo = diff.newDiffRegistry.FindFile(fileName)
-                    if newInfo == None:
-                        if util.DeleteFileOrPath(fileName):
-                            oldInfo: BuildFilePathInfo = diff.oldDiffRegistry.FindFile(fileName)
-                            if oldInfo != None and oldInfo.md5:
-                                thing.fileCounts[BuildFileStatus.Removed.value] += 1
-                            print("Deleted", fileName)
+                newInfo: BuildFilePathInfo = diff.newDiffRegistry.FindFile(fileName)
+                if newInfo == None:
+                    if util.DeleteFile(fileName):
+                        oldInfo: BuildFilePathInfo = diff.oldDiffRegistry.FindFile(fileName)
+                        if oldInfo != None and oldInfo.md5:
+                            thing.fileCounts[BuildFileStatus.Removed.value] += 1
+                        print("Deleted", fileName)
+
+            # Delete obsolete folders last.
+            for folderName in folderNames:
+                newInfo: BuildFilePathInfo = diff.newDiffRegistry.FindFile(folderName)
+                if newInfo == None:
+                    if util.DeleteDir(folderName):
+                        oldInfo: BuildFilePathInfo = diff.oldDiffRegistry.FindFile(folderName)
+                        print("Deleted", folderName)
+
+            if IsStatusRelevantForBuild(BuildFileStatus.Removed):
+                count: int = thing.GetFileCount(BuildFileStatus.Removed)
+                if count > 0:
+                    print(f"{thing.name} has {count} files {BuildFileStatus.Removed.name}")
 
             if timer.GetElapsedSeconds() > util.PERFORMANCE_TIMER_THRESHOLD:
                 print(f"Delete obsolete files for {thing.name} completed in {timer.GetElapsedSecondsString()} s")
 
 
     @staticmethod
-    def __CreateListOfExistingFilesFromThing(thing: BuildThing) -> list[str]:
-        search: str = os.path.join(thing.absParentDir, "**", "*")
-        return glob(search, recursive=True)
+    def __CreateListOfExistingFoldersAndFilesFromThing(thing: BuildThing) -> tuple[list, list]:
+        return util.GetSubdirsAndFilesRecursively(thing.absParentDir)
 
 
     @staticmethod

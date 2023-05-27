@@ -107,7 +107,7 @@ class BuildCopy:
         if self.options & BuildCopyOption.EnableBackup:
             BuildCopy.__CreateBackup(target)
 
-        util.DeleteFileOrPath(target)
+        util.DeleteFileOrDir(target)
 
         copyFunction: Callable = self.__GetCopyFunction(sourceType, targetType)
         success: bool = copyFunction(source, target, params)
@@ -118,7 +118,7 @@ class BuildCopy:
     def Uncopy(self, file: str) -> bool:
         success: bool = False
 
-        if util.DeleteFileOrPath(file):
+        if util.DeleteFileOrDir(file):
             BuildCopy.__PrintUncopyResult(file)
             success = True
 
