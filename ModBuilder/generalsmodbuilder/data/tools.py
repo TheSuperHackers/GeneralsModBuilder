@@ -4,7 +4,6 @@ import urllib.request
 import http.client
 import zipfile
 from enum import Enum, auto
-from logging import warning
 from dataclasses import dataclass
 from generalsmodbuilder import util
 from generalsmodbuilder.util import JsonFile

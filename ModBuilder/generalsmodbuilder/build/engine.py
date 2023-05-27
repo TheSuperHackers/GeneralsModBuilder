@@ -4,7 +4,6 @@ import sys
 import os
 from copy import deepcopy
 from dataclasses import dataclass
-from logging import warning
 from glob import glob
 import threading
 import time
@@ -257,7 +256,7 @@ class BuildEngine:
 
     def Run(self, setup: BuildSetup) -> bool:
         if setup.step == BuildStep.Zero:
-            warning("setup.step is Zero. Exiting.")
+            print("Warning: setup.step is Zero. Exiting.")
             return True
 
         self.setup = setup
@@ -1015,9 +1014,9 @@ class BuildEngine:
 
         print(f"Checking game install at {runner.absGameInstallDir} ...")
         if len(unexpectedGameFiles) > 0:
-            warning(f"The installed Mod may not work correctly. {len(unexpectedGameFiles)} unexpected file(s) were found:")
+            print(f"Warning: The installed Mod may not work correctly. {len(unexpectedGameFiles)} unexpected file(s) were found:")
             for file in unexpectedGameFiles:
-                warning(file)
+                print(file)
 
 
     @staticmethod
