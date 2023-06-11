@@ -8,7 +8,6 @@ import json
 import hashlib
 import pickle
 import shutil
-import yaml
 from copy import copy
 from typing import Any, Callable, Union
 
@@ -67,11 +66,8 @@ def GetCheckedMandatory(dictionary: dict, key: str, expectedType: type | types.U
 
 def pprint(obj: Any) -> None:
     try:
-        beeprintpp: function = None
+        # Is imported here because it is not part of standard Python.
         from beeprint import pp as beeprintpp
-    except ImportError:
-        pass
-    if beeprintpp != None:
         beeprintpp(
             obj,
             max_depth=10,
@@ -80,6 +76,8 @@ def pprint(obj: Any) -> None:
             list_in_line=False,
             tuple_in_line=False,
             string_break_enable=False)
+    except ImportError:
+        pass
 
 
 def LoadPickle(path: str) -> Any:
@@ -116,12 +114,14 @@ def ReadJson(path: str) -> dict:
 
 
 def ReadYaml(path: str) -> dict:
+    # Is imported here because it is not part of standard Python.
+    from yaml import safe_load
     print(f"Read yaml {path} ...")
     timer = Timer()
     data: dict = None
     with open(path, "rb") as rfile:
         text = rfile.read()
-        data = yaml.safe_load(text)
+        data = safe_load(text)
     if timer.GetElapsedSeconds() > PERFORMANCE_TIMER_THRESHOLD:
         print(f"Read yaml {path} completed in {timer.GetElapsedSecondsString()} s")
     return data
