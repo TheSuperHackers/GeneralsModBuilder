@@ -13,6 +13,35 @@ from copy import copy
 from typing import Any, Callable, Union
 
 
+class Timer:
+    start: float
+    elapsed: float
+
+    def __init__(self):
+        self.start: float = time.time()
+        self.elapsed: float = 0.0
+
+    def Start(self) -> None:
+        self.elapsed = 0.0
+        self.start = time.time()
+
+    def Finish(self) -> None:
+        self.elapsed = time.time() - self.start
+
+    def GetElapsedSeconds(self) -> float:
+        if self.elapsed != 0.0:
+            return self.elapsed
+        else:
+            return time.time() - self.start
+
+    def GetElapsedSecondsString(self) -> str:
+        elapsed = self.GetElapsedSeconds()
+        return str.format("{:.3f}", elapsed)
+
+
+PERFORMANCE_TIMER_THRESHOLD = 0.01
+
+
 def Verify(condition: bool, message: str = "") -> None:
     if not condition:
         raise AssertionError(message)
@@ -54,39 +83,47 @@ def pprint(obj: Any) -> None:
 
 
 def LoadPickle(path: str) -> Any:
+    print(f"Read pickle {path} ...")
     timer = Timer()
     data: Any = None
     with open(path, "rb") as rfile:
         data = pickle.load(rfile)
-    print(f"Loaded pickle {path} in {timer.GetElapsedSecondsString()} s")
+    if timer.GetElapsedSeconds() > PERFORMANCE_TIMER_THRESHOLD:
+        print(f"Read pickle {path} completed in {timer.GetElapsedSecondsString()} s")
     return data
 
 
 def SavePickle(path: str, data: Any) -> None:
+    print(f"Write pickle {path} ...")
     timer = Timer()
     MakeDirsForFile(path)
     with open(path, "wb") as wfile:
         pickle.dump(data, wfile, protocol=pickle.HIGHEST_PROTOCOL)
-    print(f"Saved pickle {path} in {timer.GetElapsedSecondsString()} s")
+    if timer.GetElapsedSeconds() > PERFORMANCE_TIMER_THRESHOLD:
+        print(f"Write pickle {path} completed in {timer.GetElapsedSecondsString()} s")
 
 
 def ReadJson(path: str) -> dict:
+    print(f"Read json {path} ...")
     timer = Timer()
     data: dict = None
     with open(path, "rb") as rfile:
         text = rfile.read()
         data = json.loads(text)
-    print(f"Read json {path} in {timer.GetElapsedSecondsString()} s")
+    if timer.GetElapsedSeconds() > PERFORMANCE_TIMER_THRESHOLD:
+        print(f"Read json {path} completed in {timer.GetElapsedSecondsString()} s")
     return data
 
 
 def ReadYaml(path: str) -> dict:
+    print(f"Read yaml {path} ...")
     timer = Timer()
     data: dict = None
     with open(path, "rb") as rfile:
         text = rfile.read()
         data = yaml.safe_load(text)
-    print(f"Read yaml {path} in {timer.GetElapsedSecondsString()} s")
+    if timer.GetElapsedSeconds() > PERFORMANCE_TIMER_THRESHOLD:
+        print(f"Read yaml {path} completed in {timer.GetElapsedSecondsString()} s")
     return data
 
 
@@ -377,32 +414,3 @@ def IsValidPathName(pathname: str) -> bool:
 def RunProcess(args) -> bool:
     subprocess.run(args=args, check=True)
     return True
-
-
-class Timer:
-    start: float
-    elapsed: float
-
-    def __init__(self):
-        self.start: float = time.time()
-        self.elapsed: float = 0.0
-
-    def Start(self) -> None:
-        self.elapsed = 0.0
-        self.start = time.time()
-
-    def Finish(self) -> None:
-        self.elapsed = time.time() - self.start
-
-    def GetElapsedSeconds(self) -> float:
-        if self.elapsed != 0.0:
-            return self.elapsed
-        else:
-            return time.time() - self.start
-
-    def GetElapsedSecondsString(self) -> str:
-        elapsed = self.GetElapsedSeconds()
-        return str.format("{:.3f}", elapsed)
-
-
-PERFORMANCE_TIMER_THRESHOLD = 0.01
