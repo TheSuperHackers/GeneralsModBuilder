@@ -411,9 +411,9 @@ class BuildEngine:
     def __Clean(self) -> bool:
         print("Do Clean ...")
 
-        if util.DeleteFileOrDir(self.setup.folders.absBuildDir):
+        if util.DeleteDir(self.setup.folders.absBuildDir):
             print(f"Deleted {self.setup.folders.absBuildDir}")
-        if util.DeleteFileOrDir(self.setup.folders.absReleaseDir):
+        if util.DeleteDir(self.setup.folders.absReleaseDir):
             print(f"Deleted {self.setup.folders.absReleaseDir}")
 
         return True
