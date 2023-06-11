@@ -12,6 +12,7 @@ psd-tools = "1.9.19"
 markdownmaker = "^0.4.0"
 PyYAML = "^6.0"
 scikit-image = "0.19.2"
+certifi = "^2023.5.7"
 
 [tool.poetry.dev-dependencies]
 

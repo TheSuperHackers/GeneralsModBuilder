@@ -34,6 +34,14 @@ python-versions = "*"
 urwid = "*"
 
 [[package]]
+name = "certifi"
+version = "2023.5.7"
+description = "Python package for providing Mozilla's CA Bundle."
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[[package]]
 name = "docopt"
 version = "0.6.2"
 description = "Pythonic argument parser, that will make you smile"
@@ -221,7 +229,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.10,<3.11"
-content-hash = "52c81ce90d93aba5ec72c349b63f979bd2cb8e4af497fbcd1722b0f606d1d862"
+content-hash = "81b994638eef025d7e429add482f47a0397b87ae7a659646fca57bbd84521474"
 
 [metadata.files]
 aggdraw = []
@@ -229,6 +237,7 @@ attrs = []
 beeprint = [
     {file = "beeprint-2.4.10.tar.gz", hash = "sha256:b3cbe170718e696bfa05e074789212ba6aef5f096a5fd12717f14d4f1615a440"},
 ]
+certifi = []
 docopt = [
     {file = "docopt-0.6.2.tar.gz", hash = "sha256:49b3a825280bd66b3aa83585ef59c4a8c82f2c8a522dbe754a8bc8d08c85c491"},
 ]
