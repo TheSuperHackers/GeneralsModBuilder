@@ -55,7 +55,7 @@ class PyPackage:
     absWhl: str
 
     def __init__(self):
-        pass
+        self.absWhl = None
 
     def AbsDir(self) -> str:
         return os.path.dirname(self.absWhl)
@@ -83,7 +83,10 @@ class BuildSetup:
     pipInstalls: list[str]
 
     def __init__(self):
+        self.absVenvDir = None
+        self.absVenvExe = None
         self.packages = list[PyPackage]()
+        self.pipInstalls = list[str]()
 
     def VerifyTypes(self) -> None:
         util.VerifyType(self.absVenvDir, str, "BuildSetup.absVenvDir")
@@ -114,6 +117,9 @@ class BuildStep:
     config: dict
 
     def __init__(self):
+        self.absDir = None
+        self.name = None
+        self.setup = None
         self.config = dict()
 
     def MakeAbsPath(self, relPath: str) -> str:
@@ -125,8 +131,8 @@ class BuildStep:
     def VerifyTypes(self) -> None:
         util.VerifyType(self.absDir, str, "BuildStep.absDir")
         util.VerifyType(self.name, str, "BuildStep.name")
-        util.VerifyType(self.setup, BuildSetup, "BuildSetup.absVenvExe")
-        util.VerifyType(self.config, dict, "BuildSetup.absPythonExe")
+        util.VerifyType(self.setup, BuildSetup, "BuildSetup.setup")
+        util.VerifyType(self.config, dict, "BuildSetup.config")
         self.setup.VerifyTypes()
 
     def VerifyValues(self) -> None:
