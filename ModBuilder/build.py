@@ -78,7 +78,6 @@ class PyPackage:
 class BuildSetup:
     absVenvDir: str
     absVenvExe: str
-    absPythonExe: str
     packages: list[PyPackage]
     pipInstalls: list[str]
 
@@ -88,7 +87,6 @@ class BuildSetup:
     def VerifyTypes(self) -> None:
         util.VerifyType(self.absVenvDir, str, "BuildSetup.absVenvDir")
         util.VerifyType(self.absVenvExe, str, "BuildSetup.absVenvExe")
-        util.VerifyType(self.absPythonExe, str, "BuildSetup.absPythonExe")
         util.VerifyType(self.packages, list, "BuildSetup.packages")
         util.VerifyType(self.pipInstalls, list, "BuildSetup.pipInstalls")
         for package in self.packages:
@@ -98,14 +96,12 @@ class BuildSetup:
             util.VerifyType(name, str, "BuildSetup.pipInstalls")
 
     def VerifyValues(self) -> None:
-        util.Verify(os.path.isfile(self.absPythonExe), f"BuildSetup.absPythonExe '{self.absPythonExe}' is not a valid file" )
         for package in self.packages:
             package.VerifyValues()
 
     def Normalize(self) -> None:
         self.absVenvDir = os.path.normpath(self.absVenvDir)
         self.absVenvExe = os.path.normpath(self.absVenvExe)
-        self.absPythonExe = os.path.normpath(self.absPythonExe)
         for package in self.packages:
             package.Normalize()
 
@@ -161,7 +157,6 @@ def __MakeBuildSetupFromDict(jSetup: dict, absDir: str) -> BuildSetup:
         jMachine: dict = jPlatform.get(machine)
 
         if jMachine:
-            buildSetup.absPythonExe = util.JoinPathIfValid(None, absDir, jMachine.get("pythonExe"))
             jPackages: list[str] = jMachine.get("packages")
 
             if jPackages:
@@ -229,8 +224,8 @@ def __RunAndCapture(exec: str, *args) -> str:
 
 
 def __CreateVenv(buildStep: BuildStep) -> None:
-    print(f"Create venv for '{buildStep.name}' ...")
-    __Run(buildStep.setup.absPythonExe, "-m", "venv", buildStep.setup.absVenvDir)
+    print(f"Create venv for '{buildStep.name}' at '{buildStep.setup.absVenvDir}' with '{sys.executable}' ...")
+    __Run(sys.executable, "-m", "venv", buildStep.setup.absVenvDir)
 
 
 def __InstallPackages(buildStep: BuildStep) -> None:
