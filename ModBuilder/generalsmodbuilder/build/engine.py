@@ -846,6 +846,8 @@ class BuildEngine:
             print(f"Delete removed files for {thing.name} ...")
 
             fileNames: list[str] = diff.oldDiffRegistry.GetFilePathList()
+            fileNames.sort()
+            fileNames = list(reversed(fileNames))
             fileName: str
 
             for fileName in fileNames:
@@ -856,7 +858,10 @@ class BuildEngine:
                     newInfo: BuildFilePathInfo = diff.newDiffRegistry.FindFile(fileName)
 
                     if newInfo == None:
-                        if util.DeleteFileOrDir(fileName):
+                        if util.DeleteEmptyDir(fileName):
+                            print("Deleted", fileName)
+
+                        elif util.DeleteFile(fileName):
                             oldInfo: BuildFilePathInfo = diff.oldDiffRegistry.FindFile(fileName)
                             if oldInfo != None and oldInfo.md5:
                                 thing.fileCounts[BuildFileStatus.Removed.value] += 1

@@ -346,6 +346,18 @@ def DeleteDir(path: str) -> bool:
     return False
 
 
+def DeleteEmptyDir(path: str) -> bool:
+    """
+    Delete directory tree.
+    """
+    try:
+        os.rmdir(path)
+        return True
+    except OSError:
+        pass
+    return False
+
+
 def JoinPathIfValid(default: Any, *paths: str) -> Any:
     for path in paths:
         if not path or not isinstance(path, str):
