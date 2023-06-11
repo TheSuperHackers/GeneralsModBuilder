@@ -23,6 +23,7 @@ class Gui:
     configPaths: list[str]
     buildAndInstallList: list[str]
     debug: bool
+    toolsRootDir: str
 
     makeChangeLog: BooleanVar
     clean: BooleanVar
@@ -56,6 +57,7 @@ class Gui:
         self.configPaths = None
         self.buildAndInstallList = None
         self.debug = False
+        self.toolsRootDir = None
         self._ClearMainWindowElements()
 
 
@@ -71,12 +73,14 @@ class Gui:
             uninstall: bool = False,
             run: bool = False,
             debug: bool = False,
-            printConfig: bool = False):
+            printConfig: bool = False,
+            toolsRootDir: str = None):
 
         self.configPaths = configPaths
         self.buildAndInstallList = installList
         self.buildAndInstallList.extend(buildList)
         self.debug = debug
+        self.toolsRootDir = toolsRootDir
 
         mainWindow: Tk = Gui._CreateMainWindow()
 
@@ -314,6 +318,7 @@ class Gui:
             uninstall=self.uninstall.get(),
             run=self.run.get(),
             printConfig=self.printConfig.get(),
+            toolsRootDir=self.toolsRootDir,
             engine=self.buildEngine)
 
         self._DoWork(function)
@@ -335,6 +340,7 @@ class Gui:
             buildList=self.buildAndInstallList,
             clean=True,
             printConfig=self.printConfig.get(),
+            toolsRootDir=self.toolsRootDir,
             engine=self.buildEngine)
 
         self._DoWork(function)
@@ -347,6 +353,7 @@ class Gui:
             buildList=self.buildAndInstallList,
             build=True,
             printConfig=self.printConfig.get(),
+            toolsRootDir=self.toolsRootDir,
             engine=self.buildEngine)
 
         self._DoWork(function)
@@ -359,6 +366,7 @@ class Gui:
             buildList=self.buildAndInstallList,
             release=True,
             printConfig=self.printConfig.get(),
+            toolsRootDir=self.toolsRootDir,
             engine=self.buildEngine)
 
         self._DoWork(function)
@@ -371,6 +379,7 @@ class Gui:
             buildList=self.buildAndInstallList,
             install=True,
             printConfig=self.printConfig.get(),
+            toolsRootDir=self.toolsRootDir,
             engine=self.buildEngine)
 
         self._DoWork(function)
@@ -383,6 +392,7 @@ class Gui:
             buildList=self.buildAndInstallList,
             uninstall=True,
             printConfig=self.printConfig.get(),
+            toolsRootDir=self.toolsRootDir,
             engine=self.buildEngine)
 
         self._DoWork(function)
@@ -395,6 +405,7 @@ class Gui:
             buildList=self.buildAndInstallList,
             run=True,
             printConfig=self.printConfig.get(),
+            toolsRootDir=self.toolsRootDir,
             engine=self.buildEngine)
 
         self._DoWork(function)

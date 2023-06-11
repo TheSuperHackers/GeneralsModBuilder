@@ -67,6 +67,7 @@ def RunWithConfig(
         uninstall: bool=False,
         run: bool=False,
         printConfig: bool=False,
+        toolsRootDir: str=None,
         engine: BuildEngine=BuildEngine()) -> None:
 
     timer = util.Timer()
@@ -88,7 +89,7 @@ def RunWithConfig(
         folders: Folders = MakeFoldersFromJsons(jsonFiles)
         runner: Runner = MakeRunnerFromJsons(jsonFiles) if (install or uninstall or run) else Runner()
         bundles: Bundles = MakeBundlesFromJsons(jsonFiles)
-        tools: ToolsT = MakeToolsFromJsons(jsonFiles)
+        tools: ToolsT = MakeToolsFromJsons(jsonFiles, rootDir=toolsRootDir)
 
         InstallTools(tools)
 

@@ -25,6 +25,7 @@ def Main(args=None):
     parser.add_argument('-g', '--gui', action='store_true')
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--print-config', action='store_true')
+    parser.add_argument('--tools-root-dir', type=str, default=None, help='The root directory of tools. By default the directory of the tools json file is used as the root directory for its specified tools.')
     parser.add_argument('--file-hash-registry-input', type=str, action="append", help='Path to generate file hash registry from. Multiples can be specified.')
     parser.add_argument('--file-hash-registry-output', type=str, help='Path to save file hash registry to.')
     parser.add_argument('--file-hash-registry-name', type=str, default="FileHashRegistry", help='Name of the file hash registry.')
@@ -96,6 +97,10 @@ def Main(args=None):
     useGui = bool(args.gui)
     debug = bool(args.debug)
     printConfig = bool(args.print_config)
+    toolsRootDir = args.tools_root_dir
+
+    if toolsRootDir:
+        toolsRootDir = os.path.normpath(toolsRootDir)
 
     if useGui:
         gui: Gui = Gui()
@@ -111,7 +116,8 @@ def Main(args=None):
             uninstall=uninstall,
             run=run,
             debug=debug,
-            printConfig=printConfig)
+            printConfig=printConfig,
+            toolsRootDir=toolsRootDir)
     else:
         def RunWithConfigWrapper():
             RunWithConfig(
@@ -125,7 +131,8 @@ def Main(args=None):
                 install=install,
                 uninstall=uninstall,
                 run=run,
-                printConfig=printConfig)
+                printConfig=printConfig,
+                toolsRootDir=toolsRootDir)
         if debug:
             RunWithConfigWrapper()
         else:
