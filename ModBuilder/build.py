@@ -11,16 +11,12 @@ from glob import glob
 from typing import Union
 
 
-g_writeFileCount: int = 0
-
 def WriteFile(path: str, data: bytes) -> None:
     if len(data) > 0:
+        print(f"Write file '{path}'")
         with open(path, 'wb') as f:
             written: int = f.write(data)
             assert(written == len(data))
-        global g_writeFileCount
-        g_writeFileCount += 1
-        print(f"Created file ({g_writeFileCount}) '{path}'")
 
 
 def __GenerateHashFiles(file: str) -> None:
