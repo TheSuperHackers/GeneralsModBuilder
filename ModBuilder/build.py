@@ -2,53 +2,13 @@ from glob import glob
 import importlib
 import shutil
 import subprocess
-import json
 import os
 import platform
 import sys
-import hashlib
+from generalsmodbuilder import util
+from generalsmodbuilder.util import JsonFile
 from timeit import default_timer as timer
-from typing import Callable, Union
-
-
-def GetAbsFileDir(file: str) -> str:
-    dir: str
-    dir = os.path.dirname(file)
-    dir = os.path.abspath(dir)
-    return dir
-
-
-def GetFileDirAndName(file: str) -> str:
-    path, ext = os.path.splitext(file)
-    return path
-
-
-def GetFileName(file: str) -> str:
-    path, name = os.path.split(file)
-    return name
-
-
-def GetFileSize(path: str) -> str:
-    return os.path.getsize(path)
-
-
-def GetFileMd5(path: str) -> str:
-    return GetFileHash(path, hashlib.md5)
-
-
-def GetFileSha256(path: str) -> str:
-    return GetFileHash(path, hashlib.sha256)
-
-
-def GetFileHash(path: str, hashFunc: Callable) -> str:
-    hashStr: str = ""
-    if os.path.isfile(path):
-        hashObj: hashlib._Hash = hashFunc()
-        with open(path, "rb") as rfile:
-            for chunk in iter(lambda: rfile.read(4096), b""):
-                hashObj.update(chunk)
-        hashStr = hashObj.hexdigest()
-    return hashStr
+from typing import Union
 
 
 g_writeFileCount: int = 0
@@ -63,29 +23,15 @@ def WriteFile(path: str, data: bytes) -> None:
         print(f"Created file ({g_writeFileCount}) '{path}'")
 
 
-def DeleteFileOrPath(path: str) -> bool:
-    if os.path.islink(path):
-        os.unlink(path)
-        return True
-    if os.path.isfile(path):
-        os.remove(path)
-        return True
-    elif os.path.isdir(path):
-        shutil.rmtree(path)
-        return True
-    else:
-        return False
-
-
 def __GenerateHashFiles(file: str) -> None:
     if os.path.isfile(file):
-        hashDir: str = os.path.join(GetAbsFileDir(file), "hashes")
-        hashFile: str = os.path.join(hashDir, GetFileName(file))
+        hashDir: str = os.path.join(util.GetAbsFileDir(file), "hashes")
+        hashFile: str = os.path.join(hashDir, util.GetFileName(file))
         os.makedirs(hashDir, exist_ok=True)
 
-        md5: str = GetFileMd5(file)
-        sha256: str = GetFileSha256(file)
-        size: str = GetFileSize(file)
+        md5: str = util.GetFileMd5(file)
+        sha256: str = util.GetFileSha256(file)
+        size: str = util.GetFileSize(file)
 
         WriteFile(hashFile + ".md5", str.encode(md5))
         WriteFile(hashFile + ".sha256", str.encode(sha256))
@@ -100,49 +46,9 @@ def GenerateHashFiles(files: Union[str, list[str]]) -> None:
             __GenerateHashFiles(file)
 
 
-def Verify(condition: bool, message: str = "") -> None:
-    if not condition:
-        raise AssertionError(message)
-
-
-def VerifyType(obj: object, expectedType: type, objName: str) -> None:
-    if not isinstance(obj, expectedType):
-        raise AssertionError(f'Object "{objName}" is type:{type(obj).__name__} but should be type:{expectedType.__name__}')
-
-
-def JoinPathIfValid(default, *paths: str) -> str:
-    for path in paths:
-        if not path or not isinstance(path, str):
-            return default
-    return os.path.join(*paths)
-
-
 def ChangeDir(dir: str) -> None:
     print(f"chdir '{dir}'")
     os.chdir(dir)
-
-
-def ReadJson(path: str) -> dict:
-    print("Read json", path)
-    data: dict = None
-    with open(path, "rb") as rfile:
-        text = rfile.read()
-        data = json.loads(text)
-    return data
-
-
-class JsonFile:
-    path: str
-    data: dict
-
-    def __init__(self, path: str):
-        self.path = os.path.normpath(path)
-        self.data = ReadJson(path)
-        self.VerifyTypes()
-
-    def VerifyTypes(self) -> None:
-        VerifyType(self.path, str, "JsonFile.path")
-        VerifyType(self.data, dict, "JsonFile.data")
 
 
 class PyPackage:
@@ -159,11 +65,11 @@ class PyPackage:
 
     def VerifyTypes(self) -> None:
         if self.absWhl != None:
-            VerifyType(self.absWhl, str, "PyPackage.absWhl")
+            util.VerifyType(self.absWhl, str, "PyPackage.absWhl")
 
     def VerifyValues(self) -> None:
         if self.absWhl != None:
-            Verify(os.path.isfile(self.AbsWhl()), f"PyPackage.absWhl '{self.AbsWhl()}' is not a valid file")
+            util.Verify(os.path.isfile(self.AbsWhl()), f"PyPackage.absWhl '{self.AbsWhl()}' is not a valid file")
 
     def Normalize(self) -> None:
         if self.absWhl != None:
@@ -181,19 +87,19 @@ class BuildSetup:
         self.packages = list[PyPackage]()
 
     def VerifyTypes(self) -> None:
-        VerifyType(self.absVenvDir, str, "BuildSetup.absVenvDir")
-        VerifyType(self.absVenvExe, str, "BuildSetup.absVenvExe")
-        VerifyType(self.absPythonExe, str, "BuildSetup.absPythonExe")
-        VerifyType(self.packages, list, "BuildSetup.packages")
-        VerifyType(self.pipInstalls, list, "BuildSetup.pipInstalls")
+        util.VerifyType(self.absVenvDir, str, "BuildSetup.absVenvDir")
+        util.VerifyType(self.absVenvExe, str, "BuildSetup.absVenvExe")
+        util.VerifyType(self.absPythonExe, str, "BuildSetup.absPythonExe")
+        util.VerifyType(self.packages, list, "BuildSetup.packages")
+        util.VerifyType(self.pipInstalls, list, "BuildSetup.pipInstalls")
         for package in self.packages:
-            VerifyType(package, PyPackage, "BuildSetup.packages")
+            util.VerifyType(package, PyPackage, "BuildSetup.packages")
             package.VerifyTypes()
         for name in self.pipInstalls:
-            VerifyType(name, str, "BuildSetup.pipInstalls")
+            util.VerifyType(name, str, "BuildSetup.pipInstalls")
 
     def VerifyValues(self) -> None:
-        Verify(os.path.isfile(self.absPythonExe), f"BuildSetup.absPythonExe '{self.absPythonExe}' is not a valid file" )
+        util.Verify(os.path.isfile(self.absPythonExe), f"BuildSetup.absPythonExe '{self.absPythonExe}' is not a valid file" )
         for package in self.packages:
             package.VerifyValues()
 
@@ -215,21 +121,21 @@ class BuildStep:
         self.config = dict()
 
     def MakeAbsPath(self, relPath: str) -> str:
-        VerifyType(relPath, str, "relPath")
+        util.VerifyType(relPath, str, "relPath")
         path: str = os.path.join(self.absDir, relPath)
         path = os.path.normpath(path)
         return path
 
     def VerifyTypes(self) -> None:
-        VerifyType(self.absDir, str, "BuildStep.absDir")
-        VerifyType(self.name, str, "BuildStep.name")
-        VerifyType(self.setup, BuildSetup, "BuildSetup.absVenvExe")
-        VerifyType(self.config, dict, "BuildSetup.absPythonExe")
+        util.VerifyType(self.absDir, str, "BuildStep.absDir")
+        util.VerifyType(self.name, str, "BuildStep.name")
+        util.VerifyType(self.setup, BuildSetup, "BuildSetup.absVenvExe")
+        util.VerifyType(self.config, dict, "BuildSetup.absPythonExe")
         self.setup.VerifyTypes()
 
     def VerifyValues(self) -> None:
-        Verify(os.path.isdir(self.absDir), f"BuildStep.absDir '{self.absDir}' is not an valid path")
-        Verify(self.name, "BuildStep.name must not be empty")
+        util.Verify(os.path.isdir(self.absDir), f"BuildStep.absDir '{self.absDir}' is not an valid path")
+        util.Verify(self.name, "BuildStep.name must not be empty")
         self.setup.VerifyValues()
 
     def Normalize(self) -> None:
@@ -240,7 +146,7 @@ BuildStepsT = list[BuildStep]
 
 
 def __MakeBuildJsonPath() -> str:
-    return os.path.join(GetAbsFileDir(__file__), "build.json")
+    return os.path.join(util.GetAbsFileDir(__file__), "build.json")
 
 
 def __MakeBuildSetupFromDict(jSetup: dict, absDir: str) -> BuildSetup:
@@ -251,19 +157,19 @@ def __MakeBuildSetupFromDict(jSetup: dict, absDir: str) -> BuildSetup:
     jPlatform: dict = jSetup.get(platfrm)
 
     if jPlatform:
-        buildSetup.absVenvDir = JoinPathIfValid(None, absDir, jPlatform.get("venvDir"))
-        buildSetup.absVenvExe = JoinPathIfValid(None, absDir, jPlatform.get("venvExe"))
+        buildSetup.absVenvDir = util.JoinPathIfValid(None, absDir, jPlatform.get("venvDir"))
+        buildSetup.absVenvExe = util.JoinPathIfValid(None, absDir, jPlatform.get("venvExe"))
         jMachine: dict = jPlatform.get(machine)
 
         if jMachine:
-            buildSetup.absPythonExe = JoinPathIfValid(None, absDir, jMachine.get("pythonExe"))
+            buildSetup.absPythonExe = util.JoinPathIfValid(None, absDir, jMachine.get("pythonExe"))
             jPackages: list[str] = jMachine.get("packages")
 
             if jPackages:
                 jPackage: str
                 for jPackage in jPackages:
                     package = PyPackage()
-                    package.absWhl = JoinPathIfValid(None, absDir, jPackage)
+                    package.absWhl = util.JoinPathIfValid(None, absDir, jPackage)
                     buildSetup.packages.append(package)
 
     return buildSetup
@@ -417,10 +323,10 @@ def __RunPyInstaller(buildStep: BuildStep) -> None:
                 globFiles: list[str] = glob(absFile, recursive=True)
                 for globFile in globFiles:
                     print(f"Delete '{globFile}'")
-                    DeleteFileOrPath(globFile)
+                    util.DeleteFileOrDir(globFile)
             else:
                 print(f"Delete '{absFile}'")
-                DeleteFileOrPath(absFile)
+                util.DeleteFileOrDir(absFile)
 
     if makeArchive:
         try:
@@ -439,12 +345,12 @@ def __BuildArchives(inDir: str, outDir: str, outBaseName: str) -> None:
     os.makedirs(outDir, exist_ok=True)
 
     absBaseName = os.path.join(outDir, outBaseName)
-    x7z: str = os.path.join(GetAbsFileDir(__file__), "7z.exe")
+    x7z: str = os.path.join(util.GetAbsFileDir(__file__), "7z.exe")
 
     if os.name == "nt" and os.path.isfile(x7z):
         x7zInDir: str = os.path.join(inDir, "*")
-        DeleteFileOrPath(absBaseName + ".7z")
-        DeleteFileOrPath(absBaseName + ".zip")
+        util.DeleteFileOrDir(absBaseName + ".7z")
+        util.DeleteFileOrDir(absBaseName + ".zip")
         __Run(x7z, "a", "-t7z", "-mx9", absBaseName + ".7z", x7zInDir)
         __Run(x7z, "a", "-tzip", "-mx9", absBaseName + ".zip", x7zInDir)
         GenerateHashFiles(absBaseName + ".7z")
