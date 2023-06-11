@@ -327,12 +327,12 @@ def __ProcessAliases(thing: str | ParamsT, aliases: dict) -> str | ParamsT:
     return thing
 
 
-def __MakeToolFileFromDict(jFile: dict, jsonDir: str, aliases: dict) -> ToolFile:
+def __MakeToolFileFromDict(jFile: dict, rootDir: str, aliases: dict) -> ToolFile:
     toolFile = ToolFile()
 
     toolFile.url = jFile.get("url", toolFile.url)
-    toolFile.absTarget = util.JoinPathIfValid(None, jsonDir, jFile.get("target"))
-    toolFile.absExtractDir = util.JoinPathIfValid(toolFile.absExtractDir, jsonDir, jFile.get("extractDir"))
+    toolFile.absTarget = util.JoinPathIfValid(None, rootDir, jFile.get("target"))
+    toolFile.absExtractDir = util.JoinPathIfValid(toolFile.absExtractDir, rootDir, jFile.get("extractDir"))
     toolFile.md5 = jFile.get("md5", toolFile.md5)
     toolFile.sha256 = jFile.get("sha256", toolFile.sha256)
     toolFile.size = jFile.get("size", toolFile.size)
@@ -349,7 +349,7 @@ def __MakeToolFileFromDict(jFile: dict, jsonDir: str, aliases: dict) -> ToolFile
         jCall: dict
         for jCall in jCallList:
             instruction = ToolCallInstruction()
-            instruction.absCall = util.JoinPathIfValid(instruction.absCall, jsonDir,jCall.get("call", instruction.absCall))
+            instruction.absCall = util.JoinPathIfValid(instruction.absCall, rootDir,jCall.get("call", instruction.absCall))
             instruction.callArgs = jCall.get("callArgs", instruction.callArgs)
             instruction.absCall = __ProcessAliases(instruction.absCall, aliases)
             instruction.callArgs = __ProcessAliases(instruction.callArgs, aliases)
@@ -358,7 +358,7 @@ def __MakeToolFileFromDict(jFile: dict, jsonDir: str, aliases: dict) -> ToolFile
     return toolFile
 
 
-def __MakeToolFromDict(jTool: dict, jsonDir: str, jVersion: int, aliases: dict) -> Tool:
+def __MakeToolFromDict(jTool: dict, rootDir: str, jVersion: int, aliases: dict) -> Tool:
     tool = Tool()
     tool.name = jTool.get("name")
     if jVersion <= 1:
@@ -370,24 +370,27 @@ def __MakeToolFromDict(jTool: dict, jsonDir: str, jVersion: int, aliases: dict) 
     if jFiles:
         jFile: dict
         for jFile in jFiles:
-            toolFile = __MakeToolFileFromDict(jFile, jsonDir, aliases)
+            toolFile = __MakeToolFileFromDict(jFile, rootDir, aliases)
             tool.files.append(toolFile)
 
     return tool
 
 
-def MakeToolsFromJsons(jsonFiles: list[JsonFile]) -> ToolsT:
+def MakeToolsFromJsons(jsonFiles: list[JsonFile], rootDir: str=None) -> ToolsT:
     tools = ToolsT()
     tool: Tool
 
     for jsonFile in jsonFiles:
-        jsonDir: str = util.GetAbsSmartFileDir(jsonFile.path)
         jTools: dict = jsonFile.data.get("tools")
         if jTools:
             LATEST_VERSION = 2
             jVersion: int = jTools.get("version", LATEST_VERSION)
+            jsonDir: str = util.GetAbsSmartFileDir(jsonFile.path)
+            if not rootDir:
+                rootDir = jsonDir
             aliases: dict = {
-                "{THIS_DIR}": jsonDir
+                "{THIS_DIR}": jsonDir,
+                "{ROOT_DIR}": rootDir
             }
             if jAliases := jTools.get("aliases"):
                 aliases.update(jAliases)
@@ -395,7 +398,7 @@ def MakeToolsFromJsons(jsonFiles: list[JsonFile]) -> ToolsT:
             if jList:
                 jTool: dict
                 for jTool in jList:
-                    tool = __MakeToolFromDict(jTool, jsonDir, jVersion, aliases)
+                    tool = __MakeToolFromDict(jTool, rootDir, jVersion, aliases)
                     tools[tool.name] = tool
 
     for tool in tools.values():
