@@ -9,7 +9,6 @@
                         "venvDir": ".venv-poetry",
                         "venvExe": ".venv-poetry/Scripts/python.exe",
                         "amd64": {
-                            "pythonExe": "C:/Python310/python.exe",
                             "packages": []
                         }
                     },
