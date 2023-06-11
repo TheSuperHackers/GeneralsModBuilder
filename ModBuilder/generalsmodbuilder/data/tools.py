@@ -1,7 +1,9 @@
+import certifi
+import http.client
 import os
 import os.path
+import ssl
 import urllib.request
-import http.client
 import zipfile
 from enum import Enum, auto
 from dataclasses import dataclass
@@ -155,8 +157,12 @@ class ToolFile:
 
         if not result.Ok():
             if self.url:
+                print(f"Downloading from '{self.url}' ...")
                 response: http.client.HTTPResponse
-                with urllib.request.urlopen(self.url) as response:
+                cafile: str = certifi.where()
+                print(f"Using cafile '{cafile}'")
+                context: ssl.SSLContext = ssl.create_default_context(cafile=cafile)
+                with urllib.request.urlopen(self.url, context=context) as response:
                     if response.code == 200:
                         sizeOk: bool = self.size < 0
                         len: str = response.headers['Content-Length']
@@ -166,7 +172,7 @@ class ToolFile:
 
                         if sizeOk:
                             size = int(len) if len else self.size
-                            print(f"Downloading {int(size / 1024)} kb from '{self.url}' ...")
+                            print(f"Downloading {int(size / 1024)} kb to '{self.absTarget}' ...")
                             util.MakeDirsForFile(self.absTarget)
                             ToolFile.DownloadToFile(response, self.absTarget)
                             if self.IsInstalled():
