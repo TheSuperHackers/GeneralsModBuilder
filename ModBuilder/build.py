@@ -1,13 +1,12 @@
-from glob import glob
 import importlib
 import shutil
 import subprocess
 import os
 import platform
 import sys
+from argparse import ArgumentParser
 from generalsmodbuilder import util
-from generalsmodbuilder.util import JsonFile
-from timeit import default_timer as timer
+from glob import glob
 from typing import Union
 
 
@@ -187,7 +186,7 @@ def __MakeBuildStepFromDict(jStep: dict, absDir: str) -> BuildStep:
     return buildStep
 
 
-def __MakeBuildStepsFromJson(jsonFile: JsonFile) -> BuildStepsT:
+def __MakeBuildStepsFromJson(jsonFile: util.JsonFile) -> BuildStepsT:
     buildStep: BuildStep
     buildSteps = BuildStepsT()
     jBuild: dict = jsonFile.data.get("build")
@@ -362,7 +361,7 @@ def __BuildArchives(inDir: str, outDir: str, outBaseName: str) -> None:
         GenerateHashFiles(absBaseName + ".gztar")
 
 
-def Process(buildStep: BuildStep) -> None:
+def ProcessStep(buildStep: BuildStep) -> None:
     __CreateVenv(buildStep)
     __InstallPackages(buildStep)
 
@@ -372,18 +371,30 @@ def Process(buildStep: BuildStep) -> None:
         __RunPyInstaller(buildStep)
 
 
-def Main() -> None:
-    startTimer = timer()
+def Main(args=None) -> None:
+    print(f"Generals Mod Builder venv setup and build")
 
-    buildJson = JsonFile(__MakeBuildJsonPath())
+    timer = util.Timer()
+
+    parser = ArgumentParser()
+    parser.add_argument('-b', '--build-definition-file', type=str, default=None, help='The build definition json file.')
+
+    args, unknownargs = parser.parse_known_args(args=args)
+
+    buildDefinitionFile: str = args.build_definition_file
+    if buildDefinitionFile:
+        buildDefinitionFile = os.path.normpath(buildDefinitionFile)
+    else:
+        buildDefinitionFile = __MakeBuildJsonPath()
+
+    buildJson = util.JsonFile(buildDefinitionFile)
     buildSteps: BuildStepsT = __MakeBuildStepsFromJson(buildJson)
     buildStep: BuildStep
 
     for buildStep in buildSteps:
-        Process(buildStep)
+        ProcessStep(buildStep)
 
-    endTimer = timer()
-    print("Build completed in", endTimer - startTimer, "seconds")
+    print(f"Generals Mod Builder venv setup and build completed in {timer.GetElapsedSecondsString()} s")
 
 
 if __name__ == "__main__":
