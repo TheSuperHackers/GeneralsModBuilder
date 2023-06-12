@@ -326,13 +326,7 @@ def __RunPyInstaller(buildStep: BuildStep) -> None:
                 util.DeleteFileOrDir(absFile)
 
     if makeArchive:
-        try:
-            versionScript: str = config.get("codeDir") + ".__version__"
-            versionModule = importlib.import_module(versionScript)
-            outBaseName: str = exeName + "_v" + versionModule.__version__
-        except ImportError:
-            outBaseName: str = exeName
-
+        outBaseName: str = exeName + "_v" + __version__
         __BuildArchives(inDir=distDir, outDir=archiveDir, outBaseName=outBaseName)
 
 
