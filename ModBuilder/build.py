@@ -336,7 +336,7 @@ def __BuildArchives(inDir: str, outDir: str, outBaseName: str) -> None:
     os.makedirs(outDir, exist_ok=True)
 
     absBaseName = os.path.join(outDir, outBaseName)
-    x7z: str = os.path.join(util.GetAbsFileDir(__file__), "7z.exe")
+    x7z: str = os.path.join(util.GetAbsFileDir(__file__), "windows", "7z.exe")
 
     if os.name == "nt" and os.path.isfile(x7z):
         x7zInDir: str = os.path.join(inDir, "*")
