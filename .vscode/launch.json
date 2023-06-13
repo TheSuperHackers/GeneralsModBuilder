@@ -8,7 +8,7 @@
             "name": "ModBuilder - Build",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}\\ModBuilder\\build.py",
+            "program": "${workspaceFolder}\\ModBuilder\\buildproject.py",
             "console": "integratedTerminal",
             "justMyCode": true
         },
