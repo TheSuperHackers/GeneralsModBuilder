@@ -1,3 +1,3 @@
 set RootDir=%~dp0.\..
 
-python.exe "%RootDir%\build.py"
+python.exe "%RootDir%\buildproject.py"
