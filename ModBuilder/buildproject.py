@@ -5,7 +5,7 @@ import os
 import platform
 import sys
 from argparse import ArgumentParser
-from generalsmodbuilder.__version__ import __version__
+from generalsmodbuilder.__version__ import VERSIONSTR
 from generalsmodbuilder import util
 from glob import glob
 from typing import Union
@@ -326,7 +326,7 @@ def __RunPyInstaller(buildStep: BuildStep) -> None:
                 util.DeleteFileOrDir(absFile)
 
     if makeArchive:
-        outBaseName: str = exeName + "_v" + __version__
+        outBaseName: str = exeName + "_v" + VERSIONSTR
         __BuildArchives(inDir=distDir, outDir=archiveDir, outBaseName=outBaseName)
 
 
@@ -364,7 +364,7 @@ def ProcessStep(buildStep: BuildStep) -> None:
 
 
 def Main(args=None) -> None:
-    print(f"Generals Mod Builder v{__version__} venv setup and build")
+    print(f"Generals Mod Builder v{VERSIONSTR} venv setup and build")
 
     timer = util.Timer()
 
@@ -386,7 +386,7 @@ def Main(args=None) -> None:
     for buildStep in buildSteps:
         ProcessStep(buildStep)
 
-    print(f"Generals Mod Builder v{__version__} venv setup and build completed in {timer.GetElapsedSecondsString()} s")
+    print(f"Generals Mod Builder v{VERSIONSTR} venv setup and build completed in {timer.GetElapsedSecondsString()} s")
 
 
 if __name__ == "__main__":

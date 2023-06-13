@@ -6,7 +6,7 @@ from tkinter import *
 from tkinter.ttk import *
 from typing import Callable
 from generalsmodbuilder import util
-from generalsmodbuilder.__version__ import __version__
+from generalsmodbuilder.__version__ import VERSIONSTR
 from generalsmodbuilder.build.engine import BuildEngine
 from generalsmodbuilder.buildfunctions import CreateJsonFiles, RunWithConfig
 from generalsmodbuilder.data.bundles import BundlePack, Bundles, AddBundlePacksFromJsons
@@ -122,7 +122,7 @@ class Gui:
     @staticmethod
     def _CreateMainWindow() -> Tk:
         window = Tk()
-        window.title(f"Generals Mod Builder v{__version__} by The Super Hackers")
+        window.title(f"Generals Mod Builder v{VERSIONSTR} by The Super Hackers")
         window.geometry('660x270')
         window.resizable(0, 0)
         iconFile: str =  Gui._MakeIconFilePath("icon.png")

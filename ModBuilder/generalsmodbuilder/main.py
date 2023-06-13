@@ -1,14 +1,14 @@
 import os
 import traceback
 from argparse import ArgumentParser
-from generalsmodbuilder.__version__ import __version__
+from generalsmodbuilder.__version__ import VERSIONSTR
 from generalsmodbuilder.buildfunctions import RunWithConfig, BuildFileHashRegistry
 from generalsmodbuilder.gui.gui import Gui
 from generalsmodbuilder import util
 
 
 def Main(args=None):
-    print(f"Generals Mod Builder v{__version__} by The Super Hackers")
+    print(f"Generals Mod Builder v{VERSIONSTR} by The Super Hackers")
 
     parser = ArgumentParser()
     parser.add_argument('-c', '--config', type=str, action="append", help='Path to a configuration file (json). Multiples can be specified.')
