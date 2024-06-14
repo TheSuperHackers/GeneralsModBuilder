@@ -195,7 +195,7 @@ def GetSubdirsAndFilesRecursively(dir: str) -> tuple[list, list]:
         for f in os.scandir(dir):
             if f.is_dir():
                 subdirs.append(f.path)
-            elif f.is_file():
+            elif f.is_file() or f.is_symlink():
                 files.append(f.path)
 
     for subdir in list(subdirs):
