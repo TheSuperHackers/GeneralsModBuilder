@@ -8,7 +8,7 @@ from typing import Callable
 from generalsmodbuilder import util
 from generalsmodbuilder.__version__ import VERSIONSTR
 from generalsmodbuilder.build.engine import BuildEngine
-from generalsmodbuilder.buildfunctions import CreateJsonFiles, RunWithConfig
+from generalsmodbuilder.buildfunctions import CreateJsonFileList, RunWithConfig
 from generalsmodbuilder.data.bundles import BundlePack, Bundles, AddBundlePacksFromJsons
 from generalsmodbuilder.util import JsonFile
 
@@ -273,7 +273,7 @@ class Gui:
     @staticmethod
     def _GetBundlePackNamesFromConfig(configPaths: list[str]) -> list[str]:
         bundlePackNames = list()
-        jsonFiles: list[JsonFile] = CreateJsonFiles(configPaths)
+        jsonFiles: list[JsonFile] = CreateJsonFileList(configPaths)
         bundles = Bundles()
         AddBundlePacksFromJsons(jsonFiles, bundles)
         bundlePack: BundlePack

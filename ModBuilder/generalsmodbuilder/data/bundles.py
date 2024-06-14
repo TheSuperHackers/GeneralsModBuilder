@@ -527,7 +527,7 @@ def __MakeBundlePackFromDict(jPack: dict, jsonDir: str) -> BundlePack:
     return pack
 
 
-def AddBundlePacksFromJsons(jsonFiles: list[JsonFile], bundles: Bundles) -> Bundles:
+def AddBundlePacksFromJsons(jsonFiles: list[JsonFile], bundles: Bundles) -> None:
     """
     Parses bundle packs from all json files where present.
     """
@@ -556,7 +556,7 @@ def AddBundlePacksFromJsons(jsonFiles: list[JsonFile], bundles: Bundles) -> Bund
     return
 
 
-def AddBundleItemsFromJsons(jsonFiles: list[JsonFile], bundles: Bundles) -> Bundles:
+def AddBundleItemsFromJsons(jsonFiles: list[JsonFile], bundles: Bundles) -> None:
     """
     Parses bundle items from all json files where present.
     """
