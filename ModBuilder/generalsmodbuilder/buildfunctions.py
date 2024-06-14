@@ -5,6 +5,7 @@ from generalsmodbuilder.build.filehashregistry import FileHashRegistry
 from generalsmodbuilder.build.setup import BuildStep, BuildSetup
 from generalsmodbuilder.changelog.generator import FilterChangeLog, GenerateChangeLogDocuments, SortChangeList
 from generalsmodbuilder.changelog.parser import ChangeLog, MakeChangelogFromChangeConfig
+from generalsmodbuilder.data.buildfiles import BuildFiles, MakeBuildFilesFromJsons
 from generalsmodbuilder.data.bundles import Bundles, BundlePack, MakeBundlesFromJsons
 from generalsmodbuilder.data.changeconfig import ChangeConfig, MakeChangeConfigFromJsons
 from generalsmodbuilder.data.folders import Folders, MakeFoldersFromJsons
@@ -14,11 +15,16 @@ from generalsmodbuilder.util import JsonFile
 from generalsmodbuilder import util
 
 
-def CreateJsonFiles(configPaths: list[str]) -> list[JsonFile]:
+def CreateJsonFileList(configPaths: list[str]) -> list[JsonFile]:
     jsonFiles: list[JsonFile] = []
     for configPath in configPaths:
         if (util.HasFileExt(configPath, "json")):
             jsonFiles.append(JsonFile(configPath))
+
+    buildFiles: BuildFiles = MakeBuildFilesFromJsons(jsonFiles)
+    for absFile in buildFiles.absFiles:
+        if (util.HasFileExt(absFile, "json")):
+            jsonFiles.append(JsonFile(absFile))
 
     return jsonFiles
 
@@ -75,7 +81,7 @@ def RunWithConfig(
 
     util.ResetFileHashCount()
 
-    jsonFiles: list[JsonFile] = CreateJsonFiles(configPaths)
+    jsonFiles: list[JsonFile] = CreateJsonFileList(configPaths)
     buildStep: BuildStep = CreateBuildStep(clean, build, release, install, uninstall, run)
 
     if makeChangeLog:
