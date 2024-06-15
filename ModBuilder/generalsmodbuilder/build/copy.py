@@ -18,31 +18,37 @@ from generalsmodbuilder import util
 
 
 class BuildFileType(Enum):
-    blend = enum.auto()
-    csf = enum.auto()
-    str = enum.auto()
     big = enum.auto()
-    zip = enum.auto()
-    tar = enum.auto()
-    gz = enum.auto()
-    psd = enum.auto()
+    blend = enum.auto()
     bmp = enum.auto()
-    tga = enum.auto()
+    csf = enum.auto()
     dds = enum.auto()
+    gz = enum.auto()
     ini = enum.auto()
+    psd = enum.auto()
+    str = enum.auto()
+    tar = enum.auto()
+    tga = enum.auto()
     w3d = enum.auto()
     wnd = enum.auto()
+    zip = enum.auto()
     Any = enum.auto()
     Auto = enum.auto()
 
+def __BuildFileTypeStringMap() -> dict[str, BuildFileType]:
+    d = dict()
+    for type in BuildFileType:
+        d[type.name] = type
+    return d
+
+FileTypeStringDict: dict[str, BuildFileType] = __BuildFileTypeStringMap()
 
 def GetFileType(filePath: str) -> BuildFileType:
-    type: BuildFileType
-    ext: str = util.GetFileExt(filePath)
-    for type in BuildFileType:
-        if ext.lower() == type.name:
-            return type
-    return BuildFileType.Any
+    ext: str = util.GetFileExt(filePath).lower()
+    type: BuildFileType = FileTypeStringDict.get(ext)
+    if type == None:
+        type = BuildFileType.Any
+    return type
 
 
 class BuildCopyOption(Flag):
@@ -334,8 +340,9 @@ class BuildCopy:
         success: bool = False
 
         img: PILImage = None
+        fileType: BuildFileType = GetFileType(source)
 
-        if util.HasFileExt(source, "psd"):
+        if fileType == BuildFileType.psd:
             img = BuildCopy.__BuildImageFromPSD(source)
         else:
             img = PIL.Image.open(fp=source)
@@ -391,17 +398,19 @@ class BuildCopy:
 
     def __CopyToDDS(self, source: str, target: str, params: ParamsT) -> bool:
         tmpSource: str = source
+        tmpFileType: BuildFileType = GetFileType(tmpSource)
 
-        if util.HasFileExt(source, "psd") or BuildCopy.__HasResizeParams(params):
+        if tmpFileType == BuildFileType.psd or BuildCopy.__HasResizeParams(params):
             # Crunch does not handle PSD files and image resize well.
             # 1. With a PSD texture of size 4096x1024 it discards the Alpha Channel.
             # 2. When halving source image resolution it introduces unnecessary visual glitches.
             # Therefore, PSD or scaled texture is converted to TGA first, and then passed to crunch tool afterwards.
             tmpSource = target + ".tga"
+            tmpFileType = BuildFileType.tga
             copyOk: bool = self.__CopyToTGA(source, tmpSource, params)
             assert copyOk == True
 
-        hasAlpha: bool = BuildCopy.__HasAlphaChannel(tmpSource)
+        hasAlpha: bool = BuildCopy.__HasAlphaChannel(tmpSource, tmpFileType)
 
         exec: str = self.__GetToolExePath("crunch")
         args: list[str] = [exec,
@@ -496,14 +505,14 @@ class BuildCopy:
 
 
     @staticmethod
-    def __HasAlphaChannel(source: str) -> bool:
+    def __HasAlphaChannel(source: str, fileType: BuildFileType) -> bool:
         hasAlpha: bool = False
 
-        if util.HasFileExt(source, "psd"):
+        if fileType == BuildFileType.psd:
             psd: PSDImage = PSDImage.open(fp=source)
             hasAlpha = psd.channels > 3
 
-        elif util.HasAnyFileExt(source, ["dds", "tga"]):
+        elif fileType == BuildFileType.dds or fileType == BuildFileType.tga:
             img: PILImage = PIL.Image.open(fp=source)
             hasAlpha = img.mode == "RGBA"
 
