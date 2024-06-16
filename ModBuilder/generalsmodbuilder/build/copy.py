@@ -364,31 +364,23 @@ class BuildCopy:
         util.Verify(psd.channels >= 3, f"PSD image '{source}' has unsupported channel size '{psd.channels}'.")
 
         if psd.channels == 3:
-            r: PILImage = psd.topil(channel=0)
-            g: PILImage = psd.topil(channel=1)
-            b: PILImage = psd.topil(channel=2)
-            return PIL.Image.merge("RGB", (r, g, b))
+            # Does composite the image.
+            # If the psd was saved with "Maximize Compatibility", then the precomputed composite is read from it.
+            img: PILImage = psd.composite()
+            return img
 
         elif psd.channels > 3:
-            # Composite whole image to preserve layers with alpha.
-            # NOTE: Photoshop does not do this. It would render white instead.
+            # Does composite the image and preserves background alpha.
+            # If the psd was saved with "Maximize Compatibility", then the precomputed composite is read from it.
             img: PILImage = psd.composite(color=0.0, alpha=1.0)
-
-            white: PILImage = PIL.Image.new("L", psd.size, 255)
-            black: PILImage = PIL.Image.new("L", psd.size, 0)
-
-            r: PILImage
-            g: PILImage
-            b: PILImage
-            a: PILImage
-
-            if img.mode == "RGBA":
-                r, g, b, a = img.split()
-            elif img.mode == "RGB":
-                r, g, b = img.split()
+            r: PILImage = img.getchannel(0)
+            g: PILImage = img.getchannel(1)
+            b: PILImage = img.getchannel(2)
 
             # Composite alpha from each alpha channel.
-            a = white
+            white: PILImage = PIL.Image.new("L", psd.size, 255)
+            black: PILImage = PIL.Image.new("L", psd.size, 0)
+            a: PILImage = white
             for channel in range(3, psd.channels):
                 an: PILImage = psd.topil(channel=channel)
                 a = PIL.Image.composite(an, black, a)
