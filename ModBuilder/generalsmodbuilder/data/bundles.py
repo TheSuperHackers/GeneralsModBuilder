@@ -176,8 +176,11 @@ class BundleItem:
         util.Verify(not self.namePrefix or util.IsValidPathName(self.namePrefix), f"BundleItem.namePrefix '{self.namePrefix}' has invalid name")
         util.Verify(not self.nameSuffix or util.IsValidPathName(self.nameSuffix), f"BundleItem.nameSuffix '{self.nameSuffix}' has invalid name")
         util.Verify(not self.bigSuffix or util.IsValidPathName(self.bigSuffix), f"BundleItem.bigSuffix '{self.bigSuffix}' has invalid name")
+        relTargetFilesSet = set[str]()
         for file in self.files:
             file.VerifyValues()
+            util.Verify(not file.relTargetFile in relTargetFilesSet, f"BundleItem '{self.name}' attempts to create target file '{file.relTargetFile}' more than once.")
+            relTargetFilesSet.add(file.relTargetFile)
         for event in self.events.values():
             event.VerifyValues()
 
