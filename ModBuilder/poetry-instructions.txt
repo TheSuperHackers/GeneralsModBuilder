@@ -1,0 +1,6 @@
+Do not run activate.bat to interact with .venv-poetry
+
+Always run commands like so:
+
+".venv-poetry/Scripts/python.exe" -m poetry help
+".venv-poetry/Scripts/python.exe" -m poetry list

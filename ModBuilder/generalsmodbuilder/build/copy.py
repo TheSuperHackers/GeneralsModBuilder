@@ -1,7 +1,8 @@
-import os
-import shutil
 import enum
+import os
 import PIL.Image
+import PIL.TiffImagePlugin
+import shutil
 from enum import Enum, Flag
 from typing import Callable
 from psd_tools import PSDImage
@@ -29,6 +30,7 @@ class BuildFileType(Enum):
     str = enum.auto()
     tar = enum.auto()
     tga = enum.auto()
+    tiff = enum.auto()
     w3d = enum.auto()
     wnd = enum.auto()
     zip = enum.auto()
@@ -39,6 +41,7 @@ def __BuildFileTypeStringMap() -> dict[str, BuildFileType]:
     d = dict()
     for type in BuildFileType:
         d[type.name] = type
+    d["tif"] = BuildFileType.tiff
     return d
 
 FileTypeStringDict: dict[str, BuildFileType] = __BuildFileTypeStringMap()
@@ -217,13 +220,21 @@ class BuildCopy:
         if targetT == BuildFileType.gz:
             return self.__CopyToGZTAR
 
-        if targetT == BuildFileType.bmp and (sourceT == BuildFileType.psd or sourceT == BuildFileType.tga):
+        if targetT == BuildFileType.bmp and (
+            sourceT == BuildFileType.psd or
+            sourceT == BuildFileType.tga or
+            sourceT == BuildFileType.tiff):
             return self.__CopyToBMP
 
-        if targetT == BuildFileType.tga and sourceT == BuildFileType.psd:
+        if targetT == BuildFileType.tga and (
+            sourceT == BuildFileType.psd or
+            sourceT == BuildFileType.tiff):
             return self.__CopyToTGA
 
-        if targetT == BuildFileType.dds and (sourceT == BuildFileType.psd or sourceT == BuildFileType.tga):
+        if targetT == BuildFileType.dds and (
+            sourceT == BuildFileType.psd or
+            sourceT == BuildFileType.tga or
+            sourceT == BuildFileType.tiff):
             return self.__CopyToDDS
 
         if targetT == BuildFileType.w3d and sourceT == BuildFileType.blend:
@@ -344,6 +355,8 @@ class BuildCopy:
 
         if fileType == BuildFileType.psd:
             img = BuildCopy.__BuildImageFromPSD(source)
+        elif fileType == BuildFileType.tiff:
+            img = BuildCopy.__BuildImageFromTIFF(source)
         else:
             img = PIL.Image.open(fp=source)
 
@@ -388,15 +401,39 @@ class BuildCopy:
             return PIL.Image.merge("RGBA", (r, g, b, a))
 
 
+    @staticmethod
+    def __BuildImageFromTIFF(source: str) -> PILImage:
+        tif: PIL.TiffImagePlugin.TiffImageFile = PIL.Image.open(source)
+
+        util.Verify(tif.mode == "RGB" or tif.mode == "RGBA" or tif.mode == "RGBX", f"TIFF image '{source}' has unsupported color mode '{tif.mode}'.")
+
+        r: PILImage
+        g: PILImage
+        b: PILImage
+        a: PILImage
+
+        if tif.mode == "RGB":
+            r, g, b = tif.split()
+            return PIL.Image.merge("RGB", (r, g, b))
+
+        if tif.mode == "RGBA" or tif.mode == "RGBX":
+            # NOTE: No composite. Does not support more than one alpha channel and no transparent background.
+            r, g, b, a = tif.split()
+            img: PILImage = PIL.Image.merge("RGBA", (r, g, b, a))
+            return img
+
+
     def __CopyToDDS(self, source: str, target: str, params: ParamsT) -> bool:
         tmpSource: str = source
         tmpFileType: BuildFileType = GetFileType(tmpSource)
 
-        if tmpFileType == BuildFileType.psd or BuildCopy.__HasResizeParams(params):
+        if (BuildCopy.__HasResizeParams(params) or
+            tmpFileType == BuildFileType.psd or
+            tmpFileType == BuildFileType.tiff):
             # Crunch does not handle PSD files and image resize well.
             # 1. With a PSD texture of size 4096x1024 it discards the Alpha Channel.
             # 2. When halving source image resolution it introduces unnecessary visual glitches.
-            # Therefore, PSD or scaled texture is converted to TGA first, and then passed to crunch tool afterwards.
+            # Therefore, PSD, TIFF and scaled texture is converted to TGA first, and then passed to crunch tool afterwards.
             tmpSource = target + ".tga"
             tmpFileType = BuildFileType.tga
             copyOk: bool = self.__CopyToTGA(source, tmpSource, params)
