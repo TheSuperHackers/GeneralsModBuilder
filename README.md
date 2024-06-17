@@ -25,20 +25,26 @@ The following file conversions are supported:
 **Since Release 1.0**
 
 * Any to BIG (Game Archive)
-* Any to ZIP (Archive)
-* Any to TAR (Archive)
-* Any to TAR.GZ (Archive)
+* Any to ZIP (Archive), TAR (Archive), TAR.GZ (Archive)
 * CSF to STR
 * STR to CSF
-* PSD to TGA
-* PSD to DDS (DXT1 and DXT5)
-* PSD to BMP (24)
-* TGA to DDS (DXT1 and DXT5)
-* TGA to BMP (24)
+* PSD (rgb) to BMP (24), DDS (DXT1 and DXT5), TGA
+  * Can composite psd (since v2.2), otherwise uses baked psd composite (known as "Maximize Compatibility")
+  * Supports transparent background and multiple alpha channels
+  * Exports RGB as DXT1, RGBA as DXT5
+* TGA to BMP (24), DDS (DXT1 and DXT5)
+  * Exports RGB as DXT1, RGBA as DXT5
 
 **Since Release 1.8**
 
 * BLEND to W3D
+
+**Since Release 2.2**
+
+* TIFF (rgb) to BMP (24), DDS (DXT1 and DXT5), TGA
+  * Supports Uncompressed, LZW RLE, LZW ZIP, ...
+  * Supports no transparent background and no more than one alpha channel
+  * Exports RGB as DXT1, RGBA as DXT5
 
 ## Run the Mod Builder
 
