@@ -363,6 +363,7 @@ class BuildCopy:
         if img != None:
             img = BuildCopy.__ResizeImageWithParams(img, params)
             img.save(target, compression=None)
+            img.close()
             BuildCopy.__PrintMakeResult(source, target)
             success = True
 
@@ -403,10 +404,9 @@ class BuildCopy:
 
     @staticmethod
     def __BuildImageFromTIFF(source: str) -> PILImage:
-        tif: PIL.TiffImagePlugin.TiffImageFile = PIL.Image.open(source)
+        tif: PIL.TiffImagePlugin.TiffImageFile = PIL.Image.open(fp=source)
 
         util.Verify(tif.mode == "RGB" or tif.mode == "RGBA" or tif.mode == "RGBX", f"TIFF image '{source}' has unsupported color mode '{tif.mode}'.")
-
         r: PILImage
         g: PILImage
         b: PILImage
@@ -414,12 +414,15 @@ class BuildCopy:
 
         if tif.mode == "RGB":
             r, g, b = tif.split()
-            return PIL.Image.merge("RGB", (r, g, b))
+            img: PILImage = PIL.Image.merge("RGB", (r, g, b))
+            tif.close()
+            return img
 
         if tif.mode == "RGBA" or tif.mode == "RGBX":
             # NOTE: No composite. Does not support more than one alpha channel and no transparent background.
             r, g, b, a = tif.split()
             img: PILImage = PIL.Image.merge("RGBA", (r, g, b, a))
+            tif.close()
             return img
 
 
@@ -541,9 +544,12 @@ class BuildCopy:
             psd: PSDImage = PSDImage.open(fp=source)
             hasAlpha = psd.channels > 3
 
-        elif fileType == BuildFileType.dds or fileType == BuildFileType.tga:
+        elif (fileType == BuildFileType.tga or
+              fileType == BuildFileType.dds or
+              fileType == BuildFileType.tiff):
             img: PILImage = PIL.Image.open(fp=source)
-            hasAlpha = img.mode == "RGBA"
+            hasAlpha = img.mode == "RGBA" or img.mode == "RGBX"
+            img.close()
 
         return hasAlpha
 
