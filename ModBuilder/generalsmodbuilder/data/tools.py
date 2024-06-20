@@ -398,8 +398,10 @@ def MakeToolsFromJsons(jsonFiles: list[JsonFile], rootDir: str=None) -> ToolsT:
             if jList:
                 jTool: dict
                 for jTool in jList:
-                    tool = __MakeToolFromDict(jTool, rootDir, jVersion, aliases)
-                    tools[tool.name] = tool
+                    jEnabled: bool = jTool.get("enabled", True)
+                    if jEnabled:
+                        tool = __MakeToolFromDict(jTool, rootDir, jVersion, aliases)
+                        tools[tool.name] = tool
 
     for tool in tools.values():
         tool.VerifyTypes()

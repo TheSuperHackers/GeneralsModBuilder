@@ -557,7 +557,7 @@ class BuildCopy:
     def __GetToolExePath(self, name: str) -> str:
         tool: Tool = self.tools.get(name)
         if tool == None:
-            raise Exception(f"Tool definition for '{name}' is required but does not exist")
+            raise Exception(f"Tool '{name}' is required but does not exist or is disabled")
         return tool.GetExecutable()
 
 
