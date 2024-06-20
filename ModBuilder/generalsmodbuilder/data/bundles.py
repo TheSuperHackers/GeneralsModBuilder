@@ -106,29 +106,36 @@ class BundleRegistryDefinition:
 
 @dataclass(init=False)
 class BundleFile:
+    absSourceParent: str
     absSourceFile: str
     relTargetFile: str
     params: ParamsT
     registryDef: BundleRegistryDefinition
 
     def __init__(self):
+        self.absSourceParent = None
         self.absSourceFile = None
         self.relTargetFile = None
         self.params = None
         self.registryDef = None
 
+    def GetRelSourceFile(self) -> str:
+        return self.absSourceFile.removeprefix(self.absSourceParent).removeprefix("\\").removeprefix("/")
+
     def VerifyTypes(self) -> None:
+        util.VerifyType(self.absSourceParent, str, "BundleFile.absSourceParent")
         util.VerifyType(self.absSourceFile, str, "BundleFile.absSourceFile")
         util.VerifyType(self.relTargetFile, str, "BundleFile.relTargetFile")
         VerifyParamsType(self.params, "BundleFile.params")
         util.VerifyType(self.registryDef, Union[BundleRegistryDefinition, None], "BundleFile.registry")
 
     def VerifyValues(self) -> None:
-        # self.absSourceFile is already verified in ResolveWildcards function.
+        # self.absSourceParent, self.absSourceFile are already verified in ResolveWildcards function.
         util.Verify(util.IsValidPathName(self.relTargetFile), f"BundleFile.relTargetFile '{self.relTargetFile}' is not a valid file name")
         util.Verify(not os.path.isabs(self.relTargetFile), f"BundleFile.relTargetFile '{self.relTargetFile}' is not a relative path")
 
     def Normalize(self) -> None:
+        self.absSourceParent = os.path.normpath(self.absSourceParent)
         self.absSourceFile = os.path.normpath(self.absSourceFile)
         self.relTargetFile = os.path.normpath(self.relTargetFile)
 
@@ -210,7 +217,7 @@ class BundleItem:
                 newFiles.append(curFile)
 
         for curFile in newFiles:
-            curFile.relTargetFile = BundleItem.__ResolveTargetWildcard(curFile.absSourceFile, curFile.relTargetFile)
+            curFile.relTargetFile = BundleItem.__ResolveTargetWildcard(curFile.GetRelSourceFile(), curFile.relTargetFile)
 
         self.files = newFiles
         return newFiles
@@ -222,6 +229,7 @@ class BundleItem:
         sourceName, sourceExtn = os.path.splitext(sourceFile)
         targetName, targetExtn = os.path.splitext(targetFile)
 
+        # Substitute wildcard file name.
         if targetFile == "*":
             newName = sourceName
             newExtn = sourceExtn
@@ -229,24 +237,35 @@ class BundleItem:
             newName = sourceName if targetName == "*" else targetName
             newExtn = sourceExtn if targetExtn == ".*" else targetExtn
 
+        # Substitute wildcard file path.
         if "**" in targetPath:
-            basePathPair: list[str] = targetPath.split("**", 1)
-            basePath = os.path.dirname(basePathPair[0])
-            sourceExtraPathPair: list[str] = source.split(basePath)
-            if len(sourceExtraPathPair) > 1:
-                sourceExtraPath = os.path.dirname(sourceExtraPathPair[-1])
-                sourceExtraPath = sourceExtraPath.removeprefix("/")
-                sourceExtraPath = sourceExtraPath.removeprefix("\\")
-            else:
-                sourceExtraPath = ""
-            newPath = targetPath.replace("**", sourceExtraPath)
-            newPath = os.path.normpath(newPath)
-        else:
-            newPath = os.path.normpath(targetPath)
+            sourcePathList: list[str] = sourcePath.split(os.sep)
+            targetPathList: list[str] = targetPath.split(os.sep)
+            pathLevel = 0
+            while pathLevel < len(targetPathList):
+                if "**" in targetPathList[pathLevel]:
+                    if pathLevel < len(sourcePathList):
+                        # Take folder from source path on same level.
+                        targetPathList[pathLevel] = sourcePathList[pathLevel]
+                        if pathLevel == len(targetPathList) - 1:
+                            # Is last element, take all remaining folders from source path.
+                            # Do this, because glob.glob also takes all subfolders with a single ** folder.
+                            pathLevel += 1
+                            while pathLevel < len(sourcePathList):
+                                targetPathList.append(sourcePathList[pathLevel])
+                                pathLevel += 1
+                            break
+                    else:
+                        # Has no matching source path, make empty.
+                        targetPathList[pathLevel] = ""
+                pathLevel += 1
 
-        newTarget = os.path.join(newPath, newName + newExtn)
-        newTarget = newTarget.removeprefix("./")
-        newTarget = newTarget.removeprefix(".\\")
+            newTargetPath = os.path.join(*targetPathList)
+        else:
+            newTargetPath = targetPath
+
+        # Build final path.
+        newTarget = os.path.join(newTargetPath, newName + newExtn)
         return newTarget
 
 
@@ -433,7 +452,7 @@ class Bundles:
 def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
     files: list[BundleFile] = list()
 
-    parent: str = util.JoinPathIfValid(jsonDir, jsonDir, jFile.get("parent"))
+    sourceParent: str = util.JoinPathIfValid(jsonDir, jsonDir, jFile.get("parent"))
 
     params: ParamsT = jFile.get("params", ParamsT())
 
@@ -448,7 +467,8 @@ def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
 
     if jSource:
         bundleFile = BundleFile()
-        bundleFile.absSourceFile = util.JoinPathIfValid(None, parent, jSource)
+        bundleFile.absSourceParent = sourceParent
+        bundleFile.absSourceFile = util.JoinPathIfValid(None, sourceParent, jSource)
         bundleFile.relTargetFile = jFile.get("target", jSource)
         bundleFile.params = params
         bundleFile.registryDef = registryDef
@@ -458,7 +478,8 @@ def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
         jElement: str
         for jElement in jSourceList:
             bundleFile = BundleFile()
-            bundleFile.absSourceFile = util.JoinPathIfValid(None, parent, jElement)
+            bundleFile.absSourceParent = sourceParent
+            bundleFile.absSourceFile = util.JoinPathIfValid(None, sourceParent, jElement)
             bundleFile.relTargetFile = jElement
             bundleFile.params = params
             bundleFile.registryDef = registryDef
@@ -469,7 +490,8 @@ def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
         for jElement in jSourceTargetList:
             jElementSource: str = jElement.get("source")
             bundleFile = BundleFile()
-            bundleFile.absSourceFile = util.JoinPathIfValid(None, parent, jElementSource)
+            bundleFile.absSourceParent = sourceParent
+            bundleFile.absSourceFile = util.JoinPathIfValid(None, sourceParent, jElementSource)
             bundleFile.relTargetFile = jElement.get("target", jElementSource)
             bundleFile.params = params
             bundleFile.registryDef = registryDef
