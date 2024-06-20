@@ -354,7 +354,6 @@ class BuildEngine:
                 kwargs["_bundleItem"] = item
                 kwargs["_absBuildDir"] = folders.absBuildDir
                 kwargs["_absReleaseDir"] = folders.absReleaseDir
-                kwargs["_absReleaseUnpackedDir"] = folders.absReleaseUnpackedDir
                 kwargs["_rawBuildThing"] = structure.FindThingWithPlainName(BuildIndex.RawBundleItem, item.name)
                 kwargs["_bigBuildThing"] = structure.FindThingWithPlainName(BuildIndex.BigBundleItem, item.name)
                 BuildEngine.__CallScript(event, kwargs)
@@ -367,7 +366,6 @@ class BuildEngine:
                 kwargs["_bundlePack"] = pack
                 kwargs["_absBuildDir"] = folders.absBuildDir
                 kwargs["_absReleaseDir"] = folders.absReleaseDir
-                kwargs["_absReleaseUnpackedDir"] = folders.absReleaseUnpackedDir
                 kwargs["_rawBuildThing"] = structure.FindThingWithPlainName(BuildIndex.RawBundlePack, pack.name)
                 kwargs["_releaseBuildThing"] = structure.FindThingWithPlainName(BuildIndex.ReleaseBundlePack, pack.name)
                 kwargs["_installBuildThing"] = structure.FindThingWithPlainName(BuildIndex.InstallBundlePack, pack.name)
@@ -473,10 +471,6 @@ class BuildEngine:
         itemName: str
         parentFile: BuildFile
 
-        releaseUnpackedDirWithWildcards = os.path.join(folders.absReleaseUnpackedDir, "**", "*.*")
-        absReleaseFiles = glob(releaseUnpackedDirWithWildcards, recursive=True)
-        relReleaseFiles = util.CreateRelPaths(absReleaseFiles, folders.absReleaseUnpackedDir)
-
         for pack in bundles.packs:
             if not pack.allowBuild:
                 continue
@@ -485,13 +479,6 @@ class BuildEngine:
             newThing.name = MakeThingName(BuildIndex.RawBundlePack, pack.name)
             newThing.absParentDir = os.path.join(folders.absBuildDir, "RawBundlePacks", pack.name)
             newThing.files = BuildFilesT()
-
-            for absReleaseFile, relReleaseFile in zip(absReleaseFiles, relReleaseFiles):
-                if os.path.isfile(absReleaseFile):
-                    buildFile = BuildFile()
-                    buildFile.absSource = absReleaseFile
-                    buildFile.relTarget = relReleaseFile
-                    newThing.files.append(buildFile)
 
             for itemName in pack.itemNames:
                 parentName: str = MakeThingName(BuildIndex.BigBundleItem, itemName)
