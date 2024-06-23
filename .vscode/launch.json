@@ -109,7 +109,7 @@
             "justMyCode": true,
             "args": [
                 "--config-list",
-                "${workspaceFolder}\\..\\GeneralsGamePatch\\Patch104pZH\\ModBuildFiles.json",
+                "${workspaceFolder}\\..\\GeneralsGamePatch\\Patch104pZH\\ModJsonFiles.json",
                 "${workspaceFolder}\\..\\GeneralsGamePatch\\Patch104pZH\\Scripts\\Windows\\WindowsRunner.json",
                 "${workspaceFolder}\\..\\GeneralsGamePatch\\Patch104pZH\\Scripts\\Windows\\WindowsTools.json",
                 "--build",
