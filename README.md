@@ -46,6 +46,11 @@ The following file conversions are supported:
   * Supports no transparent background and no more than one alpha channel
   * Exports RGB as DXT1, RGBA as DXT5
 
+**Since Release 2.3**
+
+* DDS to DDS
+  * Useful for exporting a source DDS texture to a new format, for example from DXT5 to DXT1 when omitting the alpha channel
+
 ## Run the Mod Builder
 
 Batch scripts are available in [GeneralsModBuilderSample/Project/Scripts](https://github.com/TheSuperHackers/GeneralsModBuilderSample/tree/main/Project/Scripts) to build and run the project. The [BuildInstallRun.bat](https://github.com/TheSuperHackers/GeneralsModBuilderSample/tree/main/Project/Scripts/BuildInstallRun.bat) is helpful to build, install and run the game with the project in one go. After the game is closed, the project is automatically uninstalled. The [WindowsRunner.json](https://github.com/TheSuperHackers/GeneralsModBuilderSample/tree/main/Project/Scripts/Windows/WindowsRunner.json) can be customized to change game run behaviour.
