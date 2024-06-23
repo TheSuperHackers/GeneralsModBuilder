@@ -428,21 +428,21 @@ class BuildCopy:
 
     def __CopyToDDS(self, source: str, target: str, params: ParamsT) -> bool:
         tmpSource: str = source
-        tmpFileType: BuildFileType = GetFileType(tmpSource)
+        tmpSourceType: BuildFileType = GetFileType(tmpSource)
 
         if (BuildCopy.__HasResizeParams(params) or
-            tmpFileType == BuildFileType.psd or
-            tmpFileType == BuildFileType.tiff):
+            tmpSourceType == BuildFileType.psd or
+            tmpSourceType == BuildFileType.tiff):
             # Crunch does not handle PSD files and image resize well.
             # 1. With a PSD texture of size 4096x1024 it discards the Alpha Channel.
             # 2. When halving source image resolution it introduces unnecessary visual glitches.
             # Therefore, PSD, TIFF and scaled texture is converted to TGA first, and then passed to crunch tool afterwards.
             tmpSource = target + ".tga"
-            tmpFileType = BuildFileType.tga
+            tmpSourceType = BuildFileType.tga
             copyOk: bool = self.__CopyToTGA(source, tmpSource, params)
             assert copyOk == True
 
-        hasAlpha: bool = BuildCopy.__HasAlphaChannel(tmpSource, tmpFileType)
+        hasAlpha: bool = BuildCopy.__HasAlphaChannel(tmpSource, tmpSourceType)
 
         exec: str = self.__GetToolExePath("crunch")
         args: list[str] = [exec,
