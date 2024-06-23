@@ -54,6 +54,33 @@ def GetFileType(filePath: str) -> BuildFileType:
     return type
 
 
+CrunchTextureFormatSet: set[str] = {
+    "-DXT1",
+    "-DXT2",
+    "-DXT3",
+    "-DXT4",
+    "-DXT5",
+    "-3DC",
+    "-DXN",
+    "-DXT5A",
+    "-DXT5_CCxY",
+    "-DXT5_xGxR",
+    "-DXT5_xGBR",
+    "-DXT5_AGBR",
+    "-DXT1A",
+    "-ETC1",
+    "-ETC2",
+    "-ETC2A",
+    "-ETC1S",
+    "-ETC2AS",
+    "-R8G8B8",
+    "-L8",
+    "-A8",
+    "-A8L8",
+    "-A8R8G8B8"
+}
+
+
 class BuildCopyOption(Flag):
     Zero = 0
     EnableBackup = enum.auto()
@@ -197,6 +224,9 @@ class BuildCopy:
 
         if targetT == BuildFileType.str and not sourceT == BuildFileType.csf:
             return self.__CopyToTextFile
+
+        if targetT == BuildFileType.dds and sourceT == BuildFileType.dds:
+            return self.__CopyToDDS
 
         # Be mindful about what comes before and after this.
         if targetT == BuildFileType.Any or sourceT == targetT:
@@ -427,8 +457,15 @@ class BuildCopy:
 
 
     def __CopyToDDS(self, source: str, target: str, params: ParamsT) -> bool:
+        tmpSourceType: BuildFileType = GetFileType(source)
+        targetType: BuildFileType = GetFileType(target)
+
+        if tmpSourceType == targetType:
+            if not bool(params):
+                # Simply copy the file when no processing is required.
+                return self.__CopyTo(source, target, params)
+
         tmpSource: str = source
-        tmpSourceType: BuildFileType = GetFileType(tmpSource)
 
         if (BuildCopy.__HasResizeParams(params) or
             tmpSourceType == BuildFileType.psd or
@@ -442,16 +479,22 @@ class BuildCopy:
             copyOk: bool = self.__CopyToTGA(source, tmpSource, params)
             assert copyOk == True
 
-        hasAlpha: bool = BuildCopy.__HasAlphaChannel(tmpSource, tmpSourceType)
-
         exec: str = self.__GetToolExePath("crunch")
         args: list[str] = [exec,
             "-file", tmpSource,
             "-out", target,
             "-fileformat", "dds"]
 
-        args.extend(ParamsToArgs(params, includeRegex="^-"))
-        args.append("-DXT5" if hasAlpha else "-DXT1")
+        # Append all args that begin with a dash, because all command line arguments of crunch do.
+        userArgs: list[str] = ParamsToArgs(params, includeRegex="^-")
+        args.extend(userArgs)
+
+        hasTextureFormat = bool(CrunchTextureFormatSet & set(userArgs))
+
+        if not hasTextureFormat:
+            # Auto select DDS texture format depending on source format.
+            hasAlpha: bool = BuildCopy.__HasAlphaChannel(tmpSource, tmpSourceType)
+            args.append("-DXT5" if hasAlpha else "-DXT1")
 
         success: bool = util.RunProcess(args)
 
