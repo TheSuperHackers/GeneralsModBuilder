@@ -452,7 +452,10 @@ class Bundles:
 def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
     files: list[BundleFile] = list()
 
-    sourceParent: str = util.JoinPathIfValid(jsonDir, jsonDir, jFile.get("parent"))
+    jSourceParent: str = jFile.get("sourceParent")
+    if jSourceParent == None:
+        jSourceParent = jFile.get("parent") # Legacy name
+    sourceParent: str = util.JoinPathIfValid(jsonDir, jsonDir, jSourceParent)
 
     params: ParamsT = jFile.get("params", ParamsT())
 
