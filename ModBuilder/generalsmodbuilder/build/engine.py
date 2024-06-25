@@ -399,16 +399,17 @@ class BuildEngine:
         bundles: Bundles = self.setup.bundles
         tools: ToolsT = self.setup.tools
 
+        options = BuildCopyOption.EnableLogging
         processPool = ProcessPoolExecutor()
         self.processPool = processPool
 
         self.structure = BuildStructure()
         self.copyDict = {
-            BuildIndex.RawBundleItem: BuildCopy(tools=tools, options=BuildCopyOption.EnableSymlinks, processPool=processPool),
-            BuildIndex.BigBundleItem: BuildCopy(tools=tools, options=BuildCopyOption.EnableSymlinks, processPool=processPool),
-            BuildIndex.RawBundlePack: BuildCopy(tools=tools, options=BuildCopyOption.EnableSymlinks, processPool=processPool),
-            BuildIndex.ReleaseBundlePack: BuildCopy(tools=tools, processPool=processPool),
-            BuildIndex.InstallBundlePack: BuildCopy(tools=tools, options=BuildCopyOption.EnableBackup | BuildCopyOption.EnableSymlinks),
+            BuildIndex.RawBundleItem: BuildCopy(tools=tools, options=options | BuildCopyOption.EnableSymlinks, processPool=processPool),
+            BuildIndex.BigBundleItem: BuildCopy(tools=tools, options=options | BuildCopyOption.EnableSymlinks, processPool=processPool),
+            BuildIndex.RawBundlePack: BuildCopy(tools=tools, options=options | BuildCopyOption.EnableSymlinks, processPool=processPool),
+            BuildIndex.ReleaseBundlePack: BuildCopy(tools=tools, options=options, processPool=processPool),
+            BuildIndex.InstallBundlePack: BuildCopy(tools=tools, options=options | BuildCopyOption.EnableBackup | BuildCopyOption.EnableSymlinks),
         }
 
         BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnPreBuild)
