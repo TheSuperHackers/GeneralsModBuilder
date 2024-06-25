@@ -3,6 +3,7 @@ import platformdirs # Imported to make it work in a PyInstaller build (*1)
 import traceback
 from argparse import ArgumentParser
 from generalsmodbuilder.__version__ import VERSIONSTR
+from generalsmodbuilder.build.engine import BuildEngine
 from generalsmodbuilder.buildfunctions import RunWithConfig, BuildFileHashRegistry
 from generalsmodbuilder.gui.gui import Gui
 from generalsmodbuilder import util
@@ -121,19 +122,21 @@ def Main(args=None):
             toolsRootDir=toolsRootDir)
     else:
         def RunWithConfigWrapper():
-            RunWithConfig(
-                configPaths=configPaths,
-                installList=installList,
-                buildList=buildList,
-                makeChangeLog=makeChangeLog,
-                clean=clean,
-                build=build,
-                release=release,
-                install=install,
-                uninstall=uninstall,
-                run=run,
-                printConfig=printConfig,
-                toolsRootDir=toolsRootDir)
+            with BuildEngine() as buildEngine:
+                RunWithConfig(
+                    engine=buildEngine,
+                    configPaths=configPaths,
+                    installList=installList,
+                    buildList=buildList,
+                    makeChangeLog=makeChangeLog,
+                    clean=clean,
+                    build=build,
+                    release=release,
+                    install=install,
+                    uninstall=uninstall,
+                    run=run,
+                    printConfig=printConfig,
+                    toolsRootDir=toolsRootDir)
         if debug:
             RunWithConfigWrapper()
         else:
