@@ -87,6 +87,7 @@ class BuildCopyOption(Flag):
     Zero = 0
     EnableBackup = enum.auto()
     EnableSymlinks = enum.auto()
+    EnableLogging = enum.auto()
 
 
 class BuildJob:
@@ -127,6 +128,7 @@ class BuildCopy:
 
     def CopyThingMultiProcess(self, thing: BuildThing) -> bool:
         success: bool = True
+        options = self.options & ~BuildCopyOption.EnableLogging
         futures = list[Future]()
         future: Future
         buildJob: BuildJob
@@ -139,7 +141,7 @@ class BuildCopy:
                 buildJob.absSource = file.AbsSource()
                 buildJob.absTarget = file.AbsTarget(thing.absParentDir)
                 buildJob.params = file.params
-                future = self.processPool.submit(CopyWithProcess, self.tools, self.options, buildJob)
+                future = self.processPool.submit(CopyWithProcess, self.tools, options, buildJob)
                 futures.append(future)
 
         concurrent.futures.wait(futures, return_when=concurrent.futures.ALL_COMPLETED)
@@ -199,7 +201,8 @@ class BuildCopy:
         success: bool = False
 
         if util.DeleteFileOrDir(file):
-            BuildCopy.__PrintUncopyResult(file)
+            if self.options & BuildCopyOption.EnableLogging:
+                BuildCopy.__PrintUncopyResult(file)
             success = True
 
         if self.options & BuildCopyOption.EnableBackup:
@@ -321,13 +324,15 @@ class BuildCopy:
         if self.options & BuildCopyOption.EnableSymlinks:
             try:
                 os.symlink(src=source, dst=target)
-                BuildCopy.__PrintLinkResult(source, target)
+                if self.options & BuildCopyOption.EnableLogging:
+                    BuildCopy.__PrintLinkResult(source, target)
                 return True
             except OSError:
                 pass
 
         shutil.copy(src=source, dst=target)
-        BuildCopy.__PrintCopyResult(source, target)
+        if self.options & BuildCopyOption.EnableLogging:
+            BuildCopy.__PrintCopyResult(source, target)
         return True
 
 
@@ -351,7 +356,7 @@ class BuildCopy:
             args.extend(["-SWAP_AND_SET_LANGUAGE", swapAndSetLanguage])
 
         success: bool = util.RunProcess(args)
-        if success:
+        if success and self.options & BuildCopyOption.EnableLogging:
             BuildCopy.__PrintMakeResult(source, target)
 
         if tmpTarget == source:
@@ -372,7 +377,7 @@ class BuildCopy:
             args.extend(["-SAVE_STR_LANGUAGES", language])
 
         success: bool = util.RunProcess(args)
-        if success:
+        if success and self.options & BuildCopyOption.EnableLogging:
             BuildCopy.__PrintMakeResult(source, target)
 
         return success
@@ -385,7 +390,7 @@ class BuildCopy:
             "-dest", target]
 
         success: bool = util.RunProcess(args)
-        if success:
+        if success and self.options & BuildCopyOption.EnableLogging:
             BuildCopy.__PrintMakeResult(source, target)
 
         return success
@@ -394,34 +399,36 @@ class BuildCopy:
     def __CopyToZIP(self, source: str, target: str, params: ParamsT) -> bool:
         shutil.make_archive(base_name=util.GetFileDirAndName(target), format="zip", root_dir=source)
 
-        BuildCopy.__PrintMakeResult(source, target)
+        if self.options & BuildCopyOption.EnableLogging:
+            BuildCopy.__PrintMakeResult(source, target)
         return True
 
 
     def __CopyToTAR(self, source: str, target: str, params: ParamsT) -> bool:
         shutil.make_archive(base_name=util.GetFileDirAndName(target), format="tar", root_dir=source)
 
-        BuildCopy.__PrintMakeResult(source, target)
+        if self.options & BuildCopyOption.EnableLogging:
+            BuildCopy.__PrintMakeResult(source, target)
         return True
 
 
     def __CopyToGZTAR(self, source: str, target: str, params: ParamsT) -> bool:
         shutil.make_archive(base_name=util.GetFileDirAndName(target), format="gztar", root_dir=source)
 
-        BuildCopy.__PrintMakeResult(source, target)
+        if self.options & BuildCopyOption.EnableLogging:
+            BuildCopy.__PrintMakeResult(source, target)
         return True
 
 
     def __CopyToBMP(self, source: str, target: str, params: ParamsT) -> bool:
-        return BuildCopy.__CopyToImage(source, target, params)
+        return self.__CopyToImage(source, target, params)
 
 
     def __CopyToTGA(self, source: str, target: str, params: ParamsT) -> bool:
-        return BuildCopy.__CopyToImage(source, target, params)
+        return self.__CopyToImage(source, target, params)
 
 
-    @staticmethod
-    def __CopyToImage(source: str, target: str, params: ParamsT) -> bool:
+    def __CopyToImage(self, source: str, target: str, params: ParamsT) -> bool:
         success: bool = False
 
         img: PILImage = None
@@ -438,7 +445,8 @@ class BuildCopy:
             img = BuildCopy.__ResizeImageWithParams(img, params)
             img.save(target, compression=None)
             img.close()
-            BuildCopy.__PrintMakeResult(source, target)
+            if self.options & BuildCopyOption.EnableLogging:
+                BuildCopy.__PrintMakeResult(source, target)
             success = True
 
         return success
@@ -527,7 +535,12 @@ class BuildCopy:
         args: list[str] = [exec,
             "-file", tmpSource,
             "-out", target,
-            "-fileformat", "dds"]
+            "-fileformat", "dds",
+            "-noprogress"]
+
+        # Quiet crunching.
+        if not (self.options & BuildCopyOption.EnableLogging):
+            args.append("-quiet")
 
         # Append all args that begin with a dash, because all command line arguments of crunch do.
         userArgs: list[str] = ParamsToArgs(params, includeRegex="^-")
@@ -545,7 +558,7 @@ class BuildCopy:
         if tmpSource != source:
             util.DeleteFile(tmpSource)
 
-        if success:
+        if success and self.options & BuildCopyOption.EnableLogging:
             BuildCopy.__PrintMakeResult(tmpSource, target)
 
         return success
@@ -745,7 +758,8 @@ class BuildCopy:
                     for line in sourceLines:
                         targetFile.write(line)
 
-                    BuildCopy.__PrintMakeResult(source, target)
+                    if self.options & BuildCopyOption.EnableLogging:
+                        BuildCopy.__PrintMakeResult(source, target)
                     return True
 
         return False
@@ -799,7 +813,7 @@ bpy.ops.export_mesh.westwood_w3d(
         args: list[str] = [exec, source, "--background", "--python-expr", expr]
 
         success: bool = util.RunProcess(args)
-        if success:
+        if success and self.options & BuildCopyOption.EnableLogging:
             BuildCopy.__PrintMakeResult(source, target)
 
         return success
