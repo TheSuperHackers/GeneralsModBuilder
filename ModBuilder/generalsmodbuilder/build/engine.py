@@ -2,13 +2,13 @@ import importlib
 import subprocess
 import sys
 import os
-from copy import deepcopy
-from dataclasses import dataclass
-from glob import glob
 import threading
 import time
-from typing import Any
+from concurrent.futures import ProcessPoolExecutor
+from copy import deepcopy
+from dataclasses import dataclass
 from enum import Enum, auto
+from glob import glob
 from generalsmodbuilder.build.common import ParamsToArgs
 from generalsmodbuilder.build.copy import BuildCopy, BuildCopyOption
 from generalsmodbuilder.build.filehashregistry import FileHash, FileHashRegistry
@@ -20,6 +20,7 @@ from generalsmodbuilder.data.folders import Folders
 from generalsmodbuilder.data.runner import Runner
 from generalsmodbuilder.data.tools import ToolsT
 from generalsmodbuilder import util
+from typing import Any
 
 
 @dataclass
@@ -238,20 +239,35 @@ class BuildEngine:
     setup: BuildSetup
     structure: BuildStructure
     copyDict: dict[BuildIndex, BuildCopy]
+    processPool: ProcessPoolExecutor
     processHandle: subprocess.Popen
     processLock: threading.RLock
 
 
     def __init__(self):
+        self.processPool = None
         self.__Reset()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.Shutdown()
 
 
     def __Reset(self):
+        self.Shutdown()
         self.setup = None
         self.structure = None
         self.copyDict = None
+        self.processPool = None
         self.processHandle = None
         self.processLock = threading.RLock()
+
+
+    def Shutdown(self) -> None:
+        if self.processPool != None:
+            self.processPool.shutdown()
 
 
     def Run(self, setup: BuildSetup) -> bool:
@@ -383,12 +399,15 @@ class BuildEngine:
         bundles: Bundles = self.setup.bundles
         tools: ToolsT = self.setup.tools
 
+        processPool = ProcessPoolExecutor()
+        self.processPool = processPool
+
         self.structure = BuildStructure()
         self.copyDict = {
-            BuildIndex.RawBundleItem: BuildCopy(tools=tools, options=BuildCopyOption.EnableSymlinks),
-            BuildIndex.BigBundleItem: BuildCopy(tools=tools, options=BuildCopyOption.EnableSymlinks),
-            BuildIndex.RawBundlePack: BuildCopy(tools=tools, options=BuildCopyOption.EnableSymlinks),
-            BuildIndex.ReleaseBundlePack: BuildCopy(tools=tools),
+            BuildIndex.RawBundleItem: BuildCopy(tools=tools, options=BuildCopyOption.EnableSymlinks, processPool=processPool),
+            BuildIndex.BigBundleItem: BuildCopy(tools=tools, options=BuildCopyOption.EnableSymlinks, processPool=processPool),
+            BuildIndex.RawBundlePack: BuildCopy(tools=tools, options=BuildCopyOption.EnableSymlinks, processPool=processPool),
+            BuildIndex.ReleaseBundlePack: BuildCopy(tools=tools, processPool=processPool),
             BuildIndex.InstallBundlePack: BuildCopy(tools=tools, options=BuildCopyOption.EnableBackup | BuildCopyOption.EnableSymlinks),
         }
 

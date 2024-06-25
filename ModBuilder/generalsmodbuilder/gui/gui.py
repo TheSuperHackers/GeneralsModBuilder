@@ -442,6 +442,7 @@ class Gui:
 
     def _OnWorkEnd(self) -> None:
         with self.buildEngineLock:
+            self.buildEngine.Shutdown()
             self.buildEngine = None
 
         self.abortThread.join()

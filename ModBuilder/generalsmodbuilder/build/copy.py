@@ -1,21 +1,23 @@
+import concurrent.futures
 import enum
 import os
 import PIL.Image
 import PIL.TiffImagePlugin
 import shutil
-from enum import Enum, Flag
-from typing import Callable
+from concurrent.futures import Future, ProcessPoolExecutor
+from dataclasses import dataclass, field
 from psd_tools import PSDImage
 from psd_tools.constants import ColorMode as PSDColorMode
-from PIL.Image import Image as PILImage
-from PIL.Image import Resampling
-from dataclasses import dataclass, field
+from enum import Enum, Flag
 from generalsmodbuilder.data.bundles import ParamsT
 from generalsmodbuilder.data.tools import Tool, ToolsT
 from generalsmodbuilder.build.caseinsensitivedict import CaseInsensitiveDict
 from generalsmodbuilder.build.common import ParamsToArgs
 from generalsmodbuilder.build.thing import BuildFile, BuildThing
 from generalsmodbuilder import util
+from PIL.Image import Image as PILImage
+from PIL.Image import Resampling
+from typing import Callable
 
 
 class BuildFileType(Enum):
@@ -87,13 +89,27 @@ class BuildCopyOption(Flag):
     EnableSymlinks = enum.auto()
 
 
+class BuildJob:
+    success: bool
+    absSource: str
+    absTarget: str
+    params: ParamsT
+
+
 @dataclass
 class BuildCopy:
     tools: ToolsT
     options: BuildCopyOption = field(default=BuildCopyOption.Zero)
-
+    processPool: ProcessPoolExecutor = field(default=None)
 
     def CopyThing(self, thing: BuildThing) -> bool:
+        if self.processPool != None:
+            return self.CopyThingMultiProcess(thing)
+        else:
+            return self.CopyThingSingleProcess(thing)
+
+
+    def CopyThingSingleProcess(self, thing: BuildThing) -> bool:
         success: bool = True
         file: BuildFile
 
@@ -104,7 +120,35 @@ class BuildCopy:
                 params: ParamsT = file.params
                 success &= self.Copy(absSource, absTarget, params)
                 if not success:
-                    raise Exception(f"Unable to copy source '{absSource}' to target '{absTarget}'. Was the most recent Project build before?")
+                    raise Exception(f"Unable to copy source '{absSource}' to target '{absTarget}'.")
+
+        return success
+
+
+    def CopyThingMultiProcess(self, thing: BuildThing) -> bool:
+        success: bool = True
+        futures = list[Future]()
+        future: Future
+        buildJob: BuildJob
+        file: BuildFile
+
+        for file in thing.files:
+            if file.RequiresRebuild():
+                buildJob = BuildJob()
+                buildJob.success = False
+                buildJob.absSource = file.AbsSource()
+                buildJob.absTarget = file.AbsTarget(thing.absParentDir)
+                buildJob.params = file.params
+                future = self.processPool.submit(CopyWithProcess, self.tools, self.options, buildJob)
+                futures.append(future)
+
+        concurrent.futures.wait(futures, return_when=concurrent.futures.ALL_COMPLETED)
+
+        for future in futures:
+            buildJob = future.result()
+            success &= buildJob.success
+            if not success:
+                raise Exception(f"Unable to copy source '{buildJob.absSource}' to target '{buildJob.absTarget}'.")
 
         return success
 
@@ -759,3 +803,10 @@ bpy.ops.export_mesh.westwood_w3d(
             BuildCopy.__PrintMakeResult(source, target)
 
         return success
+
+
+
+def CopyWithProcess(tools: ToolsT, options: BuildCopyOption, buildJob: BuildJob):
+    buildCopy = BuildCopy(tools=tools, options=options)
+    buildJob.success = buildCopy.Copy(buildJob.absSource, buildJob.absTarget, buildJob.params)
+    return buildJob
