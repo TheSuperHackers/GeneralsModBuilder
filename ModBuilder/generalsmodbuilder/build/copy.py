@@ -90,8 +90,25 @@ class BuildCopyOption(Flag):
     EnableLogging = enum.auto()
 
 
+class BuildCopyPrintType(Enum):
+    Nothing = enum.auto()
+    Copy = enum.auto()
+    Link = enum.auto()
+    Make = enum.auto()
+
+
+@dataclass
+class BuildCopyResult:
+    success: bool = field(default=False)
+    printType: BuildCopyPrintType = field(default=BuildCopyPrintType.Nothing)
+
+
+BuildCopyResultFunctionT = Callable[[str, str], None]
+BuildCopyFunctionT = Callable[[str, str, ParamsT], BuildCopyResult]
+
+
 class BuildJob:
-    success: bool
+    result: BuildCopyResult
     absSource: str
     absTarget: str
     params: ParamsT
@@ -119,8 +136,12 @@ class BuildCopy:
                 absSource: str = file.AbsSource()
                 absTarget: str = file.AbsTarget(thing.absParentDir)
                 params: ParamsT = file.params
-                success &= self.Copy(absSource, absTarget, params)
-                if not success:
+                result: BuildCopyResult = self.Copy(absSource, absTarget, params)
+                success &= result.success
+                if result.success:
+                    if self.options & BuildCopyOption.EnableLogging:
+                        BuildCopy.__PrintResult(result.printType, absSource, absTarget)
+                else:
                     raise Exception(f"Unable to copy source '{absSource}' to target '{absTarget}'.")
 
         return success
@@ -137,7 +158,7 @@ class BuildCopy:
         for file in thing.files:
             if file.RequiresRebuild():
                 buildJob = BuildJob()
-                buildJob.success = False
+                buildJob.result = BuildCopyResult()
                 buildJob.absSource = file.AbsSource()
                 buildJob.absTarget = file.AbsTarget(thing.absParentDir)
                 buildJob.params = file.params
@@ -148,8 +169,11 @@ class BuildCopy:
 
         for future in futures:
             buildJob = future.result()
-            success &= buildJob.success
-            if not success:
+            success &= buildJob.result.success
+            if buildJob.result.success:
+                if self.options & BuildCopyOption.EnableLogging:
+                    BuildCopy.__PrintResult(buildJob.result.printType, buildJob.absSource, buildJob.absTarget)
+            else:
                 raise Exception(f"Unable to copy source '{buildJob.absSource}' to target '{buildJob.absTarget}'.")
 
         return success
@@ -173,10 +197,10 @@ class BuildCopy:
             target: str,
             params: ParamsT = None,
             sourceType = BuildFileType.Auto,
-            targetType = BuildFileType.Auto) -> bool:
+            targetType = BuildFileType.Auto) -> BuildCopyResult:
 
         if not os.path.exists(source):
-            return False
+            return BuildCopyResult(success=False)
 
         if sourceType == BuildFileType.Auto:
             sourceType = GetFileType(source)
@@ -191,10 +215,8 @@ class BuildCopy:
 
         util.DeleteFileOrDir(target)
 
-        copyFunction: Callable = self.__GetCopyFunction(sourceType, targetType)
-        success: bool = copyFunction(source, target, params)
-
-        return success
+        copyFunction: BuildCopyFunctionT = self.__GetCopyFunction(sourceType, targetType)
+        return copyFunction(source, target, params)
 
 
     def Uncopy(self, file: str) -> bool:
@@ -240,6 +262,16 @@ class BuildCopy:
 
 
     @staticmethod
+    def __PrintResult(type: BuildCopyPrintType, source: str, target: str) -> None:
+        if type == BuildCopyPrintType.Copy:
+            BuildCopy.__PrintCopyResult(source, target)
+        elif type == BuildCopyPrintType.Link:
+            BuildCopy.__PrintLinkResult(source, target)
+        elif type == BuildCopyPrintType.Make:
+            BuildCopy.__PrintMakeResult(source, target)
+
+
+    @staticmethod
     def __PrintCopyResult(source: str, target: str) -> None:
         print("Copy", source)
         print("  to", target)
@@ -258,11 +290,11 @@ class BuildCopy:
 
 
     @staticmethod
-    def __PrintUncopyResult(file) -> None:
+    def __PrintUncopyResult(file: str) -> None:
         print("Remove", file)
 
 
-    def __GetCopyFunction(self, sourceT: BuildFileType, targetT: BuildFileType) -> Callable:
+    def __GetCopyFunction(self, sourceT: BuildFileType, targetT: BuildFileType) -> BuildCopyFunctionT:
         if targetT == BuildFileType.ini:
             return self.__CopyToTextFile
 
@@ -320,25 +352,22 @@ class BuildCopy:
         return self.__CopyTo
 
 
-    def __CopyTo(self, source: str, target: str, params: ParamsT) -> bool:
+    def __CopyTo(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
         if self.options & BuildCopyOption.EnableSymlinks:
             try:
                 os.symlink(src=source, dst=target)
-                if self.options & BuildCopyOption.EnableLogging:
-                    BuildCopy.__PrintLinkResult(source, target)
-                return True
+                return BuildCopyResult(success=True, printType=BuildCopyPrintType.Link)
             except OSError:
                 pass
 
         shutil.copy(src=source, dst=target)
-        if self.options & BuildCopyOption.EnableLogging:
-            BuildCopy.__PrintCopyResult(source, target)
-        return True
+        return BuildCopyResult(success=True, printType=BuildCopyPrintType.Copy)
 
 
-    def __CopySTRtoCSF(self, source: str, target: str, params: ParamsT) -> bool:
+    def __CopySTRtoCSF(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
         tmpTarget: str = target + ".tmp"
-        if self.__CopyToTextFileIfNeeded(source, tmpTarget, params):
+        result: BuildCopyResult = self.__CopyToTextFileIfNeeded(source, tmpTarget, params)
+        if result.success:
             source = tmpTarget
 
         iparams = CaseInsensitiveDict(params)
@@ -356,16 +385,14 @@ class BuildCopy:
             args.extend(["-SWAP_AND_SET_LANGUAGE", swapAndSetLanguage])
 
         success: bool = util.RunProcess(args)
-        if success and self.options & BuildCopyOption.EnableLogging:
-            BuildCopy.__PrintMakeResult(source, target)
 
         if tmpTarget == source:
             util.DeleteFile(tmpTarget)
 
-        return success
+        return BuildCopyResult(success=success, printType=BuildCopyPrintType.Make)
 
 
-    def __CopyCSFtoSTR(self, source: str, target: str, params: ParamsT) -> bool:
+    def __CopyCSFtoSTR(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
         iparams = CaseInsensitiveDict(params)
         exec: str = self.__GetToolExePath("gametextcompiler")
         args: list[str] = [exec,
@@ -377,58 +404,44 @@ class BuildCopy:
             args.extend(["-SAVE_STR_LANGUAGES", language])
 
         success: bool = util.RunProcess(args)
-        if success and self.options & BuildCopyOption.EnableLogging:
-            BuildCopy.__PrintMakeResult(source, target)
-
-        return success
+        return BuildCopyResult(success=success, printType=BuildCopyPrintType.Make)
 
 
-    def __CopyToBIG(self, source: str, target: str, params: ParamsT) -> bool:
+    def __CopyToBIG(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
         exec: str = self.__GetToolExePath("generalsbigcreator")
         args: list[str] = [exec,
             "-source", source,
             "-dest", target]
 
         success: bool = util.RunProcess(args)
-        if success and self.options & BuildCopyOption.EnableLogging:
-            BuildCopy.__PrintMakeResult(source, target)
-
-        return success
+        return BuildCopyResult(success=success, printType=BuildCopyPrintType.Make)
 
 
-    def __CopyToZIP(self, source: str, target: str, params: ParamsT) -> bool:
+    def __CopyToZIP(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
         shutil.make_archive(base_name=util.GetFileDirAndName(target), format="zip", root_dir=source)
-
-        if self.options & BuildCopyOption.EnableLogging:
-            BuildCopy.__PrintMakeResult(source, target)
-        return True
+        return BuildCopyResult(success=True, printType=BuildCopyPrintType.Make)
 
 
-    def __CopyToTAR(self, source: str, target: str, params: ParamsT) -> bool:
+    def __CopyToTAR(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
         shutil.make_archive(base_name=util.GetFileDirAndName(target), format="tar", root_dir=source)
-
-        if self.options & BuildCopyOption.EnableLogging:
-            BuildCopy.__PrintMakeResult(source, target)
-        return True
+        return BuildCopyResult(success=True, printType=BuildCopyPrintType.Make)
 
 
-    def __CopyToGZTAR(self, source: str, target: str, params: ParamsT) -> bool:
+    def __CopyToGZTAR(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
         shutil.make_archive(base_name=util.GetFileDirAndName(target), format="gztar", root_dir=source)
-
-        if self.options & BuildCopyOption.EnableLogging:
-            BuildCopy.__PrintMakeResult(source, target)
-        return True
+        return BuildCopyResult(success=True, printType=BuildCopyPrintType.Make)
 
 
-    def __CopyToBMP(self, source: str, target: str, params: ParamsT) -> bool:
-        return self.__CopyToImage(source, target, params)
+    def __CopyToBMP(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
+        return BuildCopy.__CopyToImage(source, target, params)
 
 
-    def __CopyToTGA(self, source: str, target: str, params: ParamsT) -> bool:
-        return self.__CopyToImage(source, target, params)
+    def __CopyToTGA(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
+        return BuildCopy.__CopyToImage(source, target, params)
 
 
-    def __CopyToImage(self, source: str, target: str, params: ParamsT) -> bool:
+    @staticmethod
+    def __CopyToImage(source: str, target: str, params: ParamsT) -> BuildCopyResult:
         success: bool = False
 
         img: PILImage = None
@@ -445,15 +458,13 @@ class BuildCopy:
             img = BuildCopy.__ResizeImageWithParams(img, params)
             img.save(target, compression=None)
             img.close()
-            if self.options & BuildCopyOption.EnableLogging:
-                BuildCopy.__PrintMakeResult(source, target)
             success = True
 
-        return success
+        return BuildCopyResult(success=success, printType=BuildCopyPrintType.Make)
 
 
     @staticmethod
-    def __BuildImageFromPSD(source: str) -> PILImage:
+    def __BuildImageFromPSD(source: str) -> PILImage | None:
         psd: PSDImage = PSDImage.open(fp=source)
 
         util.Verify(psd.color_mode == PSDColorMode.RGB, f"PSD image '{source}' has unsupported color mode '{psd.color_mode}'.")
@@ -483,9 +494,11 @@ class BuildCopy:
 
             return PIL.Image.merge("RGBA", (r, g, b, a))
 
+        return None
+
 
     @staticmethod
-    def __BuildImageFromTIFF(source: str) -> PILImage:
+    def __BuildImageFromTIFF(source: str) -> PILImage | None:
         tif: PIL.TiffImagePlugin.TiffImageFile = PIL.Image.open(fp=source)
 
         util.Verify(tif.mode == "RGB" or tif.mode == "RGBA" or tif.mode == "RGBX", f"TIFF image '{source}' has unsupported color mode '{tif.mode}'.")
@@ -507,8 +520,10 @@ class BuildCopy:
             tif.close()
             return img
 
+        return None
 
-    def __CopyToDDS(self, source: str, target: str, params: ParamsT) -> bool:
+
+    def __CopyToDDS(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
         tmpSourceType: BuildFileType = GetFileType(source)
         targetType: BuildFileType = GetFileType(target)
 
@@ -528,8 +543,8 @@ class BuildCopy:
             # Therefore, PSD, TIFF and scaled texture is converted to TGA first, and then passed to crunch tool afterwards.
             tmpSource = target + ".tga"
             tmpSourceType = BuildFileType.tga
-            copyOk: bool = self.__CopyToTGA(source, tmpSource, params)
-            assert copyOk == True
+            result: BuildCopyResult = self.__CopyToTGA(source, tmpSource, params)
+            assert result.success == True
 
         exec: str = self.__GetToolExePath("crunch")
         args: list[str] = [exec,
@@ -558,10 +573,7 @@ class BuildCopy:
         if tmpSource != source:
             util.DeleteFile(tmpSource)
 
-        if success and self.options & BuildCopyOption.EnableLogging:
-            BuildCopy.__PrintMakeResult(tmpSource, target)
-
-        return success
+        return BuildCopyResult(success=success, printType=BuildCopyPrintType.Make)
 
 
     @staticmethod
@@ -661,9 +673,10 @@ class BuildCopy:
         return tool.GetExecutable()
 
 
-    def __CopyToTextFile(self, source: str, target: str, params: ParamsT) -> bool:
-        if self.__CopyToTextFileIfNeeded(source, target, params):
-            return True
+    def __CopyToTextFile(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
+        result: BuildCopyResult = self.__CopyToTextFileIfNeeded(source, target, params)
+        if result.success:
+            return result
         else:
             return self.__CopyTo(source, target, params)
 
@@ -671,7 +684,6 @@ class BuildCopy:
     class Marker:
         begin: str
         end: str
-
         def __init__(self, begin: str, end: str):
             self.begin = begin
             self.end = end
@@ -698,7 +710,8 @@ class BuildCopy:
         return outputLines
 
 
-    def __CopyToTextFileIfNeeded(self, source: str, target: str, params: ParamsT) -> bool:
+    def __CopyToTextFileIfNeeded(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
+        success: bool = False
         iparams = CaseInsensitiveDict(params)
 
         forceEOL: str = iparams.get("forceEOL")
@@ -758,14 +771,12 @@ class BuildCopy:
                     for line in sourceLines:
                         targetFile.write(line)
 
-                    if self.options & BuildCopyOption.EnableLogging:
-                        BuildCopy.__PrintMakeResult(source, target)
-                    return True
+                    success = True
 
-        return False
+        return BuildCopyResult(success=success, printType=BuildCopyPrintType.Make)
 
 
-    def __CopyToW3D(self, source: str, target: str, params: ParamsT) -> bool:
+    def __CopyToW3D(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
         iparams = CaseInsensitiveDict(params)
         w3dExportHierarchy: bool = iparams.get("w3dExportHierarchy", True)
         w3dExportAnimation: bool = iparams.get("w3dExportAnimation", False)
@@ -813,14 +824,11 @@ bpy.ops.export_mesh.westwood_w3d(
         args: list[str] = [exec, source, "--background", "--python-expr", expr]
 
         success: bool = util.RunProcess(args)
-        if success and self.options & BuildCopyOption.EnableLogging:
-            BuildCopy.__PrintMakeResult(source, target)
-
-        return success
+        return BuildCopyResult(success=success, printType=BuildCopyPrintType.Make)
 
 
 
-def CopyWithProcess(tools: ToolsT, options: BuildCopyOption, buildJob: BuildJob):
+def CopyWithProcess(tools: ToolsT, options: BuildCopyOption, buildJob: BuildJob) -> BuildJob:
     buildCopy = BuildCopy(tools=tools, options=options)
-    buildJob.success = buildCopy.Copy(buildJob.absSource, buildJob.absTarget, buildJob.params)
+    buildJob.result = buildCopy.Copy(buildJob.absSource, buildJob.absTarget, buildJob.params)
     return buildJob
