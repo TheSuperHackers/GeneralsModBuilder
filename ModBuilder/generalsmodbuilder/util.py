@@ -369,12 +369,12 @@ def GetFileSize(path: str) -> str:
     return os.path.getsize(path)
 
 
-def GetFileMd5(path: str) -> str:
-    return GetFileHash(path, hashlib.md5)
+def GetFileMd5(path: str, log: bool=True) -> str:
+    return GetFileHash(path, hashlib.md5, log)
 
 
-def GetFileSha256(path: str) -> str:
-    return GetFileHash(path, hashlib.sha256)
+def GetFileSha256(path: str, log: bool=True) -> str:
+    return GetFileHash(path, hashlib.sha256, log)
 
 
 g_fileHashCount: int = 0
@@ -384,7 +384,7 @@ def ResetFileHashCount() -> None:
     g_fileHashCount = 0
 
 
-def GetFileHash(path: str, hashFunc: Callable) -> str:
+def GetFileHash(path: str, hashFunc: Callable, log: bool=True) -> str:
     BUF_SIZE = 1024 * 64
     hashStr: str = ""
     try:
@@ -397,7 +397,8 @@ def GetFileHash(path: str, hashFunc: Callable) -> str:
 
             global g_fileHashCount
             g_fileHashCount += 1
-            print(f"Hashed ({g_fileHashCount}) {path} as {hashStr} in {timer.GetElapsedSecondsString()} s")
+            if log:
+                print(f"Hashed ({g_fileHashCount}) {path} as {hashStr} in {timer.GetElapsedSecondsString()} s")
     except:
         pass
     return hashStr

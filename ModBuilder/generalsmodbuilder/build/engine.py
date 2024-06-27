@@ -626,7 +626,7 @@ class BuildEngine:
         # Start event is sent before populating the build diff to allow for file modifications and file injections.
         BuildEngine.__SendBundleEvents(structure, setup, GetStartBuildEvent(index))
 
-        BuildEngine.__PopulateDiff(data, setup.folders, diffWithParentThings, diffWithFileHashRegistry)
+        BuildEngine.__PopulateDiff(data, setup, diffWithParentThings, diffWithFileHashRegistry)
         BuildEngine.__PopulateBuildFileStatusInThings(data.things, data.diff)
 
         if deleteRemovedFiles:
@@ -639,7 +639,7 @@ class BuildEngine:
         # Finish event is sent before finalizing the build diff to allow for file verifications with hard failures.
         BuildEngine.__SendBundleEvents(structure, setup, GetFinishBuildEvent(index))
 
-        BuildEngine.__RehashFilePathInfoDict(data.diff.newDiffRegistry, data.things)
+        BuildEngine.__RehashFilePathInfoDict(data.diff.newDiffRegistry, data.things, setup)
 
         data.diff.SaveNewDiffRegistry()
 
@@ -647,34 +647,34 @@ class BuildEngine:
     @staticmethod
     def __PopulateDiff(
             data: BuildIndexData,
-            folders: Folders,
+            setup: BuildSetup,
             withParentThings: bool,
             useFileHashRegistry: bool) -> None:
 
-        path: str = MakeDiffPath(data.index, folders)
+        path: str = MakeDiffPath(data.index, setup.folders)
         data.diff = BuildDiff(path, withParentThings, useFileHashRegistry)
-        BuildEngine.__PopulateDiffFromThings(data.diff, data.things)
+        BuildEngine.__PopulateDiffFromThings(data.diff, data.things, setup)
 
 
     @staticmethod
-    def __PopulateDiffFromThings(diff: BuildDiff, things: BuildThingsT) -> None:
+    def __PopulateDiffFromThings(diff: BuildDiff, things: BuildThingsT, setup: BuildSetup) -> None:
         thing: BuildThing
 
         for thing in things.values():
             timer = util.Timer()
             print(f"Create file infos for {thing.name} ...")
 
-            BuildEngine.__PopulateFilePathInfosFromThing(diff, thing)
+            BuildEngine.__PopulateFilePathInfosFromThing(diff, thing, setup)
 
             if diff.includesParentDiff and thing.parentThing != None:
-                BuildEngine.__PopulateFilePathInfosFromThing(diff, thing.parentThing)
+                BuildEngine.__PopulateFilePathInfosFromThing(diff, thing.parentThing, setup)
 
             if timer.GetElapsedSeconds() > util.PERFORMANCE_TIMER_THRESHOLD:
                 print(f"Create file infos for {thing.name} completed in {timer.GetElapsedSecondsString()} s")
 
 
     @staticmethod
-    def __PopulateFilePathInfosFromThing(diff: BuildDiff, thing: BuildThing) -> None:
+    def __PopulateFilePathInfosFromThing(diff: BuildDiff, thing: BuildThing, setup: BuildSetup) -> None:
         file: BuildFile
 
         for file in thing.files:
@@ -689,7 +689,7 @@ class BuildEngine:
                 if oldInfo != None and sourceTime > 0.0 and sourceTime == oldInfo.GetModifiedTime():
                     sourceMd5 = oldInfo.md5
                 else:
-                    sourceMd5 = util.GetFileMd5(absSource)
+                    sourceMd5 = util.GetFileMd5(absSource, log=setup.verboseLogging)
                 diff.newDiffRegistry.AddFile(absSource, modifiedTime=sourceTime, md5=sourceMd5, params=None)
 
         for file in thing.files:
@@ -712,12 +712,12 @@ class BuildEngine:
                 if oldInfo != None and targetTime > 0.0 and targetTime == oldInfo.GetModifiedTime():
                     targetMd5 = oldInfo.md5
                 else:
-                    targetMd5 = util.GetFileMd5(absTarget)
+                    targetMd5 = util.GetFileMd5(absTarget, log=setup.verboseLogging)
                 diff.newDiffRegistry.AddFile(absTarget, modifiedTime=targetTime, md5=targetMd5, params=targetParams)
 
 
     @staticmethod
-    def __RehashFilePathInfoDict(diffRegistry: BuildDiffRegistry, things: BuildThingsT) -> None:
+    def __RehashFilePathInfoDict(diffRegistry: BuildDiffRegistry, things: BuildThingsT, setup: BuildSetup) -> None:
         thing: BuildThing
         file: BuildFile
 
@@ -731,7 +731,7 @@ class BuildEngine:
                     targetInfo: BuildFilePathInfo = diffRegistry.FindFile(absTarget)
                     assert targetInfo != None
                     targetInfo.modifiedTime = util.GetFileModifiedTime(absTarget)
-                    targetInfo.md5 = util.GetFileMd5(absTarget)
+                    targetInfo.md5 = util.GetFileMd5(absTarget, log=setup.verboseLogging)
 
             if timer.GetElapsedSeconds() > util.PERFORMANCE_TIMER_THRESHOLD:
                 print(f"Rehash files for {thing.name} completed in {timer.GetElapsedSecondsString()} s")
