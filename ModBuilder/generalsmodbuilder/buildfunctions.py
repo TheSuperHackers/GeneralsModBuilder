@@ -62,7 +62,6 @@ def PatchBundlesBuild(bundles: Bundles, buildList: list[str]) -> None:
 
 
 def RunWithConfig(
-        engine: BuildEngine,
         configPaths: list[str]=list[str](),
         installList: list[str]=list[str](),
         buildList: list[str]=list[str](),
@@ -74,7 +73,10 @@ def RunWithConfig(
         uninstall: bool=False,
         run: bool=False,
         printConfig: bool=False,
-        toolsRootDir: str=None) -> None:
+        verboseLogging: bool=False,
+        multiProcessing: bool=False,
+        toolsRootDir: str=None,
+        engine: BuildEngine=None) -> None:
 
     timer = util.Timer()
     print("Run Build Job ...")
@@ -117,9 +119,15 @@ def RunWithConfig(
             runner=runner,
             bundles=bundles,
             tools=tools,
-            printConfig=printConfig)
+            printConfig=printConfig,
+            verboseLogging=verboseLogging,
+            multiProcessing=multiProcessing)
 
-        engine.Run(setup)
+        if engine == None:
+            with BuildEngine() as engine:
+                engine.Run(setup)
+        else:
+            engine.Run(setup)
 
     if timer.GetElapsedSeconds() > util.PERFORMANCE_TIMER_THRESHOLD:
         print(f"Build Job completed in {timer.GetElapsedSecondsString()} s")

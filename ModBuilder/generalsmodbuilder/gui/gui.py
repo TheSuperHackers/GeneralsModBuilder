@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import threading
 import traceback
@@ -32,8 +33,11 @@ class Gui:
     install: BooleanVar
     uninstall: BooleanVar
     run: BooleanVar
+
     printConfig: BooleanVar
     clearConsole: BooleanVar
+    verboseLogging: BooleanVar
+    multiProcessing: BooleanVar
 
     bundlePackList: Listbox
     executeButton: Button
@@ -74,6 +78,8 @@ class Gui:
             run: bool = False,
             debug: bool = False,
             printConfig: bool = False,
+            verboseLogging: bool = False,
+            multiProcessing: bool = False,
             toolsRootDir: str = None):
 
         self.configPaths = configPaths
@@ -93,6 +99,8 @@ class Gui:
         self.run = BooleanVar(mainWindow, value=run)
         self.printConfig = BooleanVar(mainWindow, value=printConfig)
         self.clearConsole = BooleanVar(mainWindow, value=True)
+        self.verboseLogging = BooleanVar(mainWindow, value=verboseLogging)
+        self.multiProcessing = BooleanVar(mainWindow, value=multiProcessing)
 
         self._CreateMainWindowElements(mainWindow)
         self._SetAbortElementsState("disabled")
@@ -201,6 +209,12 @@ class Gui:
         printConfig = Checkbutton(optionsFrame, width = checkboxWidth, text='Print Config', var=self.printConfig)
         printConfig.pack(anchor=W)
 
+        verboseLogging = Checkbutton(optionsFrame, width = checkboxWidth, text='Verbose Logging', var=self.verboseLogging)
+        verboseLogging.pack(anchor=W)
+
+        multiProcessing = Checkbutton(optionsFrame, width = checkboxWidth, text='Multi Processing', var=self.multiProcessing)
+        multiProcessing.pack(anchor=W)
+
         # Actions Frame
 
         self.makeChangeLogButton = Button(actionsFrame, width=buttonWidth, text="Make Change Log", command=lambda:self._StartWorkThread(self._MakeChangeLog))
@@ -246,6 +260,8 @@ class Gui:
         self.run = None
         self.printConfig = None
         self.clearConsole = None
+        self.verboseLogging = None
+        self.multiProcessing = None
         self.bundlePackList = None
         self.executeButton = None
         self.makeChangeLogButton = None
@@ -302,7 +318,8 @@ class Gui:
 
     @staticmethod
     def _ClearConsole() -> None:
-        os.system('cls||clear')
+        if sys.stdout.isatty():
+            os.system('cls||clear')
 
 
     def _Execute(self) -> None:
@@ -318,6 +335,8 @@ class Gui:
             uninstall=self.uninstall.get(),
             run=self.run.get(),
             printConfig=self.printConfig.get(),
+            verboseLogging=self.verboseLogging.get(),
+            multiProcessing=self.multiProcessing.get(),
             toolsRootDir=self.toolsRootDir,
             engine=self.buildEngine)
 
@@ -328,7 +347,9 @@ class Gui:
         function = lambda:RunWithConfig(
             configPaths=self.configPaths,
             makeChangeLog=True,
-            printConfig=self.printConfig.get())
+            printConfig=self.printConfig.get(),
+            verboseLogging=self.verboseLogging.get(),
+            multiProcessing=self.multiProcessing.get())
 
         self._DoWork(function)
 
@@ -340,6 +361,8 @@ class Gui:
             buildList=self.buildAndInstallList,
             clean=True,
             printConfig=self.printConfig.get(),
+            verboseLogging=self.verboseLogging.get(),
+            multiProcessing=self.multiProcessing.get(),
             toolsRootDir=self.toolsRootDir,
             engine=self.buildEngine)
 
@@ -353,6 +376,8 @@ class Gui:
             buildList=self.buildAndInstallList,
             build=True,
             printConfig=self.printConfig.get(),
+            verboseLogging=self.verboseLogging.get(),
+            multiProcessing=self.multiProcessing.get(),
             toolsRootDir=self.toolsRootDir,
             engine=self.buildEngine)
 
@@ -366,6 +391,8 @@ class Gui:
             buildList=self.buildAndInstallList,
             release=True,
             printConfig=self.printConfig.get(),
+            verboseLogging=self.verboseLogging.get(),
+            multiProcessing=self.multiProcessing.get(),
             toolsRootDir=self.toolsRootDir,
             engine=self.buildEngine)
 
@@ -379,6 +406,8 @@ class Gui:
             buildList=self.buildAndInstallList,
             install=True,
             printConfig=self.printConfig.get(),
+            verboseLogging=self.verboseLogging.get(),
+            multiProcessing=self.multiProcessing.get(),
             toolsRootDir=self.toolsRootDir,
             engine=self.buildEngine)
 
@@ -392,6 +421,8 @@ class Gui:
             buildList=self.buildAndInstallList,
             uninstall=True,
             printConfig=self.printConfig.get(),
+            verboseLogging=self.verboseLogging.get(),
+            multiProcessing=self.multiProcessing.get(),
             toolsRootDir=self.toolsRootDir,
             engine=self.buildEngine)
 
@@ -405,6 +436,8 @@ class Gui:
             buildList=self.buildAndInstallList,
             run=True,
             printConfig=self.printConfig.get(),
+            verboseLogging=self.verboseLogging.get(),
+            multiProcessing=self.multiProcessing.get(),
             toolsRootDir=self.toolsRootDir,
             engine=self.buildEngine)
 
