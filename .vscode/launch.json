@@ -35,7 +35,8 @@
                 "--install=ProjectCore",
                 "--run",
                 "--uninstall",
-                "--debug"
+                "--debug",
+                "--verbose-logging"
             ]
         },
         {
@@ -60,7 +61,8 @@
                 "--run",
                 "--uninstall",
                 "--debug",
-                "--gui"
+                "--gui",
+                "--verbose-logging"
             ]
         },
         {
@@ -82,7 +84,8 @@
                 "${workspaceFolder}\\..\\GeneralsModBuilderSample\\Project\\Scripts\\Windows\\WindowsTools.json",
                 "--build",
                 "--release",
-                "--debug"
+                "--debug",
+                "--verbose-logging"
             ]
         },
         {
@@ -117,7 +120,9 @@
                 "--run",
                 "--uninstall",
                 "--debug",
-                "--gui"
+                "--gui",
+                "--verbose-logging",
+                "--multi-processing"
             ]
         },
         {
