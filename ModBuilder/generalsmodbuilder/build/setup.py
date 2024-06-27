@@ -27,6 +27,8 @@ class BuildSetup:
     bundles: Bundles
     tools: ToolsT
     printConfig: bool
+    verboseLogging: bool
+    multiProcessing: bool
 
     def VerifyTypes(self) -> None:
         util.VerifyType(self.step, BuildStep, "BuildSetup.step")
@@ -35,6 +37,8 @@ class BuildSetup:
         util.VerifyType(self.bundles, Bundles, "BuildSetup.bundles")
         util.VerifyType(self.tools, dict, "BuildSetup.tools")
         util.VerifyType(self.printConfig, bool, "BuildSetup.printConfig")
+        util.VerifyType(self.verboseLogging, bool, "BuildSetup.verboseLogging")
+        util.VerifyType(self.multiProcessing, bool, "BuildSetup.multiProcessing")
         for key, value in self.tools.items():
             util.VerifyType(key, str, "BuildSetup.tools.key")
             util.VerifyType(value, Tool, "BuildSetup.tools.value")

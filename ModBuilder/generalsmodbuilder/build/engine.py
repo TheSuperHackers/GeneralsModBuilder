@@ -399,8 +399,11 @@ class BuildEngine:
         bundles: Bundles = self.setup.bundles
         tools: ToolsT = self.setup.tools
 
-        options = BuildCopyOption.EnableLogging
-        processPool = ProcessPoolExecutor()
+        options = BuildCopyOption.Zero
+        if self.setup.verboseLogging:
+            options |= BuildCopyOption.EnableLogging
+
+        processPool = ProcessPoolExecutor() if self.setup.multiProcessing else None
         self.processPool = processPool
 
         self.structure = BuildStructure()

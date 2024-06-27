@@ -27,6 +27,8 @@ def Main(args=None):
     parser.add_argument('-g', '--gui', action='store_true')
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--print-config', action='store_true')
+    parser.add_argument('--verbose-logging', action='store_true')
+    parser.add_argument('--multi-processing', action='store_true')
     parser.add_argument('--tools-root-dir', type=str, default=None, help='The root directory of tools. By default the directory of the tools json file is used as the root directory for its specified tools.')
     parser.add_argument('--file-hash-registry-input', type=str, action="append", help='Path to generate file hash registry from. Multiples can be specified.')
     parser.add_argument('--file-hash-registry-output', type=str, help='Path to save file hash registry to.')
@@ -99,6 +101,8 @@ def Main(args=None):
     useGui = bool(args.gui)
     debug = bool(args.debug)
     printConfig = bool(args.print_config)
+    verboseLogging = bool(args.verbose_logging)
+    multiProcessing = bool(args.multi_processing)
     toolsRootDir = args.tools_root_dir
 
     if toolsRootDir:
@@ -119,24 +123,26 @@ def Main(args=None):
             run=run,
             debug=debug,
             printConfig=printConfig,
+            verboseLogging=verboseLogging,
+            multiProcessing=multiProcessing,
             toolsRootDir=toolsRootDir)
     else:
         def RunWithConfigWrapper():
-            with BuildEngine() as buildEngine:
-                RunWithConfig(
-                    engine=buildEngine,
-                    configPaths=configPaths,
-                    installList=installList,
-                    buildList=buildList,
-                    makeChangeLog=makeChangeLog,
-                    clean=clean,
-                    build=build,
-                    release=release,
-                    install=install,
-                    uninstall=uninstall,
-                    run=run,
-                    printConfig=printConfig,
-                    toolsRootDir=toolsRootDir)
+            RunWithConfig(
+                configPaths=configPaths,
+                installList=installList,
+                buildList=buildList,
+                makeChangeLog=makeChangeLog,
+                clean=clean,
+                build=build,
+                release=release,
+                install=install,
+                uninstall=uninstall,
+                run=run,
+                printConfig=printConfig,
+                verboseLogging=verboseLogging,
+                multiProcessing=multiProcessing,
+                toolsRootDir=toolsRootDir)
         if debug:
             RunWithConfigWrapper()
         else:
