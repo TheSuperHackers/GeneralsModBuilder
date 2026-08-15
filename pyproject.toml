@@ -1,22 +1,32 @@
-[tool.poetry]
+[project]
 name = "generalsmodbuilder"
-version = "2.4"
 description = "Mod Builder for Generals: Zero Hour"
-authors = ["TheSuperHackers"]
+authors = [{ name = "TheSuperHackers" }]
 license = "MIT"
+readme = "README.md"
+requires-python = ">=3.12"
+dynamic = ["version"]
+dependencies = [
+    "beeprint>=2.4.10",
+    "certifi>=2024.2.2",
+    "markdownmaker>=0.4.0",
+    "platformdirs>=4.2.0",
+    "psd-tools>=1.10.0",
+    "PyYAML>=6.0",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.10,<3.11"
-beeprint = "^2.4.10"
-psd-tools = "1.9.19"
-markdownmaker = "^0.4.0"
-PyYAML = "^6.0"
-scikit-image = "0.19.2"
-certifi = "^2023.5.7"
-platformdirs = "^3.6.0"
+[project.urls]
+Homepage = "https://github.com/TheSuperHackers/GeneralsModBuilder"
 
-[tool.poetry.dev-dependencies]
+[project.scripts]
+generalsmodbuilder = "generalsmodbuilder.main:Main"
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "generalsmodbuilder/__version__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["generalsmodbuilder"]
