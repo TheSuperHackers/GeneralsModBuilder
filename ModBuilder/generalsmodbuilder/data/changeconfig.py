@@ -1,6 +1,5 @@
 import os.path
 from enum import Enum, auto
-from glob import glob
 from dataclasses import dataclass
 from generalsmodbuilder.util import JsonFile
 from generalsmodbuilder import util
@@ -85,25 +84,7 @@ class ChangeConfigRecord:
             definition.VerifyValues()
 
     def ResolveWildcards(self) -> None:
-        self.absSourceFiles = ChangeConfigRecord._ResolveWildcardsInFileList(self.absSourceFiles)
-
-    @staticmethod
-    def _ResolveWildcardsInFileList(fileList: list[str]) -> list[str]:
-        newFiles = list[str]()
-        file: str
-        for file in fileList:
-            if "*" in file and not os.path.isfile(file):
-                globFiles: list[str] = glob(file, recursive=True)
-                if not bool(globFiles):
-                    print(f"Note: Wildcard '{file}' currently matches nothing")
-
-                for globFile in globFiles:
-                    if os.path.isfile(globFile):
-                        newFiles.append(globFile)
-            else:
-                util.Verify(os.path.isfile(file), f"File '{file}' is not a valid file")
-                newFiles.append(file)
-        return newFiles
+        self.absSourceFiles = util.ResolveFileWildcards(self.absSourceFiles)
 
 
 @dataclass(init=False)

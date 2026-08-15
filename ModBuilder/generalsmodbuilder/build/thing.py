@@ -24,8 +24,9 @@ def IsStatusRelevantForBuild(status: BuildFileStatus) -> bool:
 
 @dataclass(init=False)
 class BuildFile:
+    # This class is serialized and therefore may be missing attributes.
     relTarget: str
-    absSource: str
+    absSources: list[str]
     targetStatus: BuildFileStatus
     sourceStatus: BuildFileStatus
     parentFile: Any
@@ -34,7 +35,7 @@ class BuildFile:
 
     def __init__(self):
         self.relTarget = None
-        self.absSource = None
+        self.absSources = None
         self.targetStatus = BuildFileStatus.Unknown
         self.sourceStatus = BuildFileStatus.Unknown
         self.parentFile = None
@@ -49,8 +50,22 @@ class BuildFile:
         path = os.path.normpath(path)
         return path
 
+    def AbsSources(self) -> list[str]:
+        try:
+            return self.absSources
+        except AttributeError:
+            # Legacy. Was serialized by a release that stored one source file in absSource.
+            return [self.absSource]
+
     def AbsSource(self) -> str:
-        return self.absSource
+        """
+        Returns the first source file. Build event scripts of mod projects call this,
+        so it keeps its name and its meaning for a file that has just one source file.
+        """
+        return self.AbsSources()[0]
+
+    def HasMultiSource(self) -> bool:
+        return len(self.AbsSources()) > 1
 
     def GetCombinedStatus(self) -> BuildFileStatus:
         maxValue: int = max(self.targetStatus.value, self.sourceStatus.value)
@@ -97,7 +112,7 @@ class BuildThing:
         file: BuildFile
         if self.parentThing != None:
             for file in self.files:
-                if file.absSource == self.parentThing.absParentDir:
+                if file.AbsSource() == self.parentThing.absParentDir:
                     count += 1
         return count
 

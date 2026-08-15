@@ -9,6 +9,7 @@ import hashlib
 import pickle
 import shutil
 from copy import copy
+from glob import glob
 from typing import Any, Callable, Union
 
 
@@ -279,6 +280,34 @@ def HasAnyFileExt(file: str, expectedExtList: list[str]) -> bool:
         if HasFileExt(file, ext):
             return True
     return False
+
+
+def ResolveFileWildcards(fileList: list[str], sortWildcardMatches: bool = False) -> list[str]:
+    """
+    Substitutes every file path that contains a wildcard with all files that it matches.
+    File paths without wildcard are taken over as is and are verified to be valid files.
+    sortWildcardMatches : bool
+        Sorts the matches of each wildcard alphabetically. This makes the resulting order
+        reproducible across machines, because glob returns matches in file system order.
+        Files that are listed without wildcard always keep their listed order.
+    """
+    newFiles = list[str]()
+    file: str
+    for file in fileList:
+        if "*" in file and not os.path.isfile(file):
+            globFiles: list[str] = glob(file, recursive=True)
+            if not bool(globFiles):
+                print(f"Note: Wildcard '{file}' currently matches nothing")
+
+            globFiles = [globFile for globFile in globFiles if os.path.isfile(globFile)]
+            if sortWildcardMatches:
+                globFiles.sort()
+
+            newFiles.extend(globFiles)
+        else:
+            Verify(os.path.isfile(file), f"File '{file}' is not a valid file")
+            newFiles.append(file)
+    return newFiles
 
 
 def CreateRelPaths(paths: list[str], start: str) -> list[str]:

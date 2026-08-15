@@ -3,7 +3,8 @@
 
 class CaseInsensitiveDict():
     def __init__(self, dictionary={}):
-        self._data = self.__create(dictionary)
+        # Treat None as empty, so that optional params can be passed in without a null check.
+        self._data = self.__create(dictionary if dictionary != None else {})
 
     def __create(self, value):
         if isinstance(value, dict):

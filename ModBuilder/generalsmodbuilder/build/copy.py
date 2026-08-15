@@ -105,11 +105,25 @@ class BuildCopyResult:
 
 BuildCopyResultFunctionT = Callable[[str, str], None]
 BuildCopyFunctionT = Callable[[str, str, ParamsT], BuildCopyResult]
+BuildMultiCopyFunctionT = Callable[[list[str], str, ParamsT], BuildCopyResult]
+
+
+def SupportsMultiSource(sourceType: BuildFileType, targetType: BuildFileType) -> bool:
+    """
+    Tells whether multiple source files can build the given target file together.
+    """
+    if targetType == BuildFileType.ini or targetType == BuildFileType.wnd:
+        return sourceType == targetType
+
+    if targetType == BuildFileType.str or targetType == BuildFileType.csf:
+        return sourceType == BuildFileType.str or sourceType == BuildFileType.csf
+
+    return False
 
 
 class BuildJob:
     result: BuildCopyResult
-    absSource: str
+    absSources: list[str]
     absTarget: str
     params: ParamsT
 
@@ -133,16 +147,16 @@ class BuildCopy:
 
         for file in thing.files:
             if file.RequiresRebuild():
-                absSource: str = file.AbsSource()
+                absSources: list[str] = file.AbsSources()
                 absTarget: str = file.AbsTarget(thing.absParentDir)
                 params: ParamsT = file.params
-                result: BuildCopyResult = self.Copy(absSource, absTarget, params)
+                result: BuildCopyResult = self.Copy(absSources, absTarget, params)
                 success &= result.success
                 if result.success:
                     if self.options & BuildCopyOption.EnableLogging:
-                        BuildCopy.__PrintResult(result.printType, absSource, absTarget)
+                        BuildCopy.__PrintResult(result.printType, absSources, absTarget)
                 else:
-                    raise Exception(f"Unable to copy source '{absSource}' to target '{absTarget}'.")
+                    raise Exception(f"Unable to copy source(s) '{BuildCopy.__JoinSources(absSources)}' to target '{absTarget}'.")
 
         return success
 
@@ -159,7 +173,7 @@ class BuildCopy:
             if file.RequiresRebuild():
                 buildJob = BuildJob()
                 buildJob.result = BuildCopyResult()
-                buildJob.absSource = file.AbsSource()
+                buildJob.absSources = file.AbsSources()
                 buildJob.absTarget = file.AbsTarget(thing.absParentDir)
                 buildJob.params = file.params
                 future = self.processPool.submit(CopyWithProcess, self.tools, options, buildJob)
@@ -172,9 +186,9 @@ class BuildCopy:
             success &= buildJob.result.success
             if buildJob.result.success:
                 if self.options & BuildCopyOption.EnableLogging:
-                    BuildCopy.__PrintResult(buildJob.result.printType, buildJob.absSource, buildJob.absTarget)
+                    BuildCopy.__PrintResult(buildJob.result.printType, buildJob.absSources, buildJob.absTarget)
             else:
-                raise Exception(f"Unable to copy source '{buildJob.absSource}' to target '{buildJob.absTarget}'.")
+                raise Exception(f"Unable to copy source(s) '{BuildCopy.__JoinSources(buildJob.absSources)}' to target '{buildJob.absTarget}'.")
 
         return success
 
@@ -193,17 +207,19 @@ class BuildCopy:
 
     def Copy(
             self,
-            source: str,
+            sources: list[str],
             target: str,
             params: ParamsT = None,
             sourceType = BuildFileType.Auto,
             targetType = BuildFileType.Auto) -> BuildCopyResult:
 
-        if not os.path.exists(source):
-            return BuildCopyResult(success=False)
+        source: str
+        for source in sources:
+            if not os.path.exists(source):
+                return BuildCopyResult(success=False)
 
         if sourceType == BuildFileType.Auto:
-            sourceType = GetFileType(source)
+            sourceType = GetFileType(sources[0])
 
         if targetType == BuildFileType.Auto:
             targetType = GetFileType(target)
@@ -215,8 +231,12 @@ class BuildCopy:
 
         util.DeleteFileOrDir(target)
 
+        if len(sources) > 1:
+            multiCopyFunction: BuildMultiCopyFunctionT = self.__GetMultiCopyFunction(sources, target, targetType)
+            return multiCopyFunction(sources, target, params)
+
         copyFunction: BuildCopyFunctionT = self.__GetCopyFunction(sourceType, targetType)
-        return copyFunction(source, target, params)
+        return copyFunction(sources[0], target, params)
 
 
     def Uncopy(self, file: str) -> bool:
@@ -262,13 +282,20 @@ class BuildCopy:
 
 
     @staticmethod
-    def __PrintResult(type: BuildCopyPrintType, source: str, target: str) -> None:
-        if type == BuildCopyPrintType.Copy:
-            BuildCopy.__PrintCopyResult(source, target)
-        elif type == BuildCopyPrintType.Link:
-            BuildCopy.__PrintLinkResult(source, target)
-        elif type == BuildCopyPrintType.Make:
-            BuildCopy.__PrintMakeResult(source, target)
+    def __JoinSources(sources: list[str]) -> str:
+        return "', '".join(sources)
+
+
+    @staticmethod
+    def __PrintResult(type: BuildCopyPrintType, sources: list[str], target: str) -> None:
+        source: str
+        for source in sources:
+            if type == BuildCopyPrintType.Copy:
+                BuildCopy.__PrintCopyResult(source, target)
+            elif type == BuildCopyPrintType.Link:
+                BuildCopy.__PrintLinkResult(source, target)
+            elif type == BuildCopyPrintType.Make:
+                BuildCopy.__PrintMakeResult(source, target)
 
 
     @staticmethod
@@ -352,6 +379,31 @@ class BuildCopy:
         return self.__CopyTo
 
 
+    def __GetMultiCopyFunction(self, sources: list[str], target: str, targetT: BuildFileType) -> BuildMultiCopyFunctionT:
+        """
+        Selects the function that builds one target file from multiple source files.
+        Symlinks are never taken here, because a merged file has no single source to link to.
+        """
+        source: str
+        for source in sources:
+            sourceT: BuildFileType = GetFileType(source)
+            if not SupportsMultiSource(sourceT, targetT):
+                raise Exception(
+                    f"Source '{source}' of type '{sourceT.name}' cannot build target '{target}' of type '{targetT.name}' "
+                    f"together with other source files.")
+
+        if targetT == BuildFileType.csf:
+            return self.__MergeToCSF
+
+        if targetT == BuildFileType.str:
+            # STR sources merge as text. A CSF source requires the tool to become text first.
+            for source in sources:
+                if GetFileType(source) == BuildFileType.csf:
+                    return self.__MergeToSTR
+
+        return self.__ConcatToTextFile
+
+
     def __CopyTo(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
         if self.options & BuildCopyOption.EnableSymlinks:
             try:
@@ -404,6 +456,71 @@ class BuildCopy:
             args.extend(["-SAVE_STR_LANGUAGES", language])
 
         success: bool = util.RunProcess(args)
+        return BuildCopyResult(success=success, printType=BuildCopyPrintType.Make)
+
+
+    def __MergeToCSF(self, sources: list[str], target: str, params: ParamsT) -> BuildCopyResult:
+        return self.__MergeGameText(sources, target, params, BuildFileType.csf)
+
+
+    def __MergeToSTR(self, sources: list[str], target: str, params: ParamsT) -> BuildCopyResult:
+        return self.__MergeGameText(sources, target, params, BuildFileType.str)
+
+
+    def __MergeGameText(self, sources: list[str], target: str, params: ParamsT, targetT: BuildFileType) -> BuildCopyResult:
+        """
+        Builds one game text file from multiple game text files.
+        Each source file is loaded into its own compiler slot and is merged over the first slot,
+        so a label that is defined again in a later source file overwrites the earlier one.
+        """
+        iparams = CaseInsensitiveDict(params)
+        exec: str = self.__GetToolExePath("gametextcompiler")
+        args: list[str] = [exec]
+
+        language: str = iparams.get("language")
+        hasLanguage: bool = isinstance(language, str) and bool(language)
+
+        # Text params cannot be applied by the compiler, so pre process each text source file into a temp file.
+        tmpSources = list[str]()
+        mergeSources = list(sources)
+
+        if BuildCopy.__RequiresTextTransform(iparams):
+            for index, source in enumerate(mergeSources):
+                if GetFileType(source) == BuildFileType.str:
+                    tmpSource: str = f"{target}.{index}.tmp.str"
+                    result: BuildCopyResult = self.__TransformToTextFile(source, tmpSource, params)
+                    if result.success:
+                        mergeSources[index] = tmpSource
+                        tmpSources.append(tmpSource)
+
+        for index, source in enumerate(mergeSources):
+            if GetFileType(source) == BuildFileType.csf:
+                args.append(f"LOAD_CSF(FILE_ID:{index},FILE_PATH:{source})")
+            elif hasLanguage:
+                args.append(f"LOAD_MULTI_STR(FILE_ID:{index},FILE_PATH:{source},LANGUAGE:{language})")
+            else:
+                args.append(f"LOAD_STR(FILE_ID:{index},FILE_PATH:{source})")
+
+            if index > 0:
+                args.append(f"MERGE_AND_OVERWRITE(FILE_ID:0,FILE_ID:{index},LANGUAGE:{language})")
+
+        swapAndSetLanguage: str = iparams.get("swapAndSetLanguage")
+        if isinstance(swapAndSetLanguage, str) and bool(swapAndSetLanguage):
+            args.append(f"SWAP_AND_SET_LANGUAGE(FILE_ID:0,LANGUAGE:{swapAndSetLanguage})")
+
+        # A CSF file stores its language, but a STR file needs the language(s) written out with it.
+        if targetT == BuildFileType.csf:
+            args.append(f"SAVE_CSF(FILE_ID:0,FILE_PATH:{target})")
+        elif hasLanguage:
+            args.append(f"SAVE_MULTI_STR(FILE_ID:0,FILE_PATH:{target},LANGUAGE:{language})")
+        else:
+            args.append(f"SAVE_STR(FILE_ID:0,FILE_PATH:{target})")
+
+        success: bool = util.RunProcess(args)
+
+        for tmpSource in tmpSources:
+            util.DeleteFile(tmpSource)
+
         return BuildCopyResult(success=success, printType=BuildCopyPrintType.Make)
 
 
@@ -710,15 +827,57 @@ class BuildCopy:
         return outputLines
 
 
-    def __CopyToTextFileIfNeeded(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
-        success: bool = False
-        iparams = CaseInsensitiveDict(params)
-
+    @staticmethod
+    def __RequiresTextTransform(iparams: CaseInsensitiveDict) -> bool:
         forceEOL: str = iparams.get("forceEOL")
         deleteComments: str = iparams.get("deleteComments")
         deleteWhitespace: int = iparams.get("deleteWhitespace")
-        sourceEncoding: str = iparams.get("sourceEncoding") # https://docs.python.org/3/library/codecs.html
+        sourceEncoding: str = iparams.get("sourceEncoding")
         targetEncoding: str = iparams.get("targetEncoding")
+        excludeMarkersList: list[list[str]] = iparams.get("excludeMarkersList")
+
+        doForceEOL: bool = isinstance(forceEOL, str) and bool(forceEOL)
+        doDeleteComments: bool = isinstance(deleteComments, str) and bool(deleteComments)
+        doDeleteWhitespace: bool = isinstance(deleteWhitespace, int) and deleteWhitespace > 0
+        doEncode: bool = isinstance(sourceEncoding, str) or isinstance(targetEncoding, str)
+        doExclude: bool = isinstance(excludeMarkersList, list)
+
+        return doDeleteWhitespace or doDeleteComments or doForceEOL or doEncode or doExclude
+
+
+    @staticmethod
+    def __GetSourceEncoding(iparams: CaseInsensitiveDict) -> str:
+        # https://docs.python.org/3/library/codecs.html
+        return iparams.get("sourceEncoding") or "utf-8"
+
+
+    @staticmethod
+    def __GetTargetEncoding(iparams: CaseInsensitiveDict) -> str:
+        return iparams.get("targetEncoding") or "utf-8"
+
+
+    @staticmethod
+    def __ReadTextLines(source: str, encoding: str) -> list[str]:
+        with open(source, "r", encoding=encoding) as sourceFile:
+            return [line.rstrip("\r\n") for line in sourceFile]
+
+
+    @staticmethod
+    def __WriteTextLines(target: str, encoding: str, lines: list[str]) -> None:
+        with open(target, "w", encoding=encoding, newline="") as targetFile:
+            for line in lines:
+                targetFile.write(line)
+
+
+    @staticmethod
+    def __TransformTextLines(lines: list[str], iparams: CaseInsensitiveDict) -> list[str]:
+        """
+        Applies all text transformations of the given params to the given lines.
+        Lines are expected to be read without line ending and are returned with line ending.
+        """
+        forceEOL: str = iparams.get("forceEOL")
+        deleteComments: str = iparams.get("deleteComments")
+        deleteWhitespace: int = iparams.get("deleteWhitespace")
         excludeMarkersList: list[list[str]] = iparams.get("excludeMarkersList")
         if excludeMarkersList:
             excludeMarkers = [BuildCopy.Marker(t[0], t[1]) for t in excludeMarkersList]
@@ -728,52 +887,84 @@ class BuildCopy:
         doForceEOL: bool = isinstance(forceEOL, str) and bool(forceEOL)
         doDeleteComments: bool = isinstance(deleteComments, str) and bool(deleteComments)
         doDeleteWhitespace: bool = isinstance(deleteWhitespace, int) and deleteWhitespace > 0
-        doEncode: bool = isinstance(sourceEncoding, str) or isinstance(targetEncoding, str)
         doExclude: bool = isinstance(excludeMarkers, list)
 
-        if doDeleteWhitespace or doDeleteComments or doForceEOL or doEncode or doExclude:
-            if not sourceEncoding:
-                sourceEncoding = "utf-8"
-            if not targetEncoding:
-                targetEncoding = "utf-8"
+        # Exclude text inside markers ...
+        if doExclude:
+            lines = BuildCopy.__FilterText(lines, excludeMarkers)
 
-            with open(source, "r", encoding=sourceEncoding) as sourceFile:
-                with open(target, "w", encoding=targetEncoding, newline="") as targetFile:
-                    sourceLines: list[str] = [line.rstrip("\r\n") for line in sourceFile]
+        # Delete comments ...
+        if doDeleteComments:
+            for i, s in enumerate(lines):
+                lines[i] = s.split(deleteComments, 1)[0]
 
-                    # Exclude text inside markers ...
-                    if doExclude:
-                        sourceLines = BuildCopy.__FilterText(sourceLines, excludeMarkers)
+        # Delete obsolete spaces ...
+        if doDeleteWhitespace:
+            for i, s in enumerate(lines):
+                lines[i] = " ".join(s.split())
 
-                    # Delete comments ...
-                    if doDeleteComments:
-                        for i, s in enumerate(sourceLines):
-                            sourceLines[i] = s.split(deleteComments, 1)[0]
+        # Delete empty lines ...
+        if doDeleteWhitespace:
+            lines[:] = [line for line in lines if line.strip()]
 
-                    # Delete obsolete spaces ...
-                    if doDeleteWhitespace:
-                        for i, s in enumerate(sourceLines):
-                            sourceLines[i] = " ".join(s.split())
+        # Set line ending ...
+        if doForceEOL:
+            for i, s in enumerate(lines):
+                lines[i] = s + forceEOL
+        else:
+            for i, s in enumerate(lines):
+                lines[i] = s + "\n"
 
-                    # Delete empty lines ...
-                    if doDeleteWhitespace:
-                        sourceLines[:] = [line for line in sourceLines if line.strip()]
+        return lines
 
-                    # Set line ending ...
-                    if doForceEOL:
-                        for i, s in enumerate(sourceLines):
-                            sourceLines[i] = s + forceEOL
-                    else:
-                        for i, s in enumerate(sourceLines):
-                            sourceLines[i] = s + "\n"
 
-                    # Write out ...
-                    for line in sourceLines:
-                        targetFile.write(line)
+    def __TransformToTextFile(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
+        """
+        Builds one text file from one text file.
+        Unlike __CopyToTextFile this always writes a new file, even when no text param changes the text.
+        """
+        iparams = CaseInsensitiveDict(params)
 
-                    success = True
+        lines: list[str] = BuildCopy.__ReadTextLines(source, BuildCopy.__GetSourceEncoding(iparams))
+        lines = BuildCopy.__TransformTextLines(lines, iparams)
+        BuildCopy.__WriteTextLines(target, BuildCopy.__GetTargetEncoding(iparams), lines)
+
+        return BuildCopyResult(success=True, printType=BuildCopyPrintType.Make)
+
+
+    def __CopyToTextFileIfNeeded(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
+        success: bool = False
+        iparams = CaseInsensitiveDict(params)
+
+        if BuildCopy.__RequiresTextTransform(iparams):
+            lines: list[str] = BuildCopy.__ReadTextLines(source, BuildCopy.__GetSourceEncoding(iparams))
+            lines = BuildCopy.__TransformTextLines(lines, iparams)
+            BuildCopy.__WriteTextLines(target, BuildCopy.__GetTargetEncoding(iparams), lines)
+            success = True
 
         return BuildCopyResult(success=success, printType=BuildCopyPrintType.Make)
+
+
+    def __ConcatToTextFile(self, sources: list[str], target: str, params: ParamsT) -> BuildCopyResult:
+        """
+        Builds one text file from multiple text files in the order that they are listed in.
+        Unlike the single source variant this always writes a new file, because there is
+        no single source file that could simply be copied or linked instead.
+        """
+        iparams = CaseInsensitiveDict(params)
+        sourceEncoding: str = BuildCopy.__GetSourceEncoding(iparams)
+        lines = list[str]()
+        source: str
+
+        for source in sources:
+            lines.extend(BuildCopy.__ReadTextLines(source, sourceEncoding))
+
+        # Lines are read without their line ending and are written back with one,
+        # so the last line of a source file can never merge into the first line of the next one.
+        lines = BuildCopy.__TransformTextLines(lines, iparams)
+        BuildCopy.__WriteTextLines(target, BuildCopy.__GetTargetEncoding(iparams), lines)
+
+        return BuildCopyResult(success=True, printType=BuildCopyPrintType.Make)
 
 
     def __CopyToW3D(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
@@ -830,5 +1021,5 @@ bpy.ops.export_mesh.westwood_w3d(
 
 def CopyWithProcess(tools: ToolsT, options: BuildCopyOption, buildJob: BuildJob) -> BuildJob:
     buildCopy = BuildCopy(tools=tools, options=options)
-    buildJob.result = buildCopy.Copy(buildJob.absSource, buildJob.absTarget, buildJob.params)
+    buildJob.result = buildCopy.Copy(buildJob.absSources, buildJob.absTarget, buildJob.params)
     return buildJob
