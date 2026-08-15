@@ -188,7 +188,7 @@ def MakeChangeConfigFromJsons(jsonFiles: list[JsonFile]) -> ChangeConfig:
     config = ChangeConfig()
 
     for jsonFile in jsonFiles:
-        jsonDir: str = util.GetAbsSmartFileDir(jsonFile.path)
+        jsonDir: str = util.GetAbsFileDir(jsonFile.path)
         jChangelog: dict = util.GetCheckedOptional(jsonFile.data, "changelog", dict)
 
         if jChangelog:

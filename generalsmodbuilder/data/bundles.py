@@ -655,7 +655,7 @@ def AddBundlePacksFromJsons(jsonFiles: list[JsonFile], bundles: Bundles) -> None
     jPacksSuffix: str = ""
 
     for jsonFile in jsonFiles:
-        jsonDir: str = util.GetAbsSmartFileDir(jsonFile.path)
+        jsonDir: str = util.GetAbsFileDir(jsonFile.path)
         jBundles: dict = jsonFile.data.get("bundles")
 
         if jBundles:
@@ -684,7 +684,7 @@ def AddBundleItemsFromJsons(jsonFiles: list[JsonFile], bundles: Bundles) -> None
     jItemsSuffix: str = ""
 
     for jsonFile in jsonFiles:
-        jsonDir: str = util.GetAbsSmartFileDir(jsonFile.path)
+        jsonDir: str = util.GetAbsFileDir(jsonFile.path)
         jBundles: dict = jsonFile.data.get("bundles")
 
         if jBundles:

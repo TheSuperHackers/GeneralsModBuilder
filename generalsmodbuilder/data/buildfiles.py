@@ -31,7 +31,7 @@ def AddBuildFilesFromJsons(jsonFiles: list[JsonFile], buildFiles: BuildFiles) ->
     Parses build file list from all json files where present.
     """
     for jsonFile in jsonFiles:
-        jsonDir: str = util.GetAbsSmartFileDir(jsonFile.path)
+        jsonDir: str = util.GetAbsFileDir(jsonFile.path)
         jBuild: dict = jsonFile.data.get("build")
 
         if jBuild:

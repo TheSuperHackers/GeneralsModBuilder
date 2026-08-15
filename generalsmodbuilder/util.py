@@ -214,19 +214,9 @@ def GetAbsFileDir(file: str) -> str:
     return fdir
 
 
-g_isFrozen: bool = getattr(sys, 'frozen', False)
-
-def GetAbsSmartFileDir(file: str) -> str:
-    # If this code is frozen and the given file is part of it, then use the executable file dir.
-    fileDir: str = GetAbsFileDir(file)
-    if g_isFrozen:
-        thisDir = os.path.dirname(__file__)
-        if fileDir.startswith(thisDir):
-            return os.path.dirname(sys.executable)
-    return fileDir
-
-
-g_appDir: str = GetAbsSmartFileDir(__file__)
+# The directory of the installed generalsmodbuilder package. Data files that ship
+# with the package, such as the built-in configurations and the gui icon, live here.
+g_appDir: str = GetAbsFileDir(__file__)
 
 
 def GetAbsFileDirs(file: str, absStopPath: str = "") -> list[str]:

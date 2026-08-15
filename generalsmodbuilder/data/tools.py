@@ -126,7 +126,7 @@ class ToolFile:
             util.Verify(self.md5 == actual, f"ToolFile.md5 '{self.md5}' does not match md5 '{actual}' of target file '{self.absTarget}'")
         if self.sha256:
             actual: str = util.GetFileSha256(self.absTarget)
-            util.Verify(self.md5 == actual, f"ToolFile.sha256 '{self.md5}' does not match sha256 '{actual}' of target file '{self.absTarget}'")
+            util.Verify(self.sha256 == actual, f"ToolFile.sha256 '{self.sha256}' does not match sha256 '{actual}' of target file '{self.absTarget}'")
         if self.size >= 0:
             actual: int = util.GetFileSize(self.absTarget)
             util.Verify(self.size == actual, f"ToolFile.size '{self.size}' does not match size '{actual}' of target file '{self.absTarget}'")
@@ -385,7 +385,7 @@ def MakeToolsFromJsons(jsonFiles: list[JsonFile], rootDir: str=None) -> ToolsT:
         if jTools:
             LATEST_VERSION = 2
             jVersion: int = jTools.get("version", LATEST_VERSION)
-            jsonDir: str = util.GetAbsSmartFileDir(jsonFile.path)
+            jsonDir: str = util.GetAbsFileDir(jsonFile.path)
             if not rootDir:
                 rootDir = jsonDir
             aliases: dict = {
