@@ -69,7 +69,7 @@ def MakeRunnerFromJsons(jsonFiles: list[JsonFile]) -> Runner:
     absGameInstallDirs = list[str]()
 
     for jsonFile in jsonFiles:
-        jsonDir: str = util.GetAbsSmartFileDir(jsonFile.path)
+        jsonDir: str = util.GetAbsFileDir(jsonFile.path)
         jRunner: dict = jsonFile.data.get("runner")
 
         if jRunner:

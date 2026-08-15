@@ -1,5 +1,5 @@
 import os
-import platformdirs # Imported to make it work in a PyInstaller build (*1)
+import platformdirs
 import traceback
 from argparse import ArgumentParser
 from generalsmodbuilder.__version__ import VERSIONSTR
@@ -7,6 +7,10 @@ from generalsmodbuilder.build.engine import BuildEngine
 from generalsmodbuilder.buildfunctions import RunWithConfig, BuildFileHashRegistry
 from generalsmodbuilder.gui.gui import Gui
 from generalsmodbuilder import util
+
+
+def GetDefaultToolsRootDir() -> str:
+    return os.path.join(platformdirs.user_cache_dir("GeneralsModBuilder", "TheSuperHackers"), "tools")
 
 
 def Main(args=None):
@@ -107,6 +111,10 @@ def Main(args=None):
 
     if toolsRootDir:
         toolsRootDir = os.path.normpath(toolsRootDir)
+    elif args.load_default_tools:
+        # The built-in tools configuration would otherwise download tools next to itself,
+        # which is inside the installed package. Use a per-user cache directory instead.
+        toolsRootDir = GetDefaultToolsRootDir()
 
     if useGui:
         gui: Gui = Gui()
@@ -156,13 +164,3 @@ def Main(args=None):
 
 if __name__ == "__main__":
     Main()
-
-
-# (*1)
-# Traceback (most recent call last):
-#   File "Lib\site-packages\PyInstaller\hooks\rthooks\pyi_rth_pkgres.py", line 16, in <module>
-#   File "PyInstaller\loader\pyimod02_importers.py", line 352, in exec_module
-#   File "pkg_resources\__init__.py", line 88, in <module>
-#   File "pkg_resources\extern\__init__.py", line 52, in create_module
-#   File "pkg_resources\extern\__init__.py", line 44, in load_module
-# ImportError: The 'platformdirs' package is required; normally this is bundled with this package so if you get this warning, consult the packager of your distribution.
