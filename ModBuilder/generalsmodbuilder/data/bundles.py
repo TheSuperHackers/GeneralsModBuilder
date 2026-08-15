@@ -34,6 +34,29 @@ def GetJsonBundleEventName(type: BundleEventType) -> str:
     return type.name[:1].lower() + type.name[1:]
 
 
+def IsBundleBuildEvent(type: BundleEventType) -> bool:
+    return (type == BundleEventType.OnPreBuild or
+            type == BundleEventType.OnBuild or
+            type == BundleEventType.OnPostBuild or
+            type == BundleEventType.OnRelease or
+            type == BundleEventType.OnStartBuildRawBundleItem or
+            type == BundleEventType.OnStartBuildBigBundleItem or
+            type == BundleEventType.OnStartBuildRawBundlePack or
+            type == BundleEventType.OnStartBuildReleaseBundlePack or
+            type == BundleEventType.OnFinishBuildRawBundleItem or
+            type == BundleEventType.OnFinishBuildBigBundleItem or
+            type == BundleEventType.OnFinishBuildRawBundlePack or
+            type == BundleEventType.OnFinishBuildReleaseBundlePack)
+
+
+def IsBundleInstallEvent(type: BundleEventType) -> bool:
+    return (type == BundleEventType.OnInstall or
+            type == BundleEventType.OnRun or
+            type == BundleEventType.OnUninstall or
+            type == BundleEventType.OnStartBuildInstallBundlePack or
+            type == BundleEventType.OnFinishBuildInstallBundlePack)
+
+
 @dataclass(init=False)
 class BundleEvent:
     type: BundleEventType
@@ -388,6 +411,14 @@ class Bundles:
         packs: list[BundlePack] = self.GetPackListContainingItem(itemName)
         for pack in packs:
             if pack.allowBuild:
+                return True
+        return False
+    
+    def IsItemAllowedToInstall(self, itemName: str) -> bool:
+        pack: BundlePack
+        packs: list[BundlePack] = self.GetPackListContainingItem(itemName)
+        for pack in packs:
+            if pack.allowInstall:
                 return True
         return False
 
