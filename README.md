@@ -51,6 +51,14 @@ The following file conversions are supported:
 * DDS to DDS
   * Useful for exporting a source DDS texture to a new format, for example from DXT5 to DXT1 when omitting the alpha channel
 
+**Since Release 2.4**
+
+* Multiple sources to one INI, WND, STR, CSF
+  * Allows to keep game data in several small files that are easier to maintain, and still ship them as the one file that the game expects
+  * INI and WND files are appended in the order that their sources are listed in
+  * STR and CSF files merge their string labels, where a label of a later file overwrites an earlier one
+  * Configured with `multiSource`, see [Configuration Settings](SETTINGS.md)
+
 ## Run the Mod Builder
 
 Batch scripts are available in [GeneralsModBuilderSample/Project/Scripts](https://github.com/TheSuperHackers/GeneralsModBuilderSample/tree/main/Project/Scripts) to build and run the project. The [BuildInstallRun.bat](https://github.com/TheSuperHackers/GeneralsModBuilderSample/tree/main/Project/Scripts/BuildInstallRun.bat) is helpful to build, install and run the game with the project in one go. After the game is closed, the project is automatically uninstalled. The [WindowsRunner.json](https://github.com/TheSuperHackers/GeneralsModBuilderSample/tree/main/Project/Scripts/Windows/WindowsRunner.json) can be customized to change game run behaviour.

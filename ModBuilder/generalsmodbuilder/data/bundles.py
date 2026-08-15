@@ -130,36 +130,55 @@ class BundleRegistryDefinition:
 @dataclass(init=False)
 class BundleFile:
     absSourceParent: str
-    absSourceFile: str
+    absSourceFiles: list[str]
+    isMultiSource: bool
     relTargetFile: str
     params: ParamsT
     registryDef: BundleRegistryDefinition
 
     def __init__(self):
         self.absSourceParent = None
-        self.absSourceFile = None
+        self.absSourceFiles = None # Expected to contain 1..N
+        self.isMultiSource = False
         self.relTargetFile = None
         self.params = None
         self.registryDef = None
 
-    def GetRelSourceFile(self) -> str:
-        return self.absSourceFile.removeprefix(self.absSourceParent).removeprefix("\\").removeprefix("/")
+    def HasMultiSourceFile(self) -> bool:
+        """
+        Tells whether all source files build one target file together.
+        This is not the same as having more than one source file, because a multi source
+        file can be written with a single wildcard that resolves to any number of files.
+        """
+        return self.isMultiSource
+
+    def GetFirstAbsSourceFile(self) -> str:
+        return self.absSourceFiles[0]
+
+    def GetFirstRelSourceFile(self) -> str:
+        absSourceFile: str = self.absSourceFiles[0]
+        return absSourceFile.removeprefix(self.absSourceParent).removeprefix("\\").removeprefix("/")
 
     def VerifyTypes(self) -> None:
         util.VerifyType(self.absSourceParent, str, "BundleFile.absSourceParent")
-        util.VerifyType(self.absSourceFile, str, "BundleFile.absSourceFile")
+        util.VerifyType(self.absSourceFiles, list, "BundleFile.absSourceFiles")
+        util.VerifyType(self.isMultiSource, bool, "BundleFile.isMultiSource")
+        util.Verify(len(self.absSourceFiles) > 0, "BundleFile.absSourceFiles cannot be empty")
+        for absSourceFile in self.absSourceFiles:
+            util.VerifyType(absSourceFile, str, "BundleFile.absSourceFiles.value")
         util.VerifyType(self.relTargetFile, str, "BundleFile.relTargetFile")
         VerifyParamsType(self.params, "BundleFile.params")
         util.VerifyType(self.registryDef, Union[BundleRegistryDefinition, None], "BundleFile.registry")
 
     def VerifyValues(self) -> None:
-        # self.absSourceParent, self.absSourceFile are already verified in ResolveWildcards function.
+        # self.absSourceParent, self.absSourceFiles are already verified in ResolveWildcards function.
         util.Verify(util.IsValidPathName(self.relTargetFile), f"BundleFile.relTargetFile '{self.relTargetFile}' is not a valid file name")
         util.Verify(not os.path.isabs(self.relTargetFile), f"BundleFile.relTargetFile '{self.relTargetFile}' is not a relative path")
 
     def Normalize(self) -> None:
         self.absSourceParent = os.path.normpath(self.absSourceParent)
-        self.absSourceFile = os.path.normpath(self.absSourceFile)
+        for i, absSourceFile in enumerate(self.absSourceFiles):
+            self.absSourceFiles[i] = os.path.normpath(absSourceFile)
         self.relTargetFile = os.path.normpath(self.relTargetFile)
 
 
@@ -225,22 +244,34 @@ class BundleItem:
         curFile: BundleFile
 
         for curFile in self.files:
-            if "*" in curFile.absSourceFile and not os.path.isfile(curFile.absSourceFile):
-                globFiles = glob(curFile.absSourceFile, recursive=True)
+
+            if curFile.HasMultiSourceFile():
+                # All source files build the same target file. Wildcard matches add more source files to it.
+                curFile.absSourceFiles = util.ResolveFileWildcards(curFile.absSourceFiles, sortWildcardMatches=True)
+                if curFile.absSourceFiles:
+                    newFiles.append(curFile)
+                continue
+
+            absSourceFile: str = curFile.GetFirstAbsSourceFile()
+
+            if "*" in absSourceFile and not os.path.isfile(absSourceFile):
+                globFiles = glob(absSourceFile, recursive=True)
                 if not bool(globFiles):
-                    print(f"Note: Wildcard '{curFile.absSourceFile}' currently matches nothing")
+                    print(f"Note: Wildcard '{absSourceFile}' currently matches nothing")
 
                 for globFile in globFiles:
                     if os.path.isfile(globFile):
                         newFile: BundleFile = copy(curFile)
-                        newFile.absSourceFile = globFile
+                        newFile.absSourceFiles = [globFile]
                         newFiles.append(newFile)
             else:
-                util.Verify(os.path.isfile(curFile.absSourceFile), f"BundleFile.absSourceFile '{curFile.absSourceFile}' is not a valid file")
+                util.Verify(os.path.isfile(absSourceFile), f"BundleFile.absSourceFiles.value '{absSourceFile}' is not a valid file")
                 newFiles.append(curFile)
 
         for curFile in newFiles:
-            curFile.relTargetFile = BundleItem.__ResolveTargetWildcard(curFile.GetRelSourceFile(), curFile.relTargetFile)
+            # A multi source file has no single source file name to substitute a target wildcard with.
+            if not curFile.HasMultiSourceFile():
+                curFile.relTargetFile = BundleItem.__ResolveTargetWildcard(curFile.GetFirstRelSourceFile(), curFile.relTargetFile)
 
         self.files = newFiles
         return newFiles
@@ -498,11 +529,31 @@ def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
     jSource: str = jFile.get("source")
     jSourceList: list = jFile.get("sourceList")
     jSourceTargetList: list = jFile.get("sourceTargetList")
+    jMultiSource: list = jFile.get("multiSource")
+    jMultiSourceTargetList: list = jFile.get("multiSourceTargetList")
+
+    util.Verify(not (jSource and jMultiSource), "Bundle file cannot specify 'source' and 'multiSource' together, because both would build the same 'target' file")
+
+    def MakeMultiSourceBundleFile(jMultiSourceElement: list, jTarget: str) -> BundleFile:
+        util.VerifyType(jMultiSourceElement, list, "BundleFile.multiSource")
+        util.Verify(bool(jMultiSourceElement), "BundleFile.multiSource cannot be empty")
+        util.Verify(bool(jTarget), "BundleFile.target is mandatory with 'multiSource', because it cannot be derived from a single source file name")
+        util.VerifyType(jTarget, str, "BundleFile.target")
+        util.Verify(not "*" in jTarget, f"BundleFile.target '{jTarget}' cannot contain a wildcard with 'multiSource', because it cannot be derived from a single source file name")
+
+        bundleFile = BundleFile()
+        bundleFile.absSourceParent = sourceParent
+        bundleFile.absSourceFiles = [util.JoinPathIfValid(None, sourceParent, jElement) for jElement in jMultiSourceElement]
+        bundleFile.isMultiSource = True
+        bundleFile.relTargetFile = jTarget
+        bundleFile.params = params
+        bundleFile.registryDef = registryDef
+        return bundleFile
 
     if jSource:
         bundleFile = BundleFile()
         bundleFile.absSourceParent = sourceParent
-        bundleFile.absSourceFile = util.JoinPathIfValid(None, sourceParent, jSource)
+        bundleFile.absSourceFiles = [util.JoinPathIfValid(None, sourceParent, jSource)]
         bundleFile.relTargetFile = jFile.get("target", jSource)
         bundleFile.params = params
         bundleFile.registryDef = registryDef
@@ -513,7 +564,7 @@ def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
         for jElement in jSourceList:
             bundleFile = BundleFile()
             bundleFile.absSourceParent = sourceParent
-            bundleFile.absSourceFile = util.JoinPathIfValid(None, sourceParent, jElement)
+            bundleFile.absSourceFiles = [util.JoinPathIfValid(None, sourceParent, jElement)]
             bundleFile.relTargetFile = jElement
             bundleFile.params = params
             bundleFile.registryDef = registryDef
@@ -525,11 +576,21 @@ def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
             jElementSource: str = jElement.get("source")
             bundleFile = BundleFile()
             bundleFile.absSourceParent = sourceParent
-            bundleFile.absSourceFile = util.JoinPathIfValid(None, sourceParent, jElementSource)
+            bundleFile.absSourceFiles = [util.JoinPathIfValid(None, sourceParent, jElementSource)]
             bundleFile.relTargetFile = jElement.get("target", jElementSource)
             bundleFile.params = params
             bundleFile.registryDef = registryDef
             files.append(bundleFile)
+
+    # Tested against None, so that an empty list is reported as a bad configuration
+    # instead of silently building no target file at all.
+    if jMultiSource != None:
+        files.append(MakeMultiSourceBundleFile(jMultiSource, jFile.get("target")))
+
+    if jMultiSourceTargetList:
+        jElement: dict[str, str | list[str]]
+        for jElement in jMultiSourceTargetList:
+            files.append(MakeMultiSourceBundleFile(jElement.get("multiSource"), jElement.get("target")))
 
     return files
 

@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from enum import Enum, auto
 from glob import glob
 from generalsmodbuilder.build.common import ParamsToArgs
-from generalsmodbuilder.build.copy import BuildCopy, BuildCopyOption
+from generalsmodbuilder.build.copy import BuildCopy, BuildCopyOption, BuildFileType, GetFileType, SupportsMultiSource
 from generalsmodbuilder.build.filehashregistry import FileHash, FileHashRegistry
 from generalsmodbuilder.build.thing import BuildFile, BuildFileStatus, BuildThing, BuildFilesT, BuildThingsT, IsStatusRelevantForBuild
 from generalsmodbuilder.build.setup import BuildSetup, BuildStep
@@ -465,14 +465,33 @@ class BuildEngine:
             newThing.files = BuildFilesT()
 
             for itemFile in item.files:
+                if itemFile.HasMultiSourceFile():
+                    BuildEngine.__VerifyMultiSourceIsSupported(item, itemFile)
+
                 buildFile = BuildFile()
-                buildFile.absSource = itemFile.absSourceFile
+                buildFile.absSources = list(itemFile.absSourceFiles)
                 buildFile.relTarget = itemFile.relTargetFile
                 buildFile.params = itemFile.params
                 buildFile.registryDef = itemFile.registryDef
                 newThing.files.append(buildFile)
 
             structure.AddThing(BuildIndex.RawBundleItem, newThing)
+
+
+    @staticmethod
+    def __VerifyMultiSourceIsSupported(item: BundleItem, itemFile: BundleFile) -> None:
+        """
+        Fails a bad multi source configuration in the Pre Build step,
+        so that it does not fail in the middle of a long running Build step.
+        """
+        targetType: BuildFileType = GetFileType(itemFile.relTargetFile)
+        absSourceFile: str
+
+        for absSourceFile in itemFile.absSourceFiles:
+            sourceType: BuildFileType = GetFileType(absSourceFile)
+            util.Verify(SupportsMultiSource(sourceType, targetType),
+                        f"BundleItem '{item.name}' cannot build target file '{itemFile.relTargetFile}' of type '{targetType.name}' "
+                        f"from multiple source files, because source file '{absSourceFile}' of type '{sourceType.name}' is not supported for it.")
 
 
     @staticmethod
@@ -491,7 +510,7 @@ class BuildEngine:
                 newThing.name = MakeThingName(BuildIndex.BigBundleItem, item.name)
                 newThing.absParentDir = os.path.join(folders.absBuildDir, "BigBundleItems")
                 newThing.files = [BuildFile()]
-                newThing.files[0].absSource = parentThing.absParentDir
+                newThing.files[0].absSources = [parentThing.absParentDir]
                 newThing.files[0].relTarget = item.namePrefix + item.name + item.nameSuffix + ".big"
                 newThing.parentThing = parentThing
 
@@ -528,7 +547,7 @@ class BuildEngine:
 
                 for parentFile in parentThing.files:
                     buildFile = BuildFile()
-                    buildFile.absSource = parentFile.AbsTarget(parentThing.absParentDir)
+                    buildFile.absSources = [parentFile.AbsTarget(parentThing.absParentDir)]
                     buildFile.relTarget = parentFile.RelTarget()
                     buildFile.parentFile = parentFile
 
@@ -555,7 +574,7 @@ class BuildEngine:
             newThing.name = MakeThingName(BuildIndex.ReleaseBundlePack, pack.name)
             newThing.absParentDir = folders.absReleaseDir
             newThing.files = [BuildFile()]
-            newThing.files[0].absSource = parentThing.absParentDir
+            newThing.files[0].absSources = [parentThing.absParentDir]
             newThing.files[0].relTarget = pack.namePrefix + pack.name + pack.nameSuffix + ".zip"
             newThing.parentThing = parentThing
 
@@ -585,7 +604,7 @@ class BuildEngine:
                 # if util.HasAnyFileExt(parentFile.relTarget, runner.relevantGameDataFileTypes):
                 #     continue
                 newFile = BuildFile()
-                newFile.absSource = parentFile.AbsTarget(parentThing.absParentDir)
+                newFile.absSources = [parentFile.AbsTarget(parentThing.absParentDir)]
                 newFile.relTarget = parentFile.relTarget
                 newThing.files.append(newFile)
 
@@ -688,19 +707,20 @@ class BuildEngine:
         file: BuildFile
 
         for file in thing.files:
-            absSource = file.AbsSource()
-            sourceTime: float = 0.0
-            sourceMd5: str = ""
+            # All source files are hashed, so that a change in any of them rebuilds the target file.
+            for absSource in file.AbsSources():
+                sourceTime: float = 0.0
+                sourceMd5: str = ""
 
-            if not diff.newDiffRegistry.FindFile(absSource):
-                sourceTime = util.GetFileModifiedTime(absSource)
-                # Optimization: Use old hash when file modification time is unchanged.
-                oldInfo: BuildFilePathInfo = diff.oldDiffRegistry.FindFile(absSource)
-                if oldInfo != None and sourceTime > 0.0 and sourceTime == oldInfo.GetModifiedTime():
-                    sourceMd5 = oldInfo.md5
-                else:
-                    sourceMd5 = util.GetFileMd5(absSource, log=setup.verboseLogging)
-                diff.newDiffRegistry.AddFile(absSource, modifiedTime=sourceTime, md5=sourceMd5, params=None)
+                if not diff.newDiffRegistry.FindFile(absSource):
+                    sourceTime = util.GetFileModifiedTime(absSource)
+                    # Optimization: Use old hash when file modification time is unchanged.
+                    oldInfo: BuildFilePathInfo = diff.oldDiffRegistry.FindFile(absSource)
+                    if oldInfo != None and sourceTime > 0.0 and sourceTime == oldInfo.GetModifiedTime():
+                        sourceMd5 = oldInfo.md5
+                    else:
+                        sourceMd5 = util.GetFileMd5(absSource, log=setup.verboseLogging)
+                    diff.newDiffRegistry.AddFile(absSource, modifiedTime=sourceTime, md5=sourceMd5, params=None)
 
         for file in thing.files:
             absTarget = file.AbsTarget(thing.absParentDir)
@@ -782,12 +802,9 @@ class BuildEngine:
         for file in thing.files:
             parentFile: BuildFile = file.parentFile
             parentStatus: BuildFileStatus = parentStatus if parentFile == None else parentFile.GetCombinedStatus()
-            absSource: str = file.AbsSource()
             absTarget: str = file.AbsTarget(thing.absParentDir)
 
-            file.sourceStatus = BuildEngine.__GetStatusWithFileHashRegistry(absSource, file.relTarget, diff, file.registryDef)
-            if file.sourceStatus == BuildFileStatus.Unknown:
-                file.sourceStatus = BuildEngine.__GetBuildFileStatus(absSource, parentStatus, diff)
+            file.sourceStatus = BuildEngine.__GetSourcesStatus(file, parentStatus, diff)
             if file.sourceStatus != BuildFileStatus.Irrelevant:
                 file.targetStatus = BuildEngine.__GetBuildFileStatus(absTarget, None, diff)
 
@@ -806,8 +823,14 @@ class BuildEngine:
 
         for file in thing.files:
             if IsStatusRelevantForBuild(file.sourceStatus):
-                absSource: str = file.absSource
-                print(f"Source {absSource} is {file.sourceStatus.name}")
+                if file.HasMultiSource():
+                    # The status of a multi source file is the combined status of all its source files.
+                    # Print the own status of each source file, so that it shows which ones caused the rebuild.
+                    for absSource in file.AbsSources():
+                        status: BuildFileStatus = BuildEngine.__GetBuildFileStatus(absSource, None, diff)
+                        print(f"Source {absSource} is {status.name}")
+                else:
+                    print(f"Source {file.AbsSource()} is {file.sourceStatus.name}")
 
         for file in thing.files:
             if IsStatusRelevantForBuild(file.targetStatus):
@@ -815,6 +838,30 @@ class BuildEngine:
                 print(f"Target {absTarget} is {file.targetStatus.name}")
 
         return
+
+
+    @staticmethod
+    def __GetSourcesStatus(file: BuildFile, parentStatus: BuildFileStatus, diff: BuildDiff) -> BuildFileStatus:
+        """
+        Folds the status of all source files into the most significant one,
+        so that a change in any source file rebuilds the target file.
+        """
+        # The file hash registry tells that a source file is identical to a known game file and
+        # therefore does not need to be built. That says nothing about a target file that is built
+        # from multiple source files, so the registry is not consulted for it.
+        useFileHashRegistry: bool = not file.HasMultiSource()
+        combinedStatus: BuildFileStatus = BuildFileStatus.Unknown
+        absSource: str
+
+        for absSource in file.AbsSources():
+            status: BuildFileStatus = BuildFileStatus.Unknown
+            if useFileHashRegistry:
+                status = BuildEngine.__GetStatusWithFileHashRegistry(absSource, file.relTarget, diff, file.registryDef)
+            if status == BuildFileStatus.Unknown:
+                status = BuildEngine.__GetBuildFileStatus(absSource, parentStatus, diff)
+            combinedStatus = BuildFileStatus(max(combinedStatus.value, status.value))
+
+        return combinedStatus
 
 
     @staticmethod
