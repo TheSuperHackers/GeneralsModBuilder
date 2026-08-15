@@ -5,18 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "ModBuilder - Build",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}\\ModBuilder\\buildproject.py",
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
             "name": "Sample - Build Release Run Uninstall",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}\\ModBuilder\\generalsmodbuilder\\main.py",
+            "program": "${workspaceFolder}\\generalsmodbuilder\\main.py",
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
@@ -43,7 +35,7 @@
             "name": "Sample - Gui",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}\\ModBuilder\\generalsmodbuilder\\main.py",
+            "program": "${workspaceFolder}\\generalsmodbuilder\\main.py",
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
@@ -69,7 +61,7 @@
             "name": "Sample - Build Release",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}\\ModBuilder\\generalsmodbuilder\\main.py",
+            "program": "${workspaceFolder}\\generalsmodbuilder\\main.py",
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
@@ -92,7 +84,7 @@
             "name": "Sample - Generate ChangeLog",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}\\ModBuilder\\generalsmodbuilder\\main.py",
+            "program": "${workspaceFolder}\\generalsmodbuilder\\main.py",
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
@@ -107,7 +99,7 @@
             "name": "GamePatch - Gui",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}\\ModBuilder\\generalsmodbuilder\\main.py",
+            "program": "${workspaceFolder}\\generalsmodbuilder\\main.py",
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
@@ -129,7 +121,7 @@
             "name": "GamePatch - Generate ChangeLog",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}\\ModBuilder\\generalsmodbuilder\\main.py",
+            "program": "${workspaceFolder}\\generalsmodbuilder\\main.py",
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [

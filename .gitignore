@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# uv / virtual environments
+.venv*/
+
+# Build and distribution output.
+# Anchored to the repo root so they do not match the generalsmodbuilder/build package.
+/build/
+/dist/
+*.egg-info/
+
+# Mod Builder runtime output
+.tools/
+.build/
+.release/
+
+# Legacy PyInstaller output (from the removed build pipeline)
+.pyinstaller/
