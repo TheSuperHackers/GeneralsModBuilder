@@ -121,6 +121,148 @@ def SupportsMultiSource(sourceType: BuildFileType, targetType: BuildFileType) ->
     return False
 
 
+class TextMarker:
+    """
+    A begin and an end token that mark a region of text.
+    """
+    begin: str
+    end: str
+
+    def __init__(self, begin: str, end: str):
+        self.begin = begin
+        self.end = end
+
+
+class TextTransform:
+    """
+    Holds the text transformation params of a build file in evaluated form.
+    """
+    forceEOL: str
+    deleteComments: str
+    deleteWhitespace: bool
+    sourceEncoding: str
+    targetEncoding: str
+    excludeMarkers: list[TextMarker]
+
+    def __init__(self, params: ParamsT):
+        iparams = CaseInsensitiveDict(params)
+
+        self.forceEOL = TextTransform.__GetNonEmptyString(iparams, "forceEOL")
+        self.deleteComments = TextTransform.__GetNonEmptyString(iparams, "deleteComments")
+        self.deleteWhitespace = TextTransform.__HasPositiveNumber(iparams, "deleteWhitespace")
+        self.sourceEncoding = TextTransform.__GetString(iparams, "sourceEncoding")
+        self.targetEncoding = TextTransform.__GetString(iparams, "targetEncoding")
+        self.excludeMarkers = TextTransform.__GetMarkers(iparams, "excludeMarkersList")
+
+
+    @staticmethod
+    def __GetString(iparams: CaseInsensitiveDict, key: str) -> str:
+        value: str = iparams.get(key)
+        return value if isinstance(value, str) else None
+
+
+    @staticmethod
+    def __GetNonEmptyString(iparams: CaseInsensitiveDict, key: str) -> str:
+        value: str = TextTransform.__GetString(iparams, key)
+        return value if value else None
+
+
+    @staticmethod
+    def __HasPositiveNumber(iparams: CaseInsensitiveDict, key: str) -> bool:
+        value: int = iparams.get(key)
+        return isinstance(value, int) and value > 0
+
+
+    @staticmethod
+    def __GetMarkers(iparams: CaseInsensitiveDict, key: str) -> list[TextMarker]:
+        value: list[list[str]] = iparams.get(key)
+        return [TextMarker(t[0], t[1]) for t in value] if isinstance(value, list) else None
+
+
+    def IsRequired(self) -> bool:
+        """
+        Tells whether any param changes the text or its encoding,
+        and therefore requires the target file to be written anew.
+        """
+        return (self.forceEOL != None or
+                self.deleteComments != None or
+                self.deleteWhitespace or
+                self.sourceEncoding != None or
+                self.targetEncoding != None or
+                self.excludeMarkers != None)
+
+
+    def GetSourceEncoding(self) -> str:
+        # https://docs.python.org/3/library/codecs.html
+        return self.sourceEncoding or "utf-8"
+
+
+    def GetTargetEncoding(self) -> str:
+        return self.targetEncoding or "utf-8"
+
+
+    def ReadLines(self, source: str) -> list[str]:
+        with open(source, "r", encoding=self.GetSourceEncoding()) as sourceFile:
+            return [line.rstrip("\r\n") for line in sourceFile]
+
+
+    def WriteLines(self, target: str, lines: list[str]) -> None:
+        with open(target, "w", encoding=self.GetTargetEncoding(), newline="") as targetFile:
+            for line in lines:
+                targetFile.write(line)
+
+
+    def TransformLines(self, lines: list[str]) -> list[str]:
+        """
+        Applies all text transformations of the params to the given lines.
+        Lines are expected to be read without line ending and are returned with line ending.
+        """
+        # Exclude text inside markers ...
+        if self.excludeMarkers:
+            lines = TextTransform.__FilterText(lines, self.excludeMarkers)
+
+        # Delete comments ...
+        if self.deleteComments != None:
+            for i, s in enumerate(lines):
+                lines[i] = s.split(self.deleteComments, 1)[0]
+
+        if self.deleteWhitespace:
+            # Delete obsolete spaces ...
+            for i, s in enumerate(lines):
+                lines[i] = " ".join(s.split())
+
+            # Delete empty lines ...
+            lines[:] = [line for line in lines if line.strip()]
+
+        # Set line ending ...
+        eol: str = self.forceEOL if self.forceEOL != None else "\n"
+        for i, s in enumerate(lines):
+            lines[i] = s + eol
+
+        return lines
+
+
+    @staticmethod
+    def __FilterText(lines: list[str], markers: list[TextMarker]) -> list[str]:
+        outputLines = []
+        activeMarkers = []
+
+        for line in lines:
+            hadActiveMarkers = bool(activeMarkers)
+
+            for marker in markers:
+                if marker.begin in line:
+                    activeMarkers.append(marker)
+                if marker.end in line:
+                    activeMarkers.remove(marker)
+
+            hasActiveMarkers = bool(activeMarkers)
+            if not hadActiveMarkers and not hasActiveMarkers:
+                outputLines.append(line)
+
+        return outputLines
+
+
 class BuildJob:
     result: BuildCopyResult
     absSources: list[str]
@@ -483,12 +625,13 @@ class BuildCopy:
         # Text params cannot be applied by the compiler, so pre process each text source file into a temp file.
         tmpSources = list[str]()
         mergeSources = list(sources)
+        transform = TextTransform(params)
 
-        if BuildCopy.__RequiresTextTransform(iparams):
+        if transform.IsRequired():
             for index, source in enumerate(mergeSources):
                 if GetFileType(source) == BuildFileType.str:
                     tmpSource: str = f"{target}.{index}.tmp.str"
-                    result: BuildCopyResult = self.__TransformToTextFile(source, tmpSource, params)
+                    result: BuildCopyResult = BuildCopy.__WriteTextFile([source], tmpSource, transform)
                     if result.success:
                         mergeSources[index] = tmpSource
                         tmpSources.append(tmpSource)
@@ -798,151 +941,32 @@ class BuildCopy:
             return self.__CopyTo(source, target, params)
 
 
-    class Marker:
-        begin: str
-        end: str
-        def __init__(self, begin: str, end: str):
-            self.begin = begin
-            self.end = end
-
-
     @staticmethod
-    def __FilterText(lines: list[str], markers: list[Marker]) -> list[str]:
-        outputLines = []
-        activeMarkers = []
-
-        for line in lines:
-            hadActiveMarkers = bool(activeMarkers)
-
-            for marker in markers:
-                if marker.begin in line:
-                    activeMarkers.append(marker)
-                if marker.end in line:
-                    activeMarkers.remove(marker)
-
-            hasActiveMarkers = bool(activeMarkers)
-            if not hadActiveMarkers and not hasActiveMarkers:
-                outputLines.append(line)
-
-        return outputLines
-
-
-    @staticmethod
-    def __RequiresTextTransform(iparams: CaseInsensitiveDict) -> bool:
-        forceEOL: str = iparams.get("forceEOL")
-        deleteComments: str = iparams.get("deleteComments")
-        deleteWhitespace: int = iparams.get("deleteWhitespace")
-        sourceEncoding: str = iparams.get("sourceEncoding")
-        targetEncoding: str = iparams.get("targetEncoding")
-        excludeMarkersList: list[list[str]] = iparams.get("excludeMarkersList")
-
-        doForceEOL: bool = isinstance(forceEOL, str) and bool(forceEOL)
-        doDeleteComments: bool = isinstance(deleteComments, str) and bool(deleteComments)
-        doDeleteWhitespace: bool = isinstance(deleteWhitespace, int) and deleteWhitespace > 0
-        doEncode: bool = isinstance(sourceEncoding, str) or isinstance(targetEncoding, str)
-        doExclude: bool = isinstance(excludeMarkersList, list)
-
-        return doDeleteWhitespace or doDeleteComments or doForceEOL or doEncode or doExclude
-
-
-    @staticmethod
-    def __GetSourceEncoding(iparams: CaseInsensitiveDict) -> str:
-        # https://docs.python.org/3/library/codecs.html
-        return iparams.get("sourceEncoding") or "utf-8"
-
-
-    @staticmethod
-    def __GetTargetEncoding(iparams: CaseInsensitiveDict) -> str:
-        return iparams.get("targetEncoding") or "utf-8"
-
-
-    @staticmethod
-    def __ReadTextLines(source: str, encoding: str) -> list[str]:
-        with open(source, "r", encoding=encoding) as sourceFile:
-            return [line.rstrip("\r\n") for line in sourceFile]
-
-
-    @staticmethod
-    def __WriteTextLines(target: str, encoding: str, lines: list[str]) -> None:
-        with open(target, "w", encoding=encoding, newline="") as targetFile:
-            for line in lines:
-                targetFile.write(line)
-
-
-    @staticmethod
-    def __TransformTextLines(lines: list[str], iparams: CaseInsensitiveDict) -> list[str]:
+    def __WriteTextFile(sources: list[str], target: str, transform: TextTransform) -> BuildCopyResult:
         """
-        Applies all text transformations of the given params to the given lines.
-        Lines are expected to be read without line ending and are returned with line ending.
+        Builds one text file from one or more text files in the order that they are listed in.
+        Lines are read without their line ending and are written back with one, so the last line
+        of a source file can never merge into the first line of the next one.
         """
-        forceEOL: str = iparams.get("forceEOL")
-        deleteComments: str = iparams.get("deleteComments")
-        deleteWhitespace: int = iparams.get("deleteWhitespace")
-        excludeMarkersList: list[list[str]] = iparams.get("excludeMarkersList")
-        if excludeMarkersList:
-            excludeMarkers = [BuildCopy.Marker(t[0], t[1]) for t in excludeMarkersList]
-        else:
-            excludeMarkers = None
+        lines = list[str]()
+        source: str
 
-        doForceEOL: bool = isinstance(forceEOL, str) and bool(forceEOL)
-        doDeleteComments: bool = isinstance(deleteComments, str) and bool(deleteComments)
-        doDeleteWhitespace: bool = isinstance(deleteWhitespace, int) and deleteWhitespace > 0
-        doExclude: bool = isinstance(excludeMarkers, list)
+        for source in sources:
+            lines.extend(transform.ReadLines(source))
 
-        # Exclude text inside markers ...
-        if doExclude:
-            lines = BuildCopy.__FilterText(lines, excludeMarkers)
-
-        # Delete comments ...
-        if doDeleteComments:
-            for i, s in enumerate(lines):
-                lines[i] = s.split(deleteComments, 1)[0]
-
-        # Delete obsolete spaces ...
-        if doDeleteWhitespace:
-            for i, s in enumerate(lines):
-                lines[i] = " ".join(s.split())
-
-        # Delete empty lines ...
-        if doDeleteWhitespace:
-            lines[:] = [line for line in lines if line.strip()]
-
-        # Set line ending ...
-        if doForceEOL:
-            for i, s in enumerate(lines):
-                lines[i] = s + forceEOL
-        else:
-            for i, s in enumerate(lines):
-                lines[i] = s + "\n"
-
-        return lines
-
-
-    def __TransformToTextFile(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
-        """
-        Builds one text file from one text file.
-        Unlike __CopyToTextFile this always writes a new file, even when no text param changes the text.
-        """
-        iparams = CaseInsensitiveDict(params)
-
-        lines: list[str] = BuildCopy.__ReadTextLines(source, BuildCopy.__GetSourceEncoding(iparams))
-        lines = BuildCopy.__TransformTextLines(lines, iparams)
-        BuildCopy.__WriteTextLines(target, BuildCopy.__GetTargetEncoding(iparams), lines)
+        lines = transform.TransformLines(lines)
+        transform.WriteLines(target, lines)
 
         return BuildCopyResult(success=True, printType=BuildCopyPrintType.Make)
 
 
     def __CopyToTextFileIfNeeded(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
-        success: bool = False
-        iparams = CaseInsensitiveDict(params)
+        transform = TextTransform(params)
 
-        if BuildCopy.__RequiresTextTransform(iparams):
-            lines: list[str] = BuildCopy.__ReadTextLines(source, BuildCopy.__GetSourceEncoding(iparams))
-            lines = BuildCopy.__TransformTextLines(lines, iparams)
-            BuildCopy.__WriteTextLines(target, BuildCopy.__GetTargetEncoding(iparams), lines)
-            success = True
+        if transform.IsRequired():
+            return BuildCopy.__WriteTextFile([source], target, transform)
 
-        return BuildCopyResult(success=success, printType=BuildCopyPrintType.Make)
+        return BuildCopyResult(success=False, printType=BuildCopyPrintType.Make)
 
 
     def __ConcatToTextFile(self, sources: list[str], target: str, params: ParamsT) -> BuildCopyResult:
@@ -951,20 +975,7 @@ class BuildCopy:
         Unlike the single source variant this always writes a new file, because there is
         no single source file that could simply be copied or linked instead.
         """
-        iparams = CaseInsensitiveDict(params)
-        sourceEncoding: str = BuildCopy.__GetSourceEncoding(iparams)
-        lines = list[str]()
-        source: str
-
-        for source in sources:
-            lines.extend(BuildCopy.__ReadTextLines(source, sourceEncoding))
-
-        # Lines are read without their line ending and are written back with one,
-        # so the last line of a source file can never merge into the first line of the next one.
-        lines = BuildCopy.__TransformTextLines(lines, iparams)
-        BuildCopy.__WriteTextLines(target, BuildCopy.__GetTargetEncoding(iparams), lines)
-
-        return BuildCopyResult(success=True, printType=BuildCopyPrintType.Make)
+        return BuildCopy.__WriteTextFile(sources, target, TextTransform(params))
 
 
     def __CopyToW3D(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
