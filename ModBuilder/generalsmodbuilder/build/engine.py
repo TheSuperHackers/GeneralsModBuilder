@@ -14,7 +14,7 @@ from generalsmodbuilder.build.copy import BuildCopy, BuildCopyOption
 from generalsmodbuilder.build.filehashregistry import FileHash, FileHashRegistry
 from generalsmodbuilder.build.thing import BuildFile, BuildFileStatus, BuildThing, BuildFilesT, BuildThingsT, IsStatusRelevantForBuild
 from generalsmodbuilder.build.setup import BuildSetup, BuildStep
-from generalsmodbuilder.data.bundles import BundleRegistryDefinition, Bundles, BundlePack, BundleItem, BundleFile, BundleEvent, BundleEventType
+from generalsmodbuilder.data.bundles import BundleRegistryDefinition, Bundles, BundlePack, BundleItem, BundleFile, BundleEvent, BundleEventType, IsBundleBuildEvent, IsBundleInstallEvent
 from generalsmodbuilder.data.common import ParamsT
 from generalsmodbuilder.data.folders import Folders
 from generalsmodbuilder.data.runner import Runner
@@ -361,8 +361,14 @@ class BuildEngine:
         folders: Folders = setup.folders
         item: BundleItem
         pack: BundlePack
+        isBuildEvent: bool = IsBundleBuildEvent(eventType)
+        isInstallEvent: bool = IsBundleInstallEvent(eventType)
 
         for item in bundles.items:
+            if isBuildEvent and not bundles.IsItemAllowedToBuild(item.name):
+                continue
+            if isInstallEvent and not bundles.IsItemAllowedToInstall(item.name):
+                continue
             event: BundleEvent = item.events.get(eventType)
             if event != None:
                 kwargs = dict()
@@ -375,6 +381,10 @@ class BuildEngine:
                 BuildEngine.__CallScript(event, kwargs)
 
         for pack in bundles.packs:
+            if isBuildEvent and not pack.allowBuild:
+                continue
+            if isInstallEvent and not pack.allowInstall:
+                continue
             event: BundleEvent = pack.events.get(eventType)
             if event != None:
                 kwargs = dict()
