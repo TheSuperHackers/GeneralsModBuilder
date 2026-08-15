@@ -2,13 +2,35 @@
 
 This tool builds game Mod or Addon release files from flat game data source files. In its current release it is compatible with Windows 10 and above.
 
-The [ModBuilder](ModBuilder) contains all program source files. It is relevant for tool developers, but not for mod developers.
+The [generalsmodbuilder](generalsmodbuilder) folder contains all program source files. It is relevant for tool developers, but not for mod developers.
 
 The [GeneralsModBuilderSample](https://github.com/TheSuperHackers/GeneralsModBuilderSample) contains all scripts (.bat) and configurations (.json) for mod developers to get started with their own project. All tools associated with the Generals Mod Builder will automatically download and install.
 
-## Customize the Mod Builder install
+## Install the Mod Builder
 
-The [Setup.bat](https://github.com/TheSuperHackers/GeneralsModBuilderSample/tree/main/Project/Scripts/Windows/Setup.bat) allows to customize the Mod Builder install. When a new Mod Builder is released, it can be upgraded by modifying this script, or by replacing the script(s) with a new version from the Sample Project. It is possible to change the folder layouts, but for simplicity sake just use the same layout as presented in the Sample Project.
+The Mod Builder needs nothing preinstalled on the machine. The [modbuilder.cmd](modbuilder.cmd) launcher installs [uv](https://docs.astral.sh/uv/) if it is missing, and uv then downloads a suitable Python and the locked dependencies into a `.venv` next to the launcher. This happens once; later runs start immediately.
+
+Pick whichever of these suits the project:
+
+**As a git submodule**, which is the recommended way and what the Sample Project does. The submodule commit pins the Mod Builder version, and `git submodule update --remote` upgrades it.
+
+```
+git submodule add https://github.com/TheSuperHackers/GeneralsModBuilder ThirdParty/GeneralsModBuilder
+ThirdParty\GeneralsModBuilder\modbuilder.cmd --build --install --config-list MyMod.json
+```
+
+**As a plain copy.** Copy the contents of this repository anywhere into the project and commit them. Run `modbuilder.cmd` from wherever it landed.
+
+**As an installed Python package**, for anyone who would rather have a `generalsmodbuilder` command on the PATH:
+
+```
+uv tool install git+https://github.com/TheSuperHackers/GeneralsModBuilder@v3.0
+generalsmodbuilder --build --install --config-list MyMod.json
+```
+
+`pip install git+https://github.com/TheSuperHackers/GeneralsModBuilder@v3.0` works the same way in an existing environment. On a POSIX shell use `modbuilder.sh` in place of `modbuilder.cmd`.
+
+The virtual environment is created inside the Mod Builder folder. Set the `UV_PROJECT_ENVIRONMENT` environment variable to put it somewhere else.
 
 ## Setup Mod files and configurations
 
@@ -63,6 +85,23 @@ The following file conversions are supported:
 
 Batch scripts are available in [GeneralsModBuilderSample/Project/Scripts](https://github.com/TheSuperHackers/GeneralsModBuilderSample/tree/main/Project/Scripts) to build and run the project. The [BuildInstallRun.bat](https://github.com/TheSuperHackers/GeneralsModBuilderSample/tree/main/Project/Scripts/BuildInstallRun.bat) is helpful to build, install and run the game with the project in one go. After the game is closed, the project is automatically uninstalled. The [WindowsRunner.json](https://github.com/TheSuperHackers/GeneralsModBuilderSample/tree/main/Project/Scripts/Windows/WindowsRunner.json) can be customized to change game run behaviour.
 
+Each of those scripts is a thin wrapper around the launcher, so the Mod Builder can equally be run by hand:
+
+```
+ThirdParty\GeneralsModBuilder\modbuilder.cmd --build --install --run --uninstall --config-list <your json files>
+```
+
 ## Safety
 
-The scripts and Mod Builder program will download and install a few executable files (.exe) from [GeneralsTools](https://github.com/TheSuperHackers/GeneralsTools). These are required to build .big or .dds files for example. Before any execution, all executable files are checked against sha256 hashes stored within the scripts and the Mod Builder to verify correctness. This means once the scripts are placed in a Mod project, then no file change on the Internet can incur wrong or malicious program behaviour.
+The Mod Builder program will download and install a few executable files (.exe) from [GeneralsTools](https://github.com/TheSuperHackers/GeneralsTools). These are required to build .big or .dds files for example. Before any execution, all executable files are checked against sha256 hashes stored within the Mod Builder to verify correctness. This means once the configuration is placed in a Mod project, then no file change on the Internet can incur wrong or malicious program behaviour.
+
+The Mod Builder itself is no longer distributed as a downloaded archive, so it needs no hash pinning of its own. A submodule is pinned to an exact commit, a copy is committed into the project, and a `uv tool install` is pinned to a tag. Its Python dependencies are pinned by [uv.lock](uv.lock), which records a hash for every package.
+
+## Develop the Mod Builder
+
+```
+uv sync
+uv run generalsmodbuilder --help
+```
+
+To release, bump `__version__` in [generalsmodbuilder/\_\_version\_\_.py](generalsmodbuilder/__version__.py), run `uv lock`, commit and tag `vX.Y`. There are no artifacts to build or upload; the tag is the release.
