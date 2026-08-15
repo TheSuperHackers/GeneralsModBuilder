@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Sync locked dependencies
+        run: uv sync --locked
+
+      - name: Run the command line interface
+        run: uv run generalsmodbuilder --help
+
+      - name: Run as a module
+        run: uv run python -m generalsmodbuilder --help
+
+      # Catches a dependency update breaking an import, and a Python without
+      # tkinter, which the gui needs. A real mod build cannot run here because
+      # crunch, gametextcompiler and blender are Windows binaries downloaded at
+      # runtime.
+      - name: Import every module
+        run: >
+          uv run python -c "import generalsmodbuilder.build.copy,
+          generalsmodbuilder.build.engine, generalsmodbuilder.buildfunctions,
+          generalsmodbuilder.changelog.generator, generalsmodbuilder.changelog.parser,
+          generalsmodbuilder.gui.gui, generalsmodbuilder.main"
+
+      - name: Build the wheel
+        run: uv build
+
+      # The wheel must carry the built-in configurations and the gui icon,
+      # otherwise --load-default-tools and the gui break once installed.
+      - name: Check the wheel contains its data files
+        shell: python
+        run: |
+          import glob, sys, zipfile
+          wheel = glob.glob("dist/*.whl")[0]
+          names = set(zipfile.ZipFile(wheel).namelist())
+          expected = {
+              "generalsmodbuilder/config/DefaultRunner.json",
+              "generalsmodbuilder/config/DefaultTools.json",
+              "generalsmodbuilder/gui/icon.png",
+          }
+          missing = expected - names
+          if missing:
+              sys.exit(f"{wheel} is missing {sorted(missing)}")
+          print(f"{wheel} contains all expected data files")
