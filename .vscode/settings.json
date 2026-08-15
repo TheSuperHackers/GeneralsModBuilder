@@ -1,5 +1,7 @@
 {
     "python.analysis.extraPaths": [
-        "${workspaceFolder}\\ModBuilder"
-    ]
+        "${workspaceFolder}"
+    ],
+    "python.defaultInterpreterPath": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+    "python-envs.defaultEnvManager": "ms-python.python:venv"
 }
