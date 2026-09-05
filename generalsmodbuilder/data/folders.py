@@ -1,8 +1,13 @@
 import os.path
 from dataclasses import dataclass
-from generalsmodbuilder.data.common import FinalizeParsedData, ParsedData
+from generalsmodbuilder.data.common import FinalizeParsedData, ParsedData, VerifyFormatVersion
 from generalsmodbuilder.util import JsonFile
 from generalsmodbuilder import util
+
+
+LATEST_FOLDERS_VERSION = 1
+
+FOLDERS_KEYS = {"version", "releaseDir", "buildDir"}
 
 
 @dataclass(init=False)
@@ -45,6 +50,9 @@ def MakeFoldersFromJsons(jsonFiles: list[JsonFile]) -> Folders:
 
         if jFolders:
             ctx = root.Sub("folders")
+            ctx.VerifyKnownKeys(jFolders, FOLDERS_KEYS)
+            VerifyFormatVersion(ctx, jFolders, LATEST_FOLDERS_VERSION)
+
             folders.absReleaseDir = util.JoinPathIfValid(
                 folders.absReleaseDir, jsonDir, ctx.GetOptional(jFolders, "releaseDir", str))
             folders.absBuildDir = util.JoinPathIfValid(

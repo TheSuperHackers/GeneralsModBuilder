@@ -82,9 +82,16 @@ def test_an_unrecognized_sort_direction_is_rejected(MakeJsonFile, MakeFile):
 def test_a_sort_entry_naming_neither_date_nor_label_is_rejected(MakeJsonFile, MakeFile):
     MakeFile("Log.yaml")
     with pytest.raises(AssertionError) as error:
-        MakeChangeConfigFromJsons([MakeJsonFile(MakeChangelogJson(sortList=[{"labl": "Fix"}]))])
+        MakeChangeConfigFromJsons([MakeJsonFile(MakeChangelogJson(sortList=[{}]))])
     assert str(error.value).endswith(
         "changelog.records[0].sortList[0] must name exactly one of 'date' or 'label'")
+
+
+def test_a_misspelled_sort_key_is_rejected_as_unknown(MakeJsonFile, MakeFile):
+    MakeFile("Log.yaml")
+    with pytest.raises(AssertionError) as error:
+        MakeChangeConfigFromJsons([MakeJsonFile(MakeChangelogJson(sortList=[{"labl": "Fix"}]))])
+    assert "changelog.records[0].sortList[0].labl is not a known key" in str(error.value)
 
 
 def test_a_sort_entry_naming_both_date_and_label_is_rejected(MakeJsonFile, MakeFile):

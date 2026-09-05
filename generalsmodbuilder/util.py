@@ -255,6 +255,16 @@ class JsonContext:
         """
         Verify(condition, f"{self.Name(key)} {message}")
 
+    def VerifyKnownKeys(self, jDict: dict, knownKeys: set) -> None:
+        """
+        Fails on a key that the format does not define. Such a key is otherwise ignored
+        in silence, so a misspelled one behaves as if it had never been written at all.
+        """
+        for key in jDict:
+            if key not in knownKeys:
+                raise AssertionError(f"{self.Name(key)} is not a known key. "
+                                     f"Known keys here are {', '.join(sorted(knownKeys))}")
+
     def GetOptional(
             self,
             jDict: dict,

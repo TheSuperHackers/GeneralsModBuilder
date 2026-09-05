@@ -1,9 +1,16 @@
 import os.path
 from enum import Enum, auto
 from dataclasses import dataclass
-from generalsmodbuilder.data.common import FinalizeParsedData, ParsedData
+from generalsmodbuilder.data.common import FinalizeParsedData, ParsedData, VerifyFormatVersion
 from generalsmodbuilder.util import JsonContext, JsonFile
 from generalsmodbuilder import util
+
+
+LATEST_CHANGELOG_VERSION = 1
+
+CHANGELOG_KEYS = {"version", "records"}
+CHANGELOG_RECORD_KEYS = {"sourceList", "targetList", "sortList", "includeLabelList", "excludeLabelList"}
+CHANGELOG_SORT_KEYS = {"date", "label"}
 
 
 class Sort(Enum):
@@ -94,6 +101,8 @@ def __MakeSortDefinitionsFromList(ctx: JsonContext, jSortList: list) -> list[Sor
 
     for index, jSortLabel in enumerate(jSortList):
         sortCtx: JsonContext = ctx.At(index)
+        sortCtx.VerifyKnownKeys(jSortLabel, CHANGELOG_SORT_KEYS)
+
         jDate: str = sortCtx.GetOptional(jSortLabel, "date", str)
         jLabel: str = sortCtx.GetOptional(jSortLabel, "label", str)
 
@@ -118,6 +127,7 @@ def __MakeAbsFilesFromList(jFileList: list, jsonDir: str) -> list[str]:
 
 def __MakeChangeConfigRecordFromDict(ctx: JsonContext, jRecord: dict, jsonDir: str) -> ChangeConfigRecord:
     record = ChangeConfigRecord()
+    ctx.VerifyKnownKeys(jRecord, CHANGELOG_RECORD_KEYS)
 
     record.absSourceFiles = __MakeAbsFilesFromList(
         ctx.GetMandatory(jRecord, "sourceList", list, elementType=str), jsonDir)
@@ -143,6 +153,9 @@ def MakeChangeConfigFromJsons(jsonFiles: list[JsonFile]) -> ChangeConfig:
 
         if jChangelog:
             ctx = root.Sub("changelog")
+            ctx.VerifyKnownKeys(jChangelog, CHANGELOG_KEYS)
+            VerifyFormatVersion(ctx, jChangelog, LATEST_CHANGELOG_VERSION)
+
             jRecords: list = ctx.GetOptional(jChangelog, "records", list, default=[], elementType=dict)
             jRecord: dict
             for index, jRecord in enumerate(jRecords):
