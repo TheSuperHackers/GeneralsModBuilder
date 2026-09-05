@@ -511,7 +511,7 @@ class BuildEngine:
                 newThing.absParentDir = os.path.join(folders.absBuildDir, "BigBundleItems")
                 newThing.files = [BuildFile()]
                 newThing.files[0].absSources = [parentThing.absParentDir]
-                newThing.files[0].relTarget = item.namePrefix + item.name + item.nameSuffix + ".big"
+                newThing.files[0].relTarget = item.GetBigFileName()
                 newThing.parentThing = parentThing
 
                 structure.AddThing(BuildIndex.BigBundleItem, newThing)
@@ -575,7 +575,7 @@ class BuildEngine:
             newThing.absParentDir = folders.absReleaseDir
             newThing.files = [BuildFile()]
             newThing.files[0].absSources = [parentThing.absParentDir]
-            newThing.files[0].relTarget = pack.namePrefix + pack.name + pack.nameSuffix + ".zip"
+            newThing.files[0].relTarget = pack.GetReleaseFileName()
             newThing.parentThing = parentThing
 
             structure.AddThing(BuildIndex.ReleaseBundlePack, newThing)

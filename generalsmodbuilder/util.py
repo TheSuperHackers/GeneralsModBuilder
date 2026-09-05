@@ -47,6 +47,30 @@ def Verify(condition: bool, message: str = "") -> None:
         raise AssertionError(message)
 
 
+def VerifyUniqueNames(names: list[str], nameDescription: str) -> None:
+    """
+    Fails when two names of the list name the same thing.
+    Names are compared case insensitively, because file and directory names are case
+    insensitive on Windows and in big archives, therefore two names that differ in
+    upper and lower case only name the same file or directory.
+    nameDescription : str
+        Describes what the names are, for example "BundleItem 'Foo' target file".
+    """
+    keyToName = dict[str, str]()
+    name: str
+
+    for name in names:
+        key: str = name.lower()
+        firstName: str = keyToName.get(key)
+        if firstName != None:
+            if firstName == name:
+                raise AssertionError(f"{nameDescription} '{name}' is used more than once")
+            else:
+                raise AssertionError(f"{nameDescription} '{name}' collides with '{firstName}', because "
+                                     f"names that differ in upper and lower case only name the same thing")
+        keyToName[key] = name
+
+
 def VerifyType(obj: object, expectedType: type | types.UnionType, objName: str) -> None:
     if not isinstance(obj, expectedType):
         raise AssertionError(f'Object "{objName}" is type:{type(obj).__name__} but should be type:{expectedType.__name__}')
