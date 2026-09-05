@@ -39,7 +39,7 @@ class ToolCallInstruction:
 
     def __init__(self):
         self.absCall = ""
-        self.callArgs = ParamsT
+        self.callArgs = ParamsT()
 
 
     def Normalize(self) -> None:
@@ -274,9 +274,8 @@ class Tool:
         return None
 
 
-    def Install(self) -> bool:
+    def Install(self) -> None:
         file: ToolFile
-        success: bool = True
         runnablesInstalled: int = 0
 
         for file in self.files:
@@ -298,12 +297,10 @@ class Tool:
                 elif result.code == InstallResultCode.HashMismatch:
                     msg += " - Hash mismatch was detected"
                 elif result.code == InstallResultCode.HttpError:
-                    msg += " - Http returned error code {result.httpCode}"
+                    msg += f" - Http returned error code {result.httpCode}"
                 elif result.code == InstallResultCode.CallError:
                     msg += " - Error on call instruction"
                 raise RuntimeError(msg)
-
-        return success
 
 
 
@@ -312,17 +309,22 @@ ToolsT = dict[str, Tool]
 
 
 def __ProcessAliases(thing: str | ParamsT, aliases: dict) -> str | ParamsT:
-    if isinstance(aliases, dict):
+    if not isinstance(aliases, dict):
+        return thing
 
-        if isinstance(thing, str):
-            for aliasKey, aliasVal in aliases.items():
-                thing = thing.replace(aliasKey, aliasVal)
+    def ReplaceAliases(value: str) -> str:
+        for aliasKey, aliasVal in aliases.items():
+            value = value.replace(aliasKey, aliasVal)
+        return value
 
-        if isinstance(thing, dict):
-            for thingKey, thingVal in thing.items():
-                for aliasKey, aliasVal in aliases.items():
-                    thingVal = thingVal.replace(aliasKey, aliasVal)
-                thing[thingKey] = thingVal
+    if isinstance(thing, str):
+        return ReplaceAliases(thing)
+
+    if isinstance(thing, dict):
+        # Call arguments are not all strings, and a new dict is built so that the
+        # parsed json data of the caller is left untouched.
+        return {key: ReplaceAliases(value) if isinstance(value, str) else value
+                for key, value in thing.items()}
 
     return thing
 
@@ -411,13 +413,10 @@ def MakeToolsFromJsons(jsonFiles: list[JsonFile], rootDir: str=None) -> ToolsT:
     return tools
 
 
-def InstallTools(tools: ToolsT) -> bool:
+def InstallTools(tools: ToolsT) -> None:
     tool: Tool
-    success: bool = True
     for tool in tools.values():
-        if not tool.Install():
-            success = False
-    return success
+        tool.Install()
 
 
 def VerifyToolIsInstalled(tools: ToolsT, name: str, reason: str = "") -> None:
