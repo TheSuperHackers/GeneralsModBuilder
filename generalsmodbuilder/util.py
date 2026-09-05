@@ -431,10 +431,15 @@ def HasAnyFileExt(file: str, expectedExtList: list[str]) -> bool:
     return False
 
 
-def ResolveFileWildcards(fileList: list[str], sortWildcardMatches: bool = False) -> list[str]:
+def ResolveFileWildcards(fileList: list[str], sortWildcardMatches: bool = False, filesMustExist: bool = True) -> list[str]:
     """
     Substitutes every file path that contains a wildcard with all files that it matches.
-    File paths without wildcard are taken over as is and are verified to be valid files.
+    File paths without wildcard are taken over as is.
+    filesMustExist : bool
+        Fails when a path without wildcard names no file, and reports a wildcard that
+        matches nothing. Pass False for a list that describes which files are allowed to
+        be present rather than which files are required, such as the regular game data
+        files, where the entries of every language that is not installed match nothing.
     sortWildcardMatches : bool
         Sorts the matches of each wildcard alphabetically. This makes the resulting order
         reproducible across machines, because glob returns matches in file system order.
@@ -445,7 +450,7 @@ def ResolveFileWildcards(fileList: list[str], sortWildcardMatches: bool = False)
     for file in fileList:
         if "*" in file and not os.path.isfile(file):
             globFiles: list[str] = glob(file, recursive=True)
-            if not bool(globFiles):
+            if filesMustExist and not bool(globFiles):
                 print(f"Note: Wildcard '{file}' currently matches nothing")
 
             globFiles = [globFile for globFile in globFiles if os.path.isfile(globFile)]
@@ -454,7 +459,8 @@ def ResolveFileWildcards(fileList: list[str], sortWildcardMatches: bool = False)
 
             newFiles.extend(globFiles)
         else:
-            Verify(os.path.isfile(file), f"File '{file}' is not a valid file")
+            if filesMustExist:
+                Verify(os.path.isfile(file), f"File '{file}' is not a valid file")
             newFiles.append(file)
     return newFiles
 

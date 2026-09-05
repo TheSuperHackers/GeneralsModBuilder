@@ -53,8 +53,3 @@ def VerifyParamsType(params: ParamsT, name: str) -> None:
             for subValue in value:
                 util.VerifyType(subValue, (str, int, float, bool, list), f"{name}.value.value")
 
-
-def VerifyStringListType(strlist: list[str], name: str) -> None:
-    util.VerifyType(strlist, list, name)
-    for value in strlist:
-        util.VerifyType(value, str, f"{name}.value")
