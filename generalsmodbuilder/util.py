@@ -15,7 +15,7 @@ import pickle
 import shutil
 from copy import copy
 from glob import glob
-from typing import Any, Callable, Union
+from typing import Any, Callable, Union, get_args
 
 
 class Timer:
@@ -76,19 +76,38 @@ def VerifyUniqueNames(names: list[str], nameDescription: str) -> None:
         keyToName[key] = name
 
 
-def VerifyType(obj: object, expectedType: type | types.UnionType, objName: str) -> None:
+def GetTypeName(expectedType: type | tuple | types.UnionType) -> str:
+    """
+    Returns a readable name for anything that isinstance accepts as its second argument.
+    Only a plain type carries __name__, so the name of a tuple of types and the name of
+    a union of types have to be built from their members.
+    """
+    if isinstance(expectedType, tuple):
+        names = [GetTypeName(member) for member in expectedType]
+    else:
+        members = get_args(expectedType)
+        if not members:
+            return getattr(expectedType, "__name__", str(expectedType))
+        names = [GetTypeName(member) for member in members]
+
+    if len(names) == 1:
+        return names[0]
+    return " or ".join([", ".join(names[:-1]), names[-1]])
+
+
+def VerifyType(obj: object, expectedType: type | tuple | types.UnionType, objName: str) -> None:
     if not isinstance(obj, expectedType):
-        raise AssertionError(f'Object "{objName}" is type:{type(obj).__name__} but should be type:{expectedType.__name__}')
+        raise AssertionError(f'Object "{objName}" is type:{type(obj).__name__} but should be type:{GetTypeName(expectedType)}')
 
 
-def GetCheckedOptional(dictionary: dict, key: str, expectedTypeIfExists: type | types.UnionType) -> Any:
+def GetCheckedOptional(dictionary: dict, key: str, expectedTypeIfExists: type | tuple | types.UnionType) -> Any:
     value: Any = dictionary.get(key)
     if value != None:
         VerifyType(value, expectedTypeIfExists, key)
     return value
 
 
-def GetCheckedMandatory(dictionary: dict, key: str, expectedType: type | types.UnionType) -> Any:
+def GetCheckedMandatory(dictionary: dict, key: str, expectedType: type | tuple | types.UnionType) -> Any:
     value: Any = dictionary.get(key)
     VerifyType(value, expectedType, key)
     return value
