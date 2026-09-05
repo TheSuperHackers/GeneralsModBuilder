@@ -19,6 +19,8 @@ class BuildFiles(ParsedData):
     def VerifyValues(self) -> None:
         for file in self.absFiles:
             util.Verify(os.path.isfile(file), f"build.files '{file}' is not a valid file")
+            # A file of any other type would be read by nobody and silently dropped.
+            util.Verify(util.HasFileExt(file, "json"), f"build.files '{file}' is not a json file")
 
 
 def AddBuildFilesFromJsons(jsonFiles: list[JsonFile], buildFiles: BuildFiles) -> None:
@@ -34,7 +36,9 @@ def AddBuildFilesFromJsons(jsonFiles: list[JsonFile], buildFiles: BuildFiles) ->
             ctx = root.Sub("build")
             jFiles: list = ctx.GetOptional(jBuild, "files", list, default=[], elementType=str)
             jFile: str
-            for jFile in jFiles:
+            for index, jFile in enumerate(jFiles):
+                # An entry that names nothing used to be dropped without a word.
+                ctx.Sub("files").At(index).Verify(bool(jFile), "must not be empty")
                 buildFiles.absFiles.append(os.path.join(jsonDir, jFile))
     return
 
