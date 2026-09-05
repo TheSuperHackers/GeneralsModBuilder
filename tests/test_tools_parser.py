@@ -1,5 +1,7 @@
 import os
 
+import pytest
+
 from generalsmodbuilder.data.tools import MakeToolsFromJsons
 
 
@@ -110,3 +112,53 @@ def test_the_default_tools_config_resolves_the_addon_zip_into_the_root_dir(tmp_p
     expression: str = instruction.callArgs["--python-expr"]
     quotedPath: str = expression.split("normpath('", 1)[1].split("')", 1)[0]
     assert os.path.normpath(quotedPath) == addonFile.absTarget
+
+
+def test_a_missing_tool_name_names_the_file_and_the_key(MakeJsonFile, tmp_path):
+    jsonFile = MakeJsonFile({"tools": {"version": 2, "list": [
+        {"files": [{"target": "sample.exe", "runnable": True}]}]}})
+    with pytest.raises(AssertionError) as error:
+        MakeToolsFromJsons([jsonFile], rootDir=str(tmp_path))
+    assert str(error.value).endswith("tools.list[0].name is required but is not set")
+
+
+def test_a_missing_target_names_the_tool_and_the_file_index(MakeJsonFile, tmp_path):
+    jsonFile = MakeJsonFile(MakeToolsJson([{"runnable": True}]))
+    with pytest.raises(AssertionError) as error:
+        MakeToolsFromJsons([jsonFile], rootDir=str(tmp_path))
+    assert str(error.value).endswith("tools.list[0] 'sample'.files[0].target is required but is not set")
+
+
+def test_an_empty_target_is_rejected(MakeJsonFile, tmp_path):
+    jsonFile = MakeJsonFile(MakeToolsJson([{"target": "", "runnable": True}]))
+    with pytest.raises(AssertionError) as error:
+        MakeToolsFromJsons([jsonFile], rootDir=str(tmp_path))
+    assert str(error.value).endswith("tools.list[0] 'sample'.files[0].target must not be empty")
+
+
+def test_a_tool_without_a_runnable_file_is_rejected(MakeJsonFile, tmp_path):
+    jsonFile = MakeJsonFile(MakeToolsJson([{"target": "sample.dat"}]))
+    with pytest.raises(AssertionError) as error:
+        MakeToolsFromJsons([jsonFile], rootDir=str(tmp_path))
+    assert str(error.value) == "tools.list 'sample' has no runnable file"
+
+
+def test_a_bad_size_names_the_file_and_the_key(MakeJsonFile, tmp_path):
+    jsonFile = MakeJsonFile(MakeToolsJson([{"target": "sample.exe", "runnable": True, "size": "big"}]))
+    with pytest.raises(AssertionError) as error:
+        MakeToolsFromJsons([jsonFile], rootDir=str(tmp_path))
+    assert str(error.value).endswith("tools.list[0] 'sample'.files[0].size is type:str but should be type:int")
+
+
+def test_a_tools_version_that_is_not_a_number_is_rejected(MakeJsonFile, tmp_path):
+    # Comparing the version used to raise TypeError before it could be reported.
+    jsonFile = MakeJsonFile({"tools": {"version": "2", "list": []}})
+    with pytest.raises(AssertionError) as error:
+        MakeToolsFromJsons([jsonFile], rootDir=str(tmp_path))
+    assert str(error.value).endswith("tools.version is type:str but should be type:int")
+
+
+def test_a_disabled_tool_is_skipped(MakeJsonFile, tmp_path):
+    jsonFile = MakeJsonFile(MakeToolsJson([{"target": "sample.exe", "runnable": True}]))
+    jsonFile.data["tools"]["list"][0]["enabled"] = False
+    assert MakeToolsFromJsons([jsonFile], rootDir=str(tmp_path)) == {}

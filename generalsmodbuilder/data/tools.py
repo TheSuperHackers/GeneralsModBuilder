@@ -8,8 +8,8 @@ import zipfile
 from enum import Enum, auto
 from dataclasses import dataclass
 from generalsmodbuilder import util
-from generalsmodbuilder.util import JsonFile
-from generalsmodbuilder.data.common import ParamsT, VerifyParamsType
+from generalsmodbuilder.util import JsonContext, JsonFile
+from generalsmodbuilder.data.common import FinalizeParsedData, ParamsT, ParsedData, VerifyParamsType
 from generalsmodbuilder.build.common import ParamsToArgs
 
 
@@ -32,7 +32,7 @@ class InstallResult:
 
 
 @dataclass(init=False)
-class ToolCallInstruction:
+class ToolCallInstruction(ParsedData):
     absCall: str
     callArgs: ParamsT
 
@@ -48,17 +48,16 @@ class ToolCallInstruction:
 
 
     def VerifyTypes(self) -> None:
-        util.VerifyType(self.absCall, str, "ToolCallInstruction.absCall")
-        VerifyParamsType(self.callArgs, "ToolCallInstruction.callArgs")
+        VerifyParamsType(self.callArgs, "tools.list.files.callList.callArgs")
 
 
     def VerifyValues(self) -> None:
         if self.absCall:
-            util.Verify(util.IsValidPathName(self.absCall), f"ToolCallInstruction.absCall '{self.absCall}' is not a valid file name")
+            util.Verify(util.IsValidPathName(self.absCall), f"tools.list.files.callList.call '{self.absCall}' is not a valid file name")
 
 
 @dataclass(init=False)
-class ToolFile:
+class ToolFile(ParsedData):
     url: str
     absTarget: str
     absExtractDir: str
@@ -96,31 +95,21 @@ class ToolFile:
 
 
     def VerifyTypes(self) -> None:
-        util.VerifyType(self.url, str, "ToolFile.url")
-        util.VerifyType(self.absTarget, str, "ToolFile.absTarget")
-        util.VerifyType(self.absExtractDir, str, "ToolFile.absExtractDir")
-        util.VerifyType(self.md5, str, "ToolFile.md5")
-        util.VerifyType(self.sha256, str, "ToolFile.sha256")
-        util.VerifyType(self.size, int, "ToolFile.size")
-        util.VerifyType(self.callInstructions, list, "ToolFile.callInstructions")
-        util.VerifyType(self.runnable, bool, "ToolFile.runnable")
-        util.VerifyType(self.autoDeleteAfterInstall, bool, "ToolFile.autoDeleteAfterInstall")
-        util.VerifyType(self.skipIfRunnableExists, bool, "ToolFile.skipIfRunnableExists")
         for instruction in self.callInstructions:
             instruction.VerifyTypes()
 
 
     def VerifyValues(self) -> None:
         # TODO Verify url format?
-        util.Verify(util.IsValidPathName(self.absTarget), f"ToolFile.absTarget '{self.absTarget}' is not a valid file name")
+        util.Verify(util.IsValidPathName(self.absTarget), f"tools.list.files.target '{self.absTarget}' is not a valid file name")
         if self.absExtractDir:
-            util.Verify(util.IsValidPathName(self.absExtractDir), f"ToolFile.absExtractDir '{self.absExtractDir}' is not a valid file name")
+            util.Verify(util.IsValidPathName(self.absExtractDir), f"tools.list.files.extractDir '{self.absExtractDir}' is not a valid file name")
         for instruction in self.callInstructions:
             instruction.VerifyValues()
 
 
     def VerifyInstall(self) -> None:
-        util.Verify(os.path.isfile(self.absTarget), f"ToolFile.absTarget file '{self.absTarget}' does not exist")
+        util.Verify(os.path.isfile(self.absTarget), f"tools.list.files.target file '{self.absTarget}' does not exist")
         if self.md5:
             actual: str = util.GetFileMd5(self.absTarget)
             util.Verify(self.md5 == actual, f"ToolFile.md5 '{self.md5}' does not match md5 '{actual}' of target file '{self.absTarget}'")
@@ -227,7 +216,7 @@ class ToolFile:
 
 
 @dataclass(init=False)
-class Tool:
+class Tool(ParsedData):
     name: str
     files: list[ToolFile]
     version: float
@@ -247,16 +236,12 @@ class Tool:
 
 
     def VerifyTypes(self) -> None:
-        util.VerifyType(self.name, str, "Tool.name")
-        util.VerifyType(self.version, float, "Tool.version")
-        util.VerifyType(self.versionStr, str, "Tool.versionStr")
-        util.VerifyType(self.files, list, "Tool.files")
         for file in self.files:
             file.VerifyTypes()
 
 
     def VerifyValues(self) -> None:
-        util.Verify(self.GetExecutable() != None, "Tool.files contains no runnable file")
+        util.Verify(self.GetExecutable() != None, f"tools.list '{self.name}' has no runnable file")
         for file in self.files:
             file.VerifyValues()
 
@@ -329,51 +314,56 @@ def __ProcessAliases(thing: str | ParamsT, aliases: dict) -> str | ParamsT:
     return thing
 
 
-def __MakeToolFileFromDict(jFile: dict, rootDir: str, aliases: dict) -> ToolFile:
+def __MakeToolFileFromDict(ctx: JsonContext, jFile: dict, rootDir: str, aliases: dict) -> ToolFile:
     toolFile = ToolFile()
 
-    toolFile.url = jFile.get("url", toolFile.url)
+    toolFile.url = ctx.GetOptional(jFile, "url", str, toolFile.url)
+    toolFile.md5 = ctx.GetOptional(jFile, "md5", str, toolFile.md5)
+    toolFile.sha256 = ctx.GetOptional(jFile, "sha256", str, toolFile.sha256)
+    toolFile.size = ctx.GetOptional(jFile, "size", int, toolFile.size)
+    toolFile.runnable = ctx.GetOptional(jFile, "runnable", bool, toolFile.runnable)
+    toolFile.autoDeleteAfterInstall = ctx.GetOptional(jFile, "autoDeleteAfterInstall", bool, toolFile.autoDeleteAfterInstall)
+    toolFile.skipIfRunnableExists = ctx.GetOptional(jFile, "skipIfRunnableExists", bool, toolFile.skipIfRunnableExists)
+
+    jTarget: str = ctx.GetMandatory(jFile, "target", str)
+    ctx.Verify(bool(jTarget), "must not be empty", key="target")
+
     # Aliases are replaced before the path is joined to the root directory, so that an
     # alias that stands for an absolute path yields that path instead of being appended
     # to the root directory.
-    toolFile.absTarget = util.JoinPathIfValid(None, rootDir, __ProcessAliases(jFile.get("target"), aliases))
+    toolFile.absTarget = util.JoinPathIfValid(None, rootDir, __ProcessAliases(jTarget, aliases))
     toolFile.absExtractDir = util.JoinPathIfValid(
-        toolFile.absExtractDir, rootDir, __ProcessAliases(jFile.get("extractDir"), aliases))
-    toolFile.md5 = jFile.get("md5", toolFile.md5)
-    toolFile.sha256 = jFile.get("sha256", toolFile.sha256)
-    toolFile.size = jFile.get("size", toolFile.size)
-    jCallList: list = jFile.get("callList", None)
-    toolFile.runnable = jFile.get("runnable", toolFile.runnable)
-    toolFile.autoDeleteAfterInstall = jFile.get("autoDeleteAfterInstall", toolFile.autoDeleteAfterInstall)
-    toolFile.skipIfRunnableExists = jFile.get("skipIfRunnableExists", toolFile.skipIfRunnableExists)
+        toolFile.absExtractDir, rootDir, __ProcessAliases(ctx.GetOptional(jFile, "extractDir", str), aliases))
 
+    jCallList: list = ctx.GetOptional(jFile, "callList", list, elementType=dict)
     if jCallList is not None:
         toolFile.callInstructions.clear()
         jCall: dict
-        for jCall in jCallList:
+        for index, jCall in enumerate(jCallList):
+            callCtx: JsonContext = ctx.Sub("callList").At(index)
             instruction = ToolCallInstruction()
             instruction.absCall = util.JoinPathIfValid(
-                instruction.absCall, rootDir, __ProcessAliases(jCall.get("call", instruction.absCall), aliases))
-            instruction.callArgs = __ProcessAliases(jCall.get("callArgs", instruction.callArgs), aliases)
+                instruction.absCall, rootDir,
+                __ProcessAliases(callCtx.GetOptional(jCall, "call", str, instruction.absCall), aliases))
+            instruction.callArgs = __ProcessAliases(
+                callCtx.GetOptional(jCall, "callArgs", dict, instruction.callArgs), aliases)
             toolFile.callInstructions.append(instruction)
 
     return toolFile
 
 
-def __MakeToolFromDict(jTool: dict, rootDir: str, jVersion: int, aliases: dict) -> Tool:
+def __MakeToolFromDict(ctx: JsonContext, jTool: dict, rootDir: str, jVersion: int, aliases: dict) -> Tool:
     tool = Tool()
-    tool.name = jTool.get("name")
+    tool.name = ctx.GetMandatory(jTool, "name", str)
     if jVersion <= 1:
-        tool.version = jTool.get("version", tool.version)
+        tool.version = ctx.GetOptional(jTool, "version", float, tool.version)
     else:
-        tool.versionStr = jTool.get("version", tool.versionStr)
+        tool.versionStr = ctx.GetOptional(jTool, "version", str, tool.versionStr)
 
-    jFiles: dict = jTool.get("files")
-    if jFiles:
-        jFile: dict
-        for jFile in jFiles:
-            toolFile = __MakeToolFileFromDict(jFile, rootDir, aliases)
-            tool.files.append(toolFile)
+    jFiles: list = ctx.GetOptional(jTool, "files", list, default=[], elementType=dict)
+    jFile: dict
+    for index, jFile in enumerate(jFiles):
+        tool.files.append(__MakeToolFileFromDict(ctx.Sub("files").At(index), jFile, rootDir, aliases))
 
     return tool
 
@@ -383,10 +373,12 @@ def MakeToolsFromJsons(jsonFiles: list[JsonFile], rootDir: str=None) -> ToolsT:
     tool: Tool
 
     for jsonFile in jsonFiles:
-        jTools: dict = jsonFile.data.get("tools")
+        root = util.JsonContext(jsonFile.path)
+        jTools: dict = root.GetOptional(jsonFile.data, "tools", dict)
         if jTools:
+            ctx = root.Sub("tools")
             LATEST_VERSION = 2
-            jVersion: int = jTools.get("version", LATEST_VERSION)
+            jVersion: int = ctx.GetOptional(jTools, "version", int, LATEST_VERSION)
             jsonDir: str = util.GetAbsFileDir(jsonFile.path)
             # Without an override, every tools json roots its own tools in its own
             # directory. The root of one file must not carry over to the next one.
@@ -395,21 +387,18 @@ def MakeToolsFromJsons(jsonFiles: list[JsonFile], rootDir: str=None) -> ToolsT:
                 "{THIS_DIR}": jsonDir,
                 "{ROOT_DIR}": fileRootDir
             }
-            if jAliases := jTools.get("aliases"):
+            if jAliases := ctx.GetOptional(jTools, "aliases", dict, elementType=str):
                 aliases.update(jAliases)
-            jList: dict = jTools.get("list")
-            if jList:
-                jTool: dict
-                for jTool in jList:
-                    jEnabled: bool = jTool.get("enabled", True)
-                    if jEnabled:
-                        tool = __MakeToolFromDict(jTool, fileRootDir, jVersion, aliases)
-                        tools[tool.name] = tool
+            jList: list = ctx.GetOptional(jTools, "list", list, default=[], elementType=dict)
+            jTool: dict
+            for index, jTool in enumerate(jList):
+                toolCtx: JsonContext = ctx.Sub("list").At(index, jTool.get("name", ""))
+                if toolCtx.GetOptional(jTool, "enabled", bool, True):
+                    tool = __MakeToolFromDict(toolCtx, jTool, fileRootDir, jVersion, aliases)
+                    tools[tool.name] = tool
 
     for tool in tools.values():
-        tool.VerifyTypes()
-        tool.Normalize()
-        tool.VerifyValues()
+        FinalizeParsedData(tool)
 
     return tools
 
