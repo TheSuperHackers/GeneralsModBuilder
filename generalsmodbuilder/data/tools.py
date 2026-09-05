@@ -418,3 +418,14 @@ def InstallTools(tools: ToolsT) -> bool:
         if not tool.Install():
             success = False
     return success
+
+
+def VerifyToolIsInstalled(tools: ToolsT, name: str, reason: str = "") -> None:
+    """
+    Fails when the named tool is not usable. The reason tells what the tool is required for.
+    """
+    tool: Tool = tools.get(name)
+    util.Verify(tool != None, f"Tool '{name}' is required for {reason}, but is not defined or is disabled")
+    # Tool.VerifyValues guarantees that every tool has a runnable file, so the executable is never None here.
+    exe: str = tool.GetExecutable()
+    util.Verify(os.path.isfile(exe), f"Tool '{name}' is required for {reason}, but its executable '{exe}' does not exist")

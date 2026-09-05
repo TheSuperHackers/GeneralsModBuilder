@@ -18,7 +18,7 @@ from generalsmodbuilder.data.bundles import BundleRegistryDefinition, Bundles, B
 from generalsmodbuilder.data.common import ParamsT
 from generalsmodbuilder.data.folders import Folders
 from generalsmodbuilder.data.runner import Runner
-from generalsmodbuilder.data.tools import ToolsT
+from generalsmodbuilder.data.tools import ToolsT, VerifyToolIsInstalled
 from generalsmodbuilder import util
 from typing import Any
 
@@ -615,6 +615,8 @@ class BuildEngine:
         timer = util.Timer()
         print("Do Build ...")
 
+        self.__VerifyRequiredToolsAreInstalled()
+
         BuildEngine.__SendBundleEvents(self.structure, self.setup, BundleEventType.OnBuild)
 
         self.__BuildWithData(BuildIndex.RawBundleItem, deleteObsoleteFiles=True, diffWithFileHashRegistry=True)
@@ -625,6 +627,33 @@ class BuildEngine:
             print(f"Build completed in {timer.GetElapsedSecondsString()} s")
 
         return True
+
+
+    def __VerifyRequiredToolsAreInstalled(self) -> None:
+        """
+        Fails a missing build tool at the begin of the Build step,
+        so that it does not fail in the middle of a long running Build step.
+        """
+        # Collect each required tool once with the first file that requires it,
+        # so that the file system is not queried once per build file.
+        reasons = dict[str, str]()
+        thing: BuildThing
+        file: BuildFile
+
+        # These are the indexes that this Build step copies files for.
+        for index in (BuildIndex.RawBundleItem, BuildIndex.BigBundleItem, BuildIndex.RawBundlePack):
+            copy: BuildCopy = self.copyDict[index]
+
+            for thing in self.structure.GetThings(index).values():
+                for file in thing.files:
+                    toolName: str = copy.GetRequiredToolName(
+                        file.AbsSources(), file.AbsTarget(thing.absParentDir), file.params)
+
+                    if toolName != None and toolName not in reasons:
+                        reasons[toolName] = f"building target file '{file.RelTarget()}' of '{thing.name}'"
+
+        for toolName, reason in reasons.items():
+            VerifyToolIsInstalled(self.setup.tools, toolName, reason)
 
 
     def __PostBuild(self) -> bool:

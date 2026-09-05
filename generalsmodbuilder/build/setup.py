@@ -44,11 +44,5 @@ class BuildSetup:
             util.VerifyType(value, Tool, "BuildSetup.tools.value")
 
     def VerifyValues(self) -> None:
-        if self.tools.get("crunch") == None:
-            print(f"Warning: BuildSetup.tools is missing a definition for 'crunch', which may be required to build DDS files.")
-        if self.tools.get("gametextcompiler") == None:
-            print(f"Warning: BuildSetup.tools is missing a definition for 'gametextcompiler', which may be required to build CSF and STR files.")
-        if self.tools.get("generalsbigcreator") == None:
-            print(f"Warning: BuildSetup.tools is missing a definition for 'generalsbigcreator', which may be required to build BIG files.")
-        if self.tools.get("blender") == None:
-            print(f"Warning: BuildSetup.tools is missing a definition for 'blender', which may be required to build W3D files.")
+        # The tools are not checked here. The Build step verifies the tools that the build files actually require.
+        pass
