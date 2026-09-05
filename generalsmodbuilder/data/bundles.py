@@ -290,7 +290,6 @@ class BundleItem:
                 curFile.relTargetFile = BundleItem.__ResolveTargetWildcard(curFile.GetFirstRelSourceFile(), curFile.relTargetFile)
 
         self.files = newFiles
-        return newFiles
 
     @staticmethod
     def __ResolveTargetWildcard(source: str, target: str) -> str:

@@ -1,6 +1,5 @@
 import os
 from dataclasses import dataclass
-from generalsmodbuilder.data.bundles import Bundles
 from generalsmodbuilder.util import JsonFile
 from generalsmodbuilder import util
 
@@ -18,15 +17,15 @@ class BuildFiles:
             util.VerifyType(file, str, "BuildFiles.absFiles.value")
 
     def Normalize(self) -> None:
-        for file in self.absFiles:
-            file = os.path.normpath(file)
+        for i, file in enumerate(self.absFiles):
+            self.absFiles[i] = os.path.normpath(file)
 
     def VerifyValues(self) -> None:
         for file in self.absFiles:
             util.Verify(os.path.isfile(file), f"BuildFiles.absFiles '{file}' is not a valid file")
 
 
-def AddBuildFilesFromJsons(jsonFiles: list[JsonFile], buildFiles: BuildFiles) -> Bundles:
+def AddBuildFilesFromJsons(jsonFiles: list[JsonFile], buildFiles: BuildFiles) -> None:
     """
     Parses build file list from all json files where present.
     """
