@@ -204,6 +204,109 @@ class YamlFile:
         VerifyType(self.data, dict, "YamlFile.data")
 
 
+class JsonContext:
+    """
+    Names the place inside a json file that a value is read from, so that a failure
+    points at the file, the section and the key that the user wrote, instead of at the
+    python field that the value ends up in.
+
+    A context is built up while descending into the data, for example
+
+        ctx = JsonContext(jsonFile.path).Sub("bundles").Sub("items").At(3, "GameFiles")
+        ctx.Sub("files").At(2).GetOptional(jFile, "target", str)
+
+    which reports a bad value as
+
+        ModBundleItems.json: bundles.items[3] 'GameFiles'.files[2].target
+        is type:int but should be type:str
+    """
+    absPath: str
+    path: str
+
+    def __init__(self, absPath: str, path: str = ""):
+        self.absPath = absPath
+        self.path = path
+
+    def Sub(self, key: str) -> "JsonContext":
+        """
+        Names a nested object or list, for example 'items' below 'bundles'.
+        """
+        return JsonContext(self.absPath, self.__Join(key))
+
+    def At(self, index: int, name: str = "") -> "JsonContext":
+        """
+        Names one element of a list. The optional name identifies the element the way
+        the user knows it, which is far more useful than its index alone.
+        """
+        path: str = f"{self.path}[{index}]"
+        if name:
+            path += f" '{name}'"
+        return JsonContext(self.absPath, path)
+
+    def Name(self, key: str = "") -> str:
+        """
+        The full name of this place, or of a key at this place, as it appears in a message.
+        """
+        return f"{self.absPath}: {self.__Join(key)}" if key else f"{self.absPath}: {self.path}"
+
+    def Verify(self, condition: bool, message: str, key: str = "") -> None:
+        """
+        Fails with a message that names this place, or a key at this place.
+        """
+        Verify(condition, f"{self.Name(key)} {message}")
+
+    def GetOptional(
+            self,
+            jDict: dict,
+            key: str,
+            expectedType: type | tuple | types.UnionType,
+            default: Any = None,
+            elementType: type | tuple | types.UnionType = None) -> Any:
+        """
+        Reads a key that the format allows to be absent, and returns default when it is.
+        """
+        value: Any = jDict.get(key)
+        if value == None:
+            return default
+        self.__VerifyValue(value, expectedType, key, elementType)
+        return value
+
+    def GetMandatory(
+            self,
+            jDict: dict,
+            key: str,
+            expectedType: type | tuple | types.UnionType,
+            elementType: type | tuple | types.UnionType = None) -> Any:
+        """
+        Reads a key that the format requires, and fails when it is absent.
+        """
+        value: Any = jDict.get(key)
+        if value == None:
+            raise AssertionError(f"{self.Name(key)} is required but is not set")
+        self.__VerifyValue(value, expectedType, key, elementType)
+        return value
+
+    def __Join(self, key: str) -> str:
+        if not key:
+            return self.path
+        return f"{self.path}.{key}" if self.path else key
+
+    def __VerifyValue(
+            self,
+            value: Any,
+            expectedType: type | tuple | types.UnionType,
+            key: str,
+            elementType: type | tuple | types.UnionType) -> None:
+        if not isinstance(value, expectedType):
+            raise AssertionError(f"{self.Name(key)} is type:{type(value).__name__} "
+                                 f"but should be type:{GetTypeName(expectedType)}")
+        if elementType != None:
+            for index, element in enumerate(value):
+                if not isinstance(element, elementType):
+                    raise AssertionError(f"{self.Name(key)}[{index}] is type:{type(element).__name__} "
+                                         f"but should be type:{GetTypeName(elementType)}")
+
+
 def GetRegKeyValue(path, root=None) -> Union[int, str, None]:
     if winreg == None:
         return None
