@@ -8,6 +8,9 @@ from generalsmodbuilder import util
 @dataclass(init=False)
 class Runner(ParsedData):
     absGameInstallDir: str
+    # Every directory that was considered for absGameInstallDir, so that a failure can
+    # tell the user where the game was looked for.
+    absGameInstallDirCandidates: list[str]
     relGameExeFile: str
     gameExeArgs: ParamsT
     relevantGameDataFileTypes: list[str]
@@ -16,6 +19,7 @@ class Runner(ParsedData):
 
     def __init__(self):
         self.absGameInstallDir = ""
+        self.absGameInstallDirCandidates = list[str]()
         self.relGameExeFile = ""
         self.gameExeArgs = ParamsT()
         self.relevantGameDataFileTypes = list[str]()
@@ -31,8 +35,13 @@ class Runner(ParsedData):
         VerifyParamsType(self.gameExeArgs, "runner.gameExeArgs")
 
     def Normalize(self) -> None:
-        self.absGameInstallDir = os.path.normpath(self.absGameInstallDir)
-        self.relGameExeFile = os.path.normpath(self.relGameExeFile)
+        # An empty path is left empty. normpath turns it into the current directory,
+        # which would make a game installation that was never found look like a valid
+        # one and would resolve the game data files against the working directory.
+        if self.absGameInstallDir:
+            self.absGameInstallDir = os.path.normpath(self.absGameInstallDir)
+        if self.relGameExeFile:
+            self.relGameExeFile = os.path.normpath(self.relGameExeFile)
         for i, file in enumerate(self.absRegularGameDataFiles):
             self.absRegularGameDataFiles[i] = os.path.normpath(file)
 
@@ -44,10 +53,23 @@ class Runner(ParsedData):
             self.absRegularGameDataFiles, filesMustExist=False)
 
     def VerifyValues(self) -> None:
+        util.Verify(bool(self.relGameExeFile),
+                    "runner.gameExeFile is not set by any configuration file, but is required to "
+                    "locate the game installation directory")
+        if not self.absGameInstallDir:
+            raise AssertionError(self.__MakeInstallDirNotFoundMessage())
         util.Verify(os.path.isdir(self.absGameInstallDir),
                     f"runner game installation directory '{self.absGameInstallDir}' is not a valid path")
         util.Verify(os.path.isfile(self.AbsGameExeFile()),
                     f"runner game executable '{self.AbsGameExeFile()}' is not a valid file")
+
+    def __MakeInstallDirNotFoundMessage(self) -> str:
+        searched: str = "".join(f"\n  {candidate}" for candidate in reversed(self.absGameInstallDirCandidates))
+        if not searched:
+            searched = "\n  nothing, because none of those keys named a directory"
+        return (f"runner game installation directory containing '{self.relGameExeFile}' was not found. "
+                f"It is taken from runner.gameInstallPath, runner.gameInstallRegKey, "
+                f"runner.gameInstall2RegKey or runner.tuczhGameInstallRegKey. Searched:{searched}")
 
 
 def __AddRegKeyInstallDir(
@@ -71,7 +93,7 @@ def __AddRegKeyInstallDir(
 
 def MakeRunnerFromJsons(jsonFiles: list[JsonFile]) -> Runner:
     runner = Runner()
-    absGameInstallDirs = list[str]()
+    absGameInstallDirs: list[str] = runner.absGameInstallDirCandidates
 
     for jsonFile in jsonFiles:
         jsonDir: str = util.GetAbsFileDir(jsonFile.path)

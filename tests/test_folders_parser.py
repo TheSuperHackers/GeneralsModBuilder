@@ -41,3 +41,15 @@ def test_a_section_of_the_wrong_type_is_reported(MakeJsonFile):
     with pytest.raises(AssertionError) as error:
         MakeFoldersFromJsons([MakeJsonFile({"folders": ["Release"]})])
     assert str(error.value).endswith("folders is type:list but should be type:dict")
+
+
+def test_the_same_directory_for_build_and_release_is_rejected(MakeJsonFile):
+    with pytest.raises(AssertionError) as error:
+        MakeFoldersFromJsons([MakeJsonFile({"folders": {"releaseDir": "Out", "buildDir": "Out"}})])
+    assert "folders.releaseDir and folders.buildDir are both" in str(error.value)
+
+
+def test_directories_that_differ_in_case_only_are_rejected(MakeJsonFile):
+    with pytest.raises(AssertionError) as error:
+        MakeFoldersFromJsons([MakeJsonFile({"folders": {"releaseDir": "Out", "buildDir": "out"}})])
+    assert "folders.releaseDir and folders.buildDir are both" in str(error.value)
