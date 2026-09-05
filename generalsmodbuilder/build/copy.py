@@ -121,6 +121,24 @@ def SupportsMultiSource(sourceType: BuildFileType, targetType: BuildFileType) ->
     return False
 
 
+def RequiresTool(toolName: str):
+    """
+    Marks a copy function as requiring the named build tool, so that a build
+    can ask what a copy would need before performing the copy.
+    """
+    def decorate(function):
+        function.requiredToolName = toolName
+        return function
+    return decorate
+
+
+def GetRequiredToolNameOfCopyFunction(function) -> str:
+    """
+    Tells the build tool that the given copy function requires, or None when it requires none.
+    """
+    return getattr(function, "requiredToolName", None)
+
+
 class TextMarker:
     """
     A begin and an end token that mark a region of text.
@@ -377,8 +395,23 @@ class BuildCopy:
             multiCopyFunction: BuildMultiCopyFunctionT = self.__GetMultiCopyFunction(sources, target, targetType)
             return multiCopyFunction(sources, target, params)
 
-        copyFunction: BuildCopyFunctionT = self.__GetCopyFunction(sourceType, targetType)
+        copyFunction: BuildCopyFunctionT = self.__GetCopyFunction(sourceType, targetType, params)
         return copyFunction(sources[0], target, params)
+
+
+    def GetRequiredToolName(self, sources: list[str], target: str, params: ParamsT = None) -> str:
+        """
+        Tells the build tool that Copy would require for these files, without copying anything.
+        Returns None when the copy requires no tool.
+        """
+        targetType: BuildFileType = GetFileType(target)
+
+        if len(sources) > 1:
+            multiCopyFunction: BuildMultiCopyFunctionT = self.__GetMultiCopyFunction(sources, target, targetType)
+            return GetRequiredToolNameOfCopyFunction(multiCopyFunction)
+
+        copyFunction: BuildCopyFunctionT = self.__GetCopyFunction(GetFileType(sources[0]), targetType, params)
+        return GetRequiredToolNameOfCopyFunction(copyFunction)
 
 
     def Uncopy(self, file: str) -> bool:
@@ -463,7 +496,7 @@ class BuildCopy:
         print("Remove", file)
 
 
-    def __GetCopyFunction(self, sourceT: BuildFileType, targetT: BuildFileType) -> BuildCopyFunctionT:
+    def __GetCopyFunction(self, sourceT: BuildFileType, targetT: BuildFileType, params: ParamsT) -> BuildCopyFunctionT:
         if targetT == BuildFileType.ini:
             return self.__CopyToTextFile
 
@@ -474,7 +507,11 @@ class BuildCopy:
             return self.__CopyToTextFile
 
         if targetT == BuildFileType.dds and sourceT == BuildFileType.dds:
-            return self.__CopyToDDS
+            # Without processing params the file is simply copied and requires no tool.
+            if bool(params):
+                return self.__CopyToDDS
+            else:
+                return self.__CopyTo
 
         # Be mindful about what comes before and after this.
         if targetT == BuildFileType.Any or sourceT == targetT:
@@ -558,6 +595,7 @@ class BuildCopy:
         return BuildCopyResult(success=True, printType=BuildCopyPrintType.Copy)
 
 
+    @RequiresTool("gametextcompiler")
     def __CopySTRtoCSF(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
         tmpTarget: str = target + ".tmp"
         result: BuildCopyResult = self.__CopyToTextFileIfNeeded(source, tmpTarget, params)
@@ -586,6 +624,7 @@ class BuildCopy:
         return BuildCopyResult(success=success, printType=BuildCopyPrintType.Make)
 
 
+    @RequiresTool("gametextcompiler")
     def __CopyCSFtoSTR(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
         iparams = CaseInsensitiveDict(params)
         exec: str = self.__GetToolExePath("gametextcompiler")
@@ -601,10 +640,12 @@ class BuildCopy:
         return BuildCopyResult(success=success, printType=BuildCopyPrintType.Make)
 
 
+    @RequiresTool("gametextcompiler")
     def __MergeToCSF(self, sources: list[str], target: str, params: ParamsT) -> BuildCopyResult:
         return self.__MergeGameText(sources, target, params, BuildFileType.csf)
 
 
+    @RequiresTool("gametextcompiler")
     def __MergeToSTR(self, sources: list[str], target: str, params: ParamsT) -> BuildCopyResult:
         return self.__MergeGameText(sources, target, params, BuildFileType.str)
 
@@ -667,6 +708,7 @@ class BuildCopy:
         return BuildCopyResult(success=success, printType=BuildCopyPrintType.Make)
 
 
+    @RequiresTool("generalsbigcreator")
     def __CopyToBIG(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
         exec: str = self.__GetToolExePath("generalsbigcreator")
         args: list[str] = [exec,
@@ -783,15 +825,9 @@ class BuildCopy:
         return None
 
 
+    @RequiresTool("crunch")
     def __CopyToDDS(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
         tmpSourceType: BuildFileType = GetFileType(source)
-        targetType: BuildFileType = GetFileType(target)
-
-        if tmpSourceType == targetType:
-            if not bool(params):
-                # Simply copy the file when no processing is required.
-                return self.__CopyTo(source, target, params)
-
         tmpSource: str = source
 
         if (BuildCopy.__HasResizeParams(params) or
@@ -978,6 +1014,7 @@ class BuildCopy:
         return BuildCopy.__WriteTextFile(sources, target, TextTransform(params))
 
 
+    @RequiresTool("blender")
     def __CopyToW3D(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
         iparams = CaseInsensitiveDict(params)
         w3dExportHierarchy: bool = iparams.get("w3dExportHierarchy", True)
