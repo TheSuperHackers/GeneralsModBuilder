@@ -1,8 +1,18 @@
 import os.path
 from dataclasses import dataclass
-from generalsmodbuilder.data.common import FinalizeParsedData, ParamsT, ParsedData, VerifyParamsType
+from generalsmodbuilder.data.common import (
+    FinalizeParsedData, ParamsT, ParsedData, VerifyFormatVersion, VerifyParamsType)
 from generalsmodbuilder.util import JsonContext, JsonFile
 from generalsmodbuilder import util
+
+
+LATEST_RUNNER_VERSION = 1
+
+RUNNER_KEYS = {
+    "version", "gameExeFile", "gameExeArgs", "relevantGameDataFileTypes", "regularGameDataFiles",
+    "gameLanguageRegKey", "gameInstallPath", "gameInstallRegKey", "gameInstall2RegKey",
+    "tuczhGameInstallRegKey",
+}
 
 
 @dataclass(init=False)
@@ -102,6 +112,9 @@ def MakeRunnerFromJsons(jsonFiles: list[JsonFile]) -> Runner:
 
         if jRunner:
             ctx = root.Sub("runner")
+            ctx.VerifyKnownKeys(jRunner, RUNNER_KEYS)
+            VerifyFormatVersion(ctx, jRunner, LATEST_RUNNER_VERSION)
+
             runner.relGameExeFile = ctx.GetOptional(jRunner, "gameExeFile", str, runner.relGameExeFile)
             runner.gameExeArgs = ctx.GetOptional(jRunner, "gameExeArgs", dict, runner.gameExeArgs)
             runner.relevantGameDataFileTypes = ctx.GetOptional(

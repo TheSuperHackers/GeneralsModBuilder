@@ -4,7 +4,8 @@ from copy import copy
 from glob import glob
 from dataclasses import dataclass
 from enum import Enum, auto
-from generalsmodbuilder.data.common import FinalizeParsedData, ParamsT, ParsedData, VerifyParamsType
+from generalsmodbuilder.data.common import (
+    FinalizeParsedData, ParamsT, ParsedData, VerifyFormatVersion, VerifyParamsType)
 from generalsmodbuilder.util import JsonContext, JsonFile
 from generalsmodbuilder import util
 
@@ -60,6 +61,26 @@ def IsBundleInstallEvent(type: BundleEventType) -> bool:
 g_bundleEventTypeByJsonName: dict[str, BundleEventType] = {
     GetJsonBundleEventName(eventType): eventType for eventType in BundleEventType
 }
+
+
+LATEST_BUNDLES_VERSION = 1
+
+BUNDLES_KEYS = {"version", "items", "itemsPrefix", "itemsSuffix", "packs", "packsPrefix", "packsSuffix"}
+BUNDLE_EVENT_KEYS = {"script", "function", "kwargs"}
+BUNDLE_ITEM_KEYS = {
+    "name", "files", "namePrefix", "nameSuffix", "big", "bigSuffix", "setGameLanguageOnInstall",
+} | set(g_bundleEventTypeByJsonName)
+BUNDLE_PACK_KEYS = {
+    "name", "itemNames", "namePrefix", "nameSuffix", "install", "build", "setGameLanguageOnInstall",
+} | set(g_bundleEventTypeByJsonName)
+BUNDLE_FILE_KEYS = {
+    "sourceParent", "parent", "source", "target", "params", "sourceList", "sourceTargetList",
+    "multiSource", "multiSourceTargetList", "registryList",
+}
+# params is documented but is not implemented on an element of a sourceTargetList. It
+# stays a known key so that a configuration that carries it keeps working.
+BUNDLE_SOURCE_TARGET_KEYS = {"source", "target", "params"}
+BUNDLE_MULTI_SOURCE_TARGET_KEYS = {"multiSource", "target"}
 
 
 @dataclass(init=False)
@@ -518,6 +539,7 @@ def __MakeRegistryDefinition(ctx: JsonContext, jFile: dict, jsonDir: str) -> Bun
 
 def __MakeBundleFilesFromDict(ctx: JsonContext, jFile: dict, jsonDir: str) -> list[BundleFile]:
     files: list[BundleFile] = list()
+    ctx.VerifyKnownKeys(jFile, BUNDLE_FILE_KEYS)
 
     jSourceParent: str = ctx.GetOptional(jFile, "sourceParent", str)
     if jSourceParent == None:
@@ -602,6 +624,7 @@ def __MakeBundleFilesFromDict(ctx: JsonContext, jFile: dict, jsonDir: str) -> li
         jElement: dict[str, str]
         for index, jElement in enumerate(jSourceTargetList):
             elementCtx: JsonContext = ctx.Sub("sourceTargetList").At(index)
+            elementCtx.VerifyKnownKeys(jElement, BUNDLE_SOURCE_TARGET_KEYS)
             jElementSource: str = elementCtx.GetMandatory(jElement, "source", str)
             bundleFile = BundleFile()
             bundleFile.absSourceParent = sourceParent
@@ -620,6 +643,7 @@ def __MakeBundleFilesFromDict(ctx: JsonContext, jFile: dict, jsonDir: str) -> li
         jElement: dict[str, str | list[str]]
         for index, jElement in enumerate(jMultiSourceTargetList):
             elementCtx: JsonContext = ctx.Sub("multiSourceTargetList").At(index)
+            elementCtx.VerifyKnownKeys(jElement, BUNDLE_MULTI_SOURCE_TARGET_KEYS)
             files.append(MakeMultiSourceBundleFile(
                 elementCtx,
                 elementCtx.GetMandatory(jElement, "multiSource", list, elementType=str),
@@ -637,6 +661,7 @@ def __MakeBundleEventsFromDict(ctx: JsonContext, jThing: dict, jsonDir: str) -> 
         jEvent: dict = ctx.GetOptional(jThing, eventName, dict)
         if jEvent:
             eventCtx: JsonContext = ctx.Sub(eventName)
+            eventCtx.VerifyKnownKeys(jEvent, BUNDLE_EVENT_KEYS)
             event = BundleEvent()
             event.type = eventType
             event.absScript = os.path.join(jsonDir, eventCtx.GetMandatory(jEvent, "script", str))
@@ -649,6 +674,7 @@ def __MakeBundleEventsFromDict(ctx: JsonContext, jThing: dict, jsonDir: str) -> 
 
 def __MakeBundleItemFromDict(ctx: JsonContext, jItem: dict, jsonDir: str) -> BundleItem:
     item = BundleItem()
+    ctx.VerifyKnownKeys(jItem, BUNDLE_ITEM_KEYS)
     item.name = ctx.GetMandatory(jItem, "name", str)
     item.namePrefix = ctx.GetOptional(jItem, "namePrefix", str, item.namePrefix)
     item.nameSuffix = ctx.GetOptional(jItem, "nameSuffix", str, item.nameSuffix)
@@ -669,6 +695,7 @@ def __MakeBundleItemFromDict(ctx: JsonContext, jItem: dict, jsonDir: str) -> Bun
 
 def __MakeBundlePackFromDict(ctx: JsonContext, jPack: dict, jsonDir: str) -> BundlePack:
     pack = BundlePack()
+    ctx.VerifyKnownKeys(jPack, BUNDLE_PACK_KEYS)
     pack.name = ctx.GetMandatory(jPack, "name", str)
     pack.namePrefix = ctx.GetOptional(jPack, "namePrefix", str, pack.namePrefix)
     pack.nameSuffix = ctx.GetOptional(jPack, "nameSuffix", str, pack.nameSuffix)
@@ -696,6 +723,9 @@ def AddBundlePacksFromJsons(jsonFiles: list[JsonFile], bundles: Bundles) -> None
 
         if jBundles:
             ctx = root.Sub("bundles")
+            ctx.VerifyKnownKeys(jBundles, BUNDLES_KEYS)
+            VerifyFormatVersion(ctx, jBundles, LATEST_BUNDLES_VERSION)
+
             # The prefixes are deliberately not reset per json file. A prefix declared
             # in one file keeps applying to the packs of the following files.
             jPacksPrefix: str = ctx.GetOptional(jBundles, "packsPrefix", str, jPacksPrefix)
@@ -729,6 +759,9 @@ def AddBundleItemsFromJsons(jsonFiles: list[JsonFile], bundles: Bundles) -> None
 
         if jBundles:
             ctx = root.Sub("bundles")
+            ctx.VerifyKnownKeys(jBundles, BUNDLES_KEYS)
+            VerifyFormatVersion(ctx, jBundles, LATEST_BUNDLES_VERSION)
+
             # The prefixes are deliberately not reset per json file. A prefix declared
             # in one file keeps applying to the items of the following files.
             jItemsPrefix: str = ctx.GetOptional(jBundles, "itemsPrefix", str, jItemsPrefix)

@@ -9,8 +9,21 @@ from enum import Enum, auto
 from dataclasses import dataclass
 from generalsmodbuilder import util
 from generalsmodbuilder.util import JsonContext, JsonFile
-from generalsmodbuilder.data.common import FinalizeParsedData, ParamsT, ParsedData, VerifyParamsType
+from generalsmodbuilder.data.common import (
+    FinalizeParsedData, ParamsT, ParsedData, VerifyFormatVersion, VerifyParamsType)
 from generalsmodbuilder.build.common import ParamsToArgs
+
+
+LATEST_TOOLS_VERSION = 2
+
+TOOLS_KEYS = {"version", "aliases", "list"}
+# info is not consumed. It describes a tool for whoever reads the configuration.
+TOOL_KEYS = {"name", "version", "info", "enabled", "files"}
+TOOL_FILE_KEYS = {
+    "url", "target", "extractDir", "md5", "sha256", "size", "callList", "runnable",
+    "autoDeleteAfterInstall", "skipIfRunnableExists",
+}
+TOOL_CALL_KEYS = {"call", "callArgs"}
 
 
 class InstallResultCode(Enum):
@@ -317,6 +330,7 @@ def __ProcessAliases(thing: str | ParamsT, aliases: dict) -> str | ParamsT:
 
 def __MakeToolFileFromDict(ctx: JsonContext, jFile: dict, rootDir: str, aliases: dict) -> ToolFile:
     toolFile = ToolFile()
+    ctx.VerifyKnownKeys(jFile, TOOL_FILE_KEYS)
 
     toolFile.url = ctx.GetOptional(jFile, "url", str, toolFile.url)
     toolFile.md5 = ctx.GetOptional(jFile, "md5", str, toolFile.md5)
@@ -342,6 +356,7 @@ def __MakeToolFileFromDict(ctx: JsonContext, jFile: dict, rootDir: str, aliases:
         jCall: dict
         for index, jCall in enumerate(jCallList):
             callCtx: JsonContext = ctx.Sub("callList").At(index)
+            callCtx.VerifyKnownKeys(jCall, TOOL_CALL_KEYS)
             instruction = ToolCallInstruction()
             jCallPath: str = callCtx.GetMandatory(jCall, "call", str)
             callCtx.Verify(bool(jCallPath), "must not be empty", key="call")
@@ -356,6 +371,7 @@ def __MakeToolFileFromDict(ctx: JsonContext, jFile: dict, rootDir: str, aliases:
 
 def __MakeToolFromDict(ctx: JsonContext, jTool: dict, rootDir: str, jVersion: int, aliases: dict) -> Tool:
     tool = Tool()
+    ctx.VerifyKnownKeys(jTool, TOOL_KEYS)
     tool.name = ctx.GetMandatory(jTool, "name", str)
     if jVersion <= 1:
         # Version 1 wrote the tool version as a number rather than as a string.
@@ -382,8 +398,8 @@ def MakeToolsFromJsons(jsonFiles: list[JsonFile], rootDir: str=None) -> ToolsT:
         jTools: dict = root.GetOptional(jsonFile.data, "tools", dict)
         if jTools:
             ctx = root.Sub("tools")
-            LATEST_VERSION = 2
-            jVersion: int = ctx.GetOptional(jTools, "version", int, LATEST_VERSION)
+            ctx.VerifyKnownKeys(jTools, TOOLS_KEYS)
+            jVersion: int = VerifyFormatVersion(ctx, jTools, LATEST_TOOLS_VERSION)
             jsonDir: str = util.GetAbsFileDir(jsonFile.path)
             # Without an override, every tools json roots its own tools in its own
             # directory. The root of one file must not carry over to the next one.

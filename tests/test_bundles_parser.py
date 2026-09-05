@@ -122,12 +122,18 @@ def test_item_prefixes_carry_over_to_a_later_json_file(MakeJsonFile, MakeFile):
 
 
 def test_an_entry_naming_no_source_key_is_rejected(MakeJsonFile):
-    # A misspelled source key used to make the entry build nothing at all, in silence.
+    # Such an entry used to build nothing at all, in silence.
     with pytest.raises(AssertionError) as error:
-        MakeBundlesFromJsons([MakeJsonFile(MakeItemsJson([{"sourceParent": "Src", "sourceLst": ["A.ini"]}]))])
+        MakeBundlesFromJsons([MakeJsonFile(MakeItemsJson([{"sourceParent": "Src", "params": {}}]))])
     assert str(error.value).endswith(
         "bundles.items[0] 'SampleItem'.files[0] must name at least one of 'source', 'sourceList', "
         "'sourceTargetList', 'multiSource' or 'multiSourceTargetList', otherwise it builds no file at all")
+
+
+def test_a_misspelled_source_key_is_rejected_as_unknown(MakeJsonFile):
+    with pytest.raises(AssertionError) as error:
+        MakeBundlesFromJsons([MakeJsonFile(MakeItemsJson([{"sourceParent": "Src", "sourceLst": ["A.ini"]}]))])
+    assert "bundles.items[0] 'SampleItem'.files[0].sourceLst is not a known key" in str(error.value)
 
 
 @pytest.mark.parametrize("key", ["source", "sourceList", "sourceTargetList", "multiSource", "multiSourceTargetList"])

@@ -1,8 +1,13 @@
 import os
 from dataclasses import dataclass
-from generalsmodbuilder.data.common import FinalizeParsedData, ParsedData
+from generalsmodbuilder.data.common import FinalizeParsedData, ParsedData, VerifyFormatVersion
 from generalsmodbuilder.util import JsonFile
 from generalsmodbuilder import util
+
+
+LATEST_BUILD_VERSION = 1
+
+BUILD_KEYS = {"version", "files"}
 
 
 @dataclass(init=False)
@@ -34,6 +39,9 @@ def AddBuildFilesFromJsons(jsonFiles: list[JsonFile], buildFiles: BuildFiles) ->
 
         if jBuild:
             ctx = root.Sub("build")
+            ctx.VerifyKnownKeys(jBuild, BUILD_KEYS)
+            VerifyFormatVersion(ctx, jBuild, LATEST_BUILD_VERSION)
+
             jFiles: list = ctx.GetOptional(jBuild, "files", list, default=[], elementType=str)
             jFile: str
             for index, jFile in enumerate(jFiles):

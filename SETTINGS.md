@@ -1,5 +1,17 @@
 ## Configuration settings
 
+### Keys and versions
+
+Every key is listed below. A key that is not listed is rejected, naming the file, the
+section and the key, because a misspelled key would otherwise be ignored in silence and
+behave as if it had never been written.
+
+Every section carries a `version`, which is the version of the json format that the
+section is written in, not the version of the mod. It exists so that the parsers can
+adapt to older and newer data once a breaking change is made to the format. A section
+without one is read as the current version, and a version newer than the build
+understands is rejected instead of being read as if it were the current one.
+
 ### Bundle Items
 
 | Setting                                           | Mandatory | Default | Description                                                                                                         |
@@ -19,8 +31,8 @@
 | bundles.items[].files[].sourceList                | no        |         | List of source file(s), target file is automatic, alternative to 'source', accepts wild cards \*.\* or A.\* or \*.B |
 | bundles.items[].files[].sourceTargetList          | no        |         | List of source and target file(s), alternative to 'source' and 'target', accepts wild cards \*.\* or A.\* or \*.B   |
 | bundles.items[].files[].sourceTargetList[].source | yes       |         | Source file as part of the list                                                                                     |
-| bundles.items[].files[].sourceTargetList[].target | yes       |         | Target file as part of the list                                                                                     |
-| bundles.items[].files[].sourceTargetList[].params | no        |         | Not implemented                                                                                                     |
+| bundles.items[].files[].sourceTargetList[].target | no        | source  | Target file as part of the list, defaults to the source file                                                        |
+| bundles.items[].files[].sourceTargetList[].params | no        |         | Accepted but not implemented. Set 'params' on the file entry instead                                                |
 | bundles.items[].files[].multiSource                    | no  |         | List of source files that build one 'target' file together, accepts wild cards \*.\* or A.\* or \*.B, see Multi Source Files |
 | bundles.items[].files[].multiSourceTargetList          | no  |         | List of multi source and target file(s), alternative to 'multiSource' and 'target'                                  |
 | bundles.items[].files[].multiSourceTargetList[].multiSource | yes |    | List of source files that build one target file together, accepts wild cards \*.\* or A.\* or \*.B                  |
@@ -29,6 +41,16 @@
 | bundles.items[].onPreBuild.script                 | yes       |         | Python script called on event                                                                                       |
 | bundles.items[].onPreBuild.function               | no        | OnEvent | Python script function called                                                                                       |
 | bundles.items[].onPreBuild.kwargs                 | no        |         | Arbitrary keyword arguments passed to Python script function                                                        |
+
+A file entry must name at least one of `source`, `sourceList`, `sourceTargetList`,
+`multiSource` or `multiSourceTargetList`, and none of them may be empty, because an
+entry that names no source builds no file at all. A `target` may only be given together
+with a `source` or a `multiSource`, because `sourceList` and `sourceTargetList` derive
+their targets from their own source files and would ignore it.
+
+`itemsPrefix`, `itemsSuffix`, `packsPrefix` and `packsSuffix` are not reset per file. A
+prefix declared in one configuration file keeps applying to the items and packs of every
+file that is read after it, until another file declares its own.
 
 ### Multi Source Files
 
@@ -86,6 +108,31 @@ multiple source files into it.
 | bundles.items[].onPreBuild.script   | yes       |         | Python script called on event                                                            |
 | bundles.items[].onPreBuild.function | no        | OnEvent | Python script function called                                                            |
 | bundles.items[].onPreBuild.kwargs   | no        |         | Arbitrary keyword arguments passed to Python script function                             |
+
+### Tools
+
+| Setting                                   | Mandatory | Default | Description                                                                     |
+|-------------------------------------------|-----------|---------|---------------------------------------------------------------------------------|
+| tools.version                             | no        | 2       | json Format version                                                             |
+| tools.aliases                             | no        |         | Text that is replaced in target, extractDir, call and callArgs                  |
+| tools.list[].name                         | yes       |         | Tool name, used to look the tool up                                             |
+| tools.list[].version                      | no        |         | Tool version. A string from format version 2 on, a number before that           |
+| tools.list[].info                         | no        |         | Describes the tool. Not used by the build                                       |
+| tools.list[].enabled                      | no        | True    | Tool is parsed?                                                                 |
+| tools.list[].files[].target               | yes       |         | Path the file is installed to                                                   |
+| tools.list[].files[].url                  | no        |         | Address the file is downloaded from. Without it the file must already be there  |
+| tools.list[].files[].md5                  | no        |         | Expected md5 of the target file                                                 |
+| tools.list[].files[].sha256               | no        |         | Expected sha256 of the target file                                              |
+| tools.list[].files[].size                 | no        |         | Expected size of the target file in bytes                                       |
+| tools.list[].files[].extractDir           | no        |         | Directory a zip target is extracted into                                        |
+| tools.list[].files[].runnable             | no        | False   | File is the executable of the tool. Exactly one file of a tool must be          |
+| tools.list[].files[].autoDeleteAfterInstall | no      | False   | Target file is deleted once it is installed                                     |
+| tools.list[].files[].skipIfRunnableExists | no        | False   | File is skipped when the executable of the tool is already installed            |
+| tools.list[].files[].callList[].call      | yes       |         | Program that is run after the file is installed                                 |
+| tools.list[].files[].callList[].callArgs  | no        |         | Arguments passed to that program                                                |
+
+A file that declares none of `md5`, `sha256` and `size` is only checked for existence,
+so an interrupted or substituted download is accepted as installed.
 
 ### Unique Names
 
