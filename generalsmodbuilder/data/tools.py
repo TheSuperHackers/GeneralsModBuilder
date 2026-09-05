@@ -333,8 +333,12 @@ def __MakeToolFileFromDict(jFile: dict, rootDir: str, aliases: dict) -> ToolFile
     toolFile = ToolFile()
 
     toolFile.url = jFile.get("url", toolFile.url)
-    toolFile.absTarget = util.JoinPathIfValid(None, rootDir, jFile.get("target"))
-    toolFile.absExtractDir = util.JoinPathIfValid(toolFile.absExtractDir, rootDir, jFile.get("extractDir"))
+    # Aliases are replaced before the path is joined to the root directory, so that an
+    # alias that stands for an absolute path yields that path instead of being appended
+    # to the root directory.
+    toolFile.absTarget = util.JoinPathIfValid(None, rootDir, __ProcessAliases(jFile.get("target"), aliases))
+    toolFile.absExtractDir = util.JoinPathIfValid(
+        toolFile.absExtractDir, rootDir, __ProcessAliases(jFile.get("extractDir"), aliases))
     toolFile.md5 = jFile.get("md5", toolFile.md5)
     toolFile.sha256 = jFile.get("sha256", toolFile.sha256)
     toolFile.size = jFile.get("size", toolFile.size)
@@ -343,18 +347,14 @@ def __MakeToolFileFromDict(jFile: dict, rootDir: str, aliases: dict) -> ToolFile
     toolFile.autoDeleteAfterInstall = jFile.get("autoDeleteAfterInstall", toolFile.autoDeleteAfterInstall)
     toolFile.skipIfRunnableExists = jFile.get("skipIfRunnableExists", toolFile.skipIfRunnableExists)
 
-    toolFile.absTarget = __ProcessAliases(toolFile.absTarget, aliases)
-    toolFile.absExtractDir = __ProcessAliases(toolFile.absExtractDir, aliases)
-
     if jCallList is not None:
         toolFile.callInstructions.clear()
         jCall: dict
         for jCall in jCallList:
             instruction = ToolCallInstruction()
-            instruction.absCall = util.JoinPathIfValid(instruction.absCall, rootDir,jCall.get("call", instruction.absCall))
-            instruction.callArgs = jCall.get("callArgs", instruction.callArgs)
-            instruction.absCall = __ProcessAliases(instruction.absCall, aliases)
-            instruction.callArgs = __ProcessAliases(instruction.callArgs, aliases)
+            instruction.absCall = util.JoinPathIfValid(
+                instruction.absCall, rootDir, __ProcessAliases(jCall.get("call", instruction.absCall), aliases))
+            instruction.callArgs = __ProcessAliases(jCall.get("callArgs", instruction.callArgs), aliases)
             toolFile.callInstructions.append(instruction)
 
     return toolFile
@@ -388,11 +388,12 @@ def MakeToolsFromJsons(jsonFiles: list[JsonFile], rootDir: str=None) -> ToolsT:
             LATEST_VERSION = 2
             jVersion: int = jTools.get("version", LATEST_VERSION)
             jsonDir: str = util.GetAbsFileDir(jsonFile.path)
-            if not rootDir:
-                rootDir = jsonDir
+            # Without an override, every tools json roots its own tools in its own
+            # directory. The root of one file must not carry over to the next one.
+            fileRootDir: str = rootDir if rootDir else jsonDir
             aliases: dict = {
                 "{THIS_DIR}": jsonDir,
-                "{ROOT_DIR}": rootDir
+                "{ROOT_DIR}": fileRootDir
             }
             if jAliases := jTools.get("aliases"):
                 aliases.update(jAliases)
@@ -402,7 +403,7 @@ def MakeToolsFromJsons(jsonFiles: list[JsonFile], rootDir: str=None) -> ToolsT:
                 for jTool in jList:
                     jEnabled: bool = jTool.get("enabled", True)
                     if jEnabled:
-                        tool = __MakeToolFromDict(jTool, rootDir, jVersion, aliases)
+                        tool = __MakeToolFromDict(jTool, fileRootDir, jVersion, aliases)
                         tools[tool.name] = tool
 
     for tool in tools.values():
