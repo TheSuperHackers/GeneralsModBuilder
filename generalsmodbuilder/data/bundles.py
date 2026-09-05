@@ -120,6 +120,9 @@ class BundleFile(ParsedData):
     absSourceFiles: list[str]
     isMultiSource: bool
     relTargetFile: str
+    # params and registryDef are shared with every other file that the same json entry
+    # builds, which includes every file that a wildcard in that entry expands into.
+    # Neither of them may be modified after parsing.
     params: ParamsT
     registryDef: BundleRegistryDefinition
 
@@ -531,16 +534,39 @@ def __MakeBundleFilesFromDict(ctx: JsonContext, jFile: dict, jsonDir: str) -> li
     jMultiSource: list = ctx.GetOptional(jFile, "multiSource", list, elementType=str)
     jMultiSourceTargetList: list = ctx.GetOptional(jFile, "multiSourceTargetList", list, elementType=dict)
 
+    # Is tested first, so that an entry naming both keeps being reported as that.
     util.Verify(not (jSource and jMultiSource), "Bundle file cannot specify 'source' and 'multiSource' together, because both would build the same 'target' file")
+
+    # An entry that names no source key at all builds nothing, which is never intended
+    # and hides a misspelled key. An empty source collection does the same.
+    jSourceKeys: dict = {
+        "source": jSource,
+        "sourceList": jSourceList,
+        "sourceTargetList": jSourceTargetList,
+        "multiSource": jMultiSource,
+        "multiSourceTargetList": jMultiSourceTargetList,
+    }
+    jPresentKeys: list[str] = [key for key, value in jSourceKeys.items() if value != None]
+    ctx.Verify(bool(jPresentKeys),
+               "must name at least one of 'source', 'sourceList', 'sourceTargetList', "
+               "'multiSource' or 'multiSourceTargetList', otherwise it builds no file at all")
+    for key in jPresentKeys:
+        ctx.Verify(bool(jSourceKeys[key]), "must not be empty, otherwise it builds no file at all", key=key)
+
+    # The targets of a sourceList and of a sourceTargetList are derived from their own
+    # source files, so a target next to them alone would be silently ignored.
+    if jTarget != None:
+        ctx.Verify(jSource != None or jMultiSource != None,
+                   "is only used together with 'source' or 'multiSource'", key="target")
 
     def MakeSourceFile(fileCtx: JsonContext, jElement: str, key: str) -> str:
         fileCtx.Verify(bool(jElement), "must not be empty", key=key)
         return os.path.join(sourceParent, jElement)
 
     def MakeMultiSourceBundleFile(multiCtx: JsonContext, jMultiSourceElement: list, jMultiTarget: str) -> BundleFile:
-        util.Verify(bool(jMultiSourceElement), "BundleFile.multiSource cannot be empty")
-        util.Verify(bool(jMultiTarget), "BundleFile.target is mandatory with 'multiSource', because it cannot be derived from a single source file name")
-        util.Verify(not "*" in jMultiTarget, f"BundleFile.target '{jMultiTarget}' cannot contain a wildcard with 'multiSource', because it cannot be derived from a single source file name")
+        multiCtx.Verify(bool(jMultiSourceElement), "must not be empty, otherwise it builds no file at all", key="multiSource")
+        multiCtx.Verify(bool(jMultiTarget), "is mandatory with 'multiSource', because it cannot be derived from a single source file name", key="target")
+        multiCtx.Verify(not "*" in jMultiTarget, f"'{jMultiTarget}' cannot contain a wildcard with 'multiSource', because it cannot be derived from a single source file name", key="target")
 
         bundleFile = BundleFile()
         bundleFile.absSourceParent = sourceParent
