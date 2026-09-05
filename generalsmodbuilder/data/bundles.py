@@ -203,6 +203,23 @@ class BundleItem:
         self.setGameLanguageOnInstall = ""
         self.events = BundleEventsT()
 
+    def GetBigFileName(self) -> str:
+        """
+        Returns the name of the big file that is built from this item.
+        Is only meaningful when this item is built as big file.
+        """
+        return self.namePrefix + self.name + self.nameSuffix + ".big"
+
+    def GetPackTargetFileNames(self) -> list[str]:
+        """
+        Returns the names of the files that this item contributes to a bundle pack that lists it.
+        A big item contributes its big file. Any other item contributes all of its target files.
+        """
+        if self.isBig:
+            return [self.GetBigFileName() + self.bigSuffix]
+        else:
+            return [file.relTargetFile for file in self.files]
+
     def VerifyTypes(self) -> None:
         util.VerifyType(self.name, str, "BundleItem.name")
         util.VerifyType(self.files, list, "BundleItem.files")
@@ -225,11 +242,10 @@ class BundleItem:
         util.Verify(not self.namePrefix or util.IsValidPathName(self.namePrefix), f"BundleItem.namePrefix '{self.namePrefix}' has invalid name")
         util.Verify(not self.nameSuffix or util.IsValidPathName(self.nameSuffix), f"BundleItem.nameSuffix '{self.nameSuffix}' has invalid name")
         util.Verify(not self.bigSuffix or util.IsValidPathName(self.bigSuffix), f"BundleItem.bigSuffix '{self.bigSuffix}' has invalid name")
-        relTargetFilesSet = set[str]()
         for file in self.files:
             file.VerifyValues()
-            util.Verify(not file.relTargetFile in relTargetFilesSet, f"BundleItem '{self.name}' attempts to create target file '{file.relTargetFile}' more than once.")
-            relTargetFilesSet.add(file.relTargetFile)
+        # All files of an item are built into the same item directory or big file.
+        util.VerifyUniqueNames([file.relTargetFile for file in self.files], f"BundleItem '{self.name}' target file")
         for event in self.events.values():
             event.VerifyValues()
 
@@ -344,6 +360,12 @@ class BundlePack:
         self.setGameLanguageOnInstall = ""
         self.events = BundleEventsT()
 
+    def GetReleaseFileName(self) -> str:
+        """
+        Returns the name of the release zip file that is built from this pack.
+        """
+        return self.namePrefix + self.name + self.nameSuffix + ".zip"
+
     def VerifyTypes(self) -> None:
         util.VerifyType(self.name, str, "BundlePack.name")
         util.VerifyType(self.itemNames, list, "BundlePack.itemNames")
@@ -364,6 +386,7 @@ class BundlePack:
         util.Verify(util.IsValidPathName(self.name), f"BundlePack.name '{self.name}' has invalid name")
         util.Verify(not self.namePrefix or util.IsValidPathName(self.namePrefix), f"BundlePack.namePrefix '{self.namePrefix}' has invalid name")
         util.Verify(not self.nameSuffix or util.IsValidPathName(self.nameSuffix), f"BundlePack.nameSuffix '{self.nameSuffix}' has invalid name")
+        util.VerifyUniqueNames(self.itemNames, f"BundlePack '{self.name}' item name")
         for event in self.events.values():
             event.VerifyValues()
 
@@ -478,17 +501,42 @@ class Bundles:
         for pack in self.packs:
             pack.VerifyValues()
         self.__VerifyUniqueItemNames()
+        self.__VerifyUniqueItemBigFileNames()
+        self.__VerifyUniquePackNames()
+        self.__VerifyUniquePackReleaseFileNames()
         self.__VerifyKnownItemsInPacks()
+        self.__VerifyUniquePackTargetFileNames()
         if timer.GetElapsedSeconds() > util.PERFORMANCE_TIMER_THRESHOLD:
             print(f"Bundles.VerifyValues completed in {timer.GetElapsedSecondsString()} s")
 
     def __VerifyUniqueItemNames(self) -> None:
-        itemLen = len(self.items)
-        for a in range(itemLen):
-            for b in range(a + 1, itemLen):
-                nameA: str = self.items[a].name
-                nameB: str = self.items[b].name
-                util.Verify(nameA != nameB, f"Bundles.items has items with duplicate name '{nameA}'")
+        # Each item is built into its own directory that is named after the item.
+        util.VerifyUniqueNames([item.name for item in self.items], "Bundles.items item name")
+
+    def __VerifyUniqueItemBigFileNames(self) -> None:
+        # The big files of all items are built into the same directory.
+        util.VerifyUniqueNames([item.GetBigFileName() for item in self.items if item.isBig], "Bundles.items big file name")
+
+    def __VerifyUniquePackNames(self) -> None:
+        # Each pack is built into its own directory that is named after the pack.
+        util.VerifyUniqueNames([pack.name for pack in self.packs], "Bundles.packs pack name")
+
+    def __VerifyUniquePackReleaseFileNames(self) -> None:
+        # The release files of all packs are built into the same directory.
+        util.VerifyUniqueNames([pack.GetReleaseFileName() for pack in self.packs], "Bundles.packs release file name")
+
+    def __VerifyUniquePackTargetFileNames(self) -> None:
+        # All items of a pack are built into the same pack directory.
+        # Is verified after __VerifyKnownItemsInPacks, so that every listed item is known to exist.
+        pack: BundlePack
+        itemName: str
+        for pack in self.packs:
+            targetFileNames = list[str]()
+            for itemName in pack.itemNames:
+                item: BundleItem = self.FindItemByName(itemName)
+                assert item != None
+                targetFileNames.extend(item.GetPackTargetFileNames())
+            util.VerifyUniqueNames(targetFileNames, f"BundlePack '{pack.name}' target file")
 
     def __VerifyKnownItemsInPacks(self) -> None:
         for pack in self.packs:

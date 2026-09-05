@@ -86,3 +86,18 @@ multiple source files into it.
 | bundles.items[].onPreBuild.script   | yes       |         | Python script called on event                                                            |
 | bundles.items[].onPreBuild.function | no        | OnEvent | Python script function called                                                            |
 | bundles.items[].onPreBuild.kwargs   | no        |         | Arbitrary keyword arguments passed to Python script function                             |
+
+### Unique Names
+
+Names that end up as a file or a directory must be unique, so that one build step cannot
+silently overwrite the result of another one. Names are compared case insensitively, because
+file names are case insensitive on Windows and in big archives, therefore two names that
+differ in upper and lower case only name the same file.
+
+The build rejects a configuration when
+
+- an item builds the same target file more than once,
+- two items have the same name, or build a big file of the same name,
+- two packs have the same name, or build a release .zip file of the same name,
+- a pack lists the same item more than once,
+- two items of the same pack build a file of the same name into that pack.
