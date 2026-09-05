@@ -119,3 +119,75 @@ def test_item_prefixes_carry_over_to_a_later_json_file(MakeJsonFile, MakeFile):
     bundles = MakeBundlesFromJsons([first, second])
     assert bundles.FindItemByName("First").GetBigFileName() == "001_First.big"
     assert bundles.FindItemByName("Second").GetBigFileName() == "001_Second.big"
+
+
+def test_an_entry_naming_no_source_key_is_rejected(MakeJsonFile):
+    # A misspelled source key used to make the entry build nothing at all, in silence.
+    with pytest.raises(AssertionError) as error:
+        MakeBundlesFromJsons([MakeJsonFile(MakeItemsJson([{"sourceParent": "Src", "sourceLst": ["A.ini"]}]))])
+    assert str(error.value).endswith(
+        "bundles.items[0] 'SampleItem'.files[0] must name at least one of 'source', 'sourceList', "
+        "'sourceTargetList', 'multiSource' or 'multiSourceTargetList', otherwise it builds no file at all")
+
+
+@pytest.mark.parametrize("key", ["source", "sourceList", "sourceTargetList", "multiSource", "multiSourceTargetList"])
+def test_an_empty_source_collection_is_rejected(MakeJsonFile, key):
+    empty = "" if key == "source" else []
+    with pytest.raises(AssertionError) as error:
+        MakeBundlesFromJsons([MakeJsonFile(MakeItemsJson([{"sourceParent": "Src", key: empty}]))])
+    assert str(error.value).endswith(
+        f"bundles.items[0] 'SampleItem'.files[0].{key} must not be empty, otherwise it builds no file at all")
+
+
+@pytest.mark.parametrize("key", ["sourceList", "sourceTargetList"])
+def test_a_target_that_nothing_consumes_is_rejected(MakeJsonFile, MakeFile, key):
+    MakeFile("Src/A.ini")
+    value = ["A.ini"] if key == "sourceList" else [{"source": "A.ini", "target": "A.ini"}]
+    with pytest.raises(AssertionError) as error:
+        MakeBundlesFromJsons([MakeJsonFile(MakeItemsJson([
+            {"sourceParent": "Src", key: value, "target": "Ignored.ini"}]))])
+    assert str(error.value).endswith(
+        "bundles.items[0] 'SampleItem'.files[0].target is only used together with 'source' or 'multiSource'")
+
+
+def test_a_target_next_to_multi_source_and_a_source_target_list_stays_valid(MakeJsonFile, MakeFile):
+    # The target belongs to the multiSource half. A live sample config relies on this.
+    MakeFile("Src/A.ini")
+    MakeFile("Src/B.ini")
+    bundles = MakeBundlesFromJsons([MakeJsonFile(MakeItemsJson([{
+        "sourceParent": "Src",
+        "multiSource": ["A.ini"],
+        "target": "Joined.ini",
+        "sourceTargetList": [{"source": "B.ini", "target": "Renamed.ini"}],
+    }]))])
+    assert sorted(f.relTargetFile for f in bundles.items[0].files) == ["Joined.ini", "Renamed.ini"]
+
+
+def test_a_multi_source_without_a_target_is_rejected(MakeJsonFile, MakeFile):
+    MakeFile("Src/A.ini")
+    with pytest.raises(AssertionError) as error:
+        MakeBundlesFromJsons([MakeJsonFile(MakeItemsJson([
+            {"sourceParent": "Src", "multiSource": ["A.ini"]}]))])
+    assert "target is mandatory with 'multiSource'" in str(error.value)
+
+
+def test_a_multi_source_target_wildcard_is_rejected(MakeJsonFile, MakeFile):
+    MakeFile("Src/A.ini")
+    with pytest.raises(AssertionError) as error:
+        MakeBundlesFromJsons([MakeJsonFile(MakeItemsJson([
+            {"sourceParent": "Src", "multiSource": ["A.ini"], "target": "Data/*.ini"}]))])
+    assert "cannot contain a wildcard with 'multiSource'" in str(error.value)
+
+
+def test_source_and_multi_source_together_are_rejected(MakeJsonFile, MakeFile):
+    MakeFile("Src/A.ini")
+    with pytest.raises(AssertionError) as error:
+        MakeBundlesFromJsons([MakeJsonFile(MakeItemsJson([
+            {"sourceParent": "Src", "source": "A.ini", "multiSource": ["A.ini"], "target": "J.ini"}]))])
+    assert "cannot specify 'source' and 'multiSource' together" in str(error.value)
+
+
+def test_an_item_without_files_stays_valid(MakeJsonFile):
+    # The sample project ships a deliberate empty item.
+    bundles = MakeBundlesFromJsons([MakeJsonFile(MakeItemsJson([]))])
+    assert bundles.items[0].files == []
