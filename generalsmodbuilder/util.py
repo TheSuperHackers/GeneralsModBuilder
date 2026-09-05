@@ -3,7 +3,12 @@ import subprocess
 import sys
 import time
 import types
-import winreg
+try:
+    import winreg
+except ModuleNotFoundError:
+    # winreg only exists on Windows. The registry functions below are no-ops
+    # elsewhere, so that this module still imports on other platforms.
+    winreg = None
 import json
 import hashlib
 import pickle
@@ -180,7 +185,11 @@ class YamlFile:
         VerifyType(self.data, dict, "YamlFile.data")
 
 
-def GetRegKeyValue(path, root=winreg.HKEY_LOCAL_MACHINE) -> Union[int, str, None]:
+def GetRegKeyValue(path, root=None) -> Union[int, str, None]:
+    if winreg == None:
+        return None
+    if root == None:
+        root = winreg.HKEY_LOCAL_MACHINE
     path, name = str.split(path, sep=':')
     try:
         with winreg.OpenKey(root, path, 0, winreg.KEY_READ|winreg.KEY_WOW64_32KEY) as key:
@@ -193,7 +202,11 @@ def GetRegKeyValue(path, root=winreg.HKEY_LOCAL_MACHINE) -> Union[int, str, None
         return None
 
 
-def SetRegKeyValue(path: str, value: Union[int, str], root=winreg.HKEY_LOCAL_MACHINE, regtype=None) -> bool:
+def SetRegKeyValue(path: str, value: Union[int, str], root=None, regtype=None) -> bool:
+    if winreg == None:
+        return False
+    if root == None:
+        root = winreg.HKEY_LOCAL_MACHINE
     try:
         path, name = str.split(path, sep=':')
         with winreg.OpenKey(root, path, 0, winreg.KEY_WRITE|winreg.KEY_READ|winreg.KEY_WOW64_32KEY) as key:
