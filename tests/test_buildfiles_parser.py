@@ -28,3 +28,17 @@ def test_a_missing_file_is_reported_by_its_path(MakeJsonFile):
 
 def test_no_build_section_yields_no_files(MakeJsonFile):
     assert MakeBuildFilesFromJsons([MakeJsonFile({})]).absFiles == []
+
+
+def test_a_non_json_entry_is_rejected(MakeJsonFile, MakeFile):
+    # It used to pass the file check and then be dropped by the extension filter.
+    MakeFile("Notes.txt")
+    with pytest.raises(AssertionError) as error:
+        MakeBuildFilesFromJsons([MakeJsonFile({"build": {"files": ["Notes.txt"]}})])
+    assert "is not a json file" in str(error.value)
+
+
+def test_an_empty_entry_is_rejected(MakeJsonFile):
+    with pytest.raises(AssertionError) as error:
+        MakeBuildFilesFromJsons([MakeJsonFile({"build": {"files": [""]}})])
+    assert str(error.value).endswith("build.files[0] must not be empty")

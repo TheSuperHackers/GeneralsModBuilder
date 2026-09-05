@@ -16,15 +16,33 @@ from generalsmodbuilder import util
 
 
 def CreateJsonFileList(configPaths: list[str]) -> list[JsonFile]:
-    jsonFiles: list[JsonFile] = []
-    for configPath in configPaths:
-        if (util.HasFileExt(configPath, "json")):
-            jsonFiles.append(JsonFile(configPath))
+    """
+    Reads the given configuration files and every json file that they pull in through
+    their build section, to any depth. A file that several of them list, or that is
+    reached again through a cycle, is read once, so that including it twice does not
+    build its bundle items twice.
 
-    buildFiles: BuildFiles = MakeBuildFilesFromJsons(jsonFiles)
-    for absFile in buildFiles.absFiles:
-        if (util.HasFileExt(absFile, "json")):
-            jsonFiles.append(JsonFile(absFile))
+    The files that were given keep their order and come first, because a later file
+    overrides an earlier one and prefixes carry over from one file to the next.
+    """
+    jsonFiles: list[JsonFile] = []
+    readPaths: set[str] = set()
+    pendingPaths: list[str] = [path for path in configPaths if util.HasFileExt(path, "json")]
+
+    while pendingPaths:
+        path: str = pendingPaths.pop(0)
+
+        # Identifies the file itself, so that two paths that reach it name it once.
+        readPath: str = os.path.normcase(os.path.realpath(path))
+        if readPath in readPaths:
+            continue
+        readPaths.add(readPath)
+
+        jsonFile = JsonFile(path)
+        jsonFiles.append(jsonFile)
+
+        buildFiles: BuildFiles = MakeBuildFilesFromJsons([jsonFile])
+        pendingPaths.extend(buildFiles.absFiles)
 
     return jsonFiles
 
