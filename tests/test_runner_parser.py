@@ -75,3 +75,28 @@ def test_a_later_json_wins_over_an_earlier_one(MakeJsonFile, MakeFile, tmp_path)
     second = MakeJsonFile(MakeRunnerJson(), "B/Second.json")
     runner = MakeRunnerFromJsons([first, second])
     assert runner.absGameInstallDir == os.path.join(str(tmp_path), "B", "Game")
+
+
+def test_a_missing_game_installation_names_where_it_looked(MakeJsonFile, tmp_path):
+    # An empty install dir used to be normalized into the current directory, which
+    # passes isdir, so the failure blamed the executable path instead.
+    with pytest.raises(AssertionError) as error:
+        MakeRunnerFromJsons([MakeJsonFile(MakeRunnerJson())])
+    message = str(error.value)
+    assert "game installation directory containing 'generals.exe' was not found" in message
+    assert "runner.gameInstallPath" in message
+    assert os.path.join(str(tmp_path), "Game") in message
+
+
+def test_a_missing_game_exe_file_is_reported_as_such(MakeJsonFile, GameDir):
+    jRunner = MakeRunnerJson()
+    del jRunner["runner"]["gameExeFile"]
+    with pytest.raises(AssertionError) as error:
+        MakeRunnerFromJsons([MakeJsonFile(jRunner)])
+    assert str(error.value).startswith("runner.gameExeFile is not set by any configuration file")
+
+
+def test_game_data_files_are_not_resolved_against_the_working_directory(MakeJsonFile):
+    # They used to be joined to ".", which made them resolve wherever the build ran.
+    with pytest.raises(AssertionError):
+        MakeRunnerFromJsons([MakeJsonFile(MakeRunnerJson(regularGameDataFiles=["Data/**/*.big"]))])

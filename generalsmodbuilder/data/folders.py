@@ -28,6 +28,11 @@ class Folders(ParsedData):
     def VerifyValues(self) -> None:
         util.Verify(util.IsValidPathName(self.absReleaseDir), f"folders.releaseDir '{self.absReleaseDir}' is not a valid path name")
         util.Verify(util.IsValidPathName(self.absBuildDir), f"folders.buildDir '{self.absBuildDir}' is not a valid path name")
+        # Compared the way file names are compared on Windows, where two paths that
+        # differ in upper and lower case only name the same directory.
+        util.Verify(self.absReleaseDir.lower() != self.absBuildDir.lower(),
+                    f"folders.releaseDir and folders.buildDir are both '{self.absReleaseDir}', "
+                    f"but the release is built out of the build directory and would overwrite it")
 
 
 def MakeFoldersFromJsons(jsonFiles: list[JsonFile]) -> Folders:
