@@ -67,3 +67,36 @@ def test_a_sort_entry_that_is_not_a_dict_names_the_index(MakeJsonFile, MakeFile)
 
 def test_no_changelog_section_yields_no_records(MakeJsonFile):
     assert MakeChangeConfigFromJsons([MakeJsonFile({})]).records == []
+
+
+def test_an_unrecognized_sort_direction_is_rejected(MakeJsonFile, MakeFile):
+    # It used to become Sort.Zero, which the generator compares against neither
+    # direction, so the sort rule was silently dropped.
+    MakeFile("Log.yaml")
+    with pytest.raises(AssertionError) as error:
+        MakeChangeConfigFromJsons([MakeJsonFile(MakeChangelogJson(sortList=[{"date": "ascendign"}]))])
+    assert str(error.value).endswith(
+        "changelog.records[0].sortList[0].date is 'ascendign', but must be 'ascending' or 'descending'")
+
+
+def test_a_sort_entry_naming_neither_date_nor_label_is_rejected(MakeJsonFile, MakeFile):
+    MakeFile("Log.yaml")
+    with pytest.raises(AssertionError) as error:
+        MakeChangeConfigFromJsons([MakeJsonFile(MakeChangelogJson(sortList=[{"labl": "Fix"}]))])
+    assert str(error.value).endswith(
+        "changelog.records[0].sortList[0] must name exactly one of 'date' or 'label'")
+
+
+def test_a_sort_entry_naming_both_date_and_label_is_rejected(MakeJsonFile, MakeFile):
+    MakeFile("Log.yaml")
+    with pytest.raises(AssertionError) as error:
+        MakeChangeConfigFromJsons([MakeJsonFile(MakeChangelogJson(
+            sortList=[{"date": "ascending", "label": "Fix"}]))])
+    assert str(error.value).endswith(
+        "changelog.records[0].sortList[0] must name exactly one of 'date' or 'label'")
+
+
+def test_a_sort_direction_is_case_insensitive(MakeJsonFile, MakeFile):
+    MakeFile("Log.yaml")
+    config = MakeChangeConfigFromJsons([MakeJsonFile(MakeChangelogJson(sortList=[{"date": "Descending"}]))])
+    assert config.records[0].sortDefinitions[0].sort == Sort.Descending

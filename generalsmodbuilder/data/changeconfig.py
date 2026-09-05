@@ -7,13 +7,12 @@ from generalsmodbuilder import util
 
 
 class Sort(Enum):
-    Zero = auto()
     Ascending = auto()
     Descending = auto()
 
 
 @dataclass(init=False)
-class SortDefinition(ParsedData):
+class SortDefinition:
     isDate: bool
     label: str
     sort: Sort
@@ -28,9 +27,6 @@ class SortDefinition(ParsedData):
 
     def IsLabelSort(self) -> bool:
         return not self.isDate and bool(self.label)
-
-    def VerifyValues(self) -> None:
-        util.Verify(self.IsDateSort() or self.IsLabelSort(), "changelog.records.sortList entry is neither a date nor a label sort")
 
 
 @dataclass(init=False)
@@ -61,8 +57,6 @@ class ChangeConfigRecord(ParsedData):
         # The source files are already verified while their wildcards are resolved.
         for file in self.absTargetFiles:
             util.Verify(util.IsValidPathName(file), f"changelog.records.targetList '{file}' is not a valid file name")
-        for definition in self.sortDefinitions:
-            definition.VerifyValues()
 
 
 @dataclass(init=False)
@@ -85,13 +79,13 @@ class ChangeConfig(ParsedData):
             record.VerifyValues()
 
 
-def __MakeSortFromStr(jStr: str) -> Sort:
-    jStrLower: str = jStr.lower()
-    if jStrLower == Sort.Ascending.name.lower():
-        return Sort.Ascending
-    if jStrLower == Sort.Descending.name.lower():
-        return Sort.Descending
-    return Sort.Zero
+def __MakeSortFromStr(ctx: JsonContext, jStr: str) -> Sort:
+    for sort in Sort:
+        if jStr.lower() == sort.name.lower():
+            return sort
+
+    validNames: str = " or ".join(f"'{sort.name.lower()}'" for sort in Sort)
+    raise AssertionError(f"{ctx.Name('date')} is '{jStr}', but must be {validNames}")
 
 
 def __MakeSortDefinitionsFromList(ctx: JsonContext, jSortList: list) -> list[SortDefinition]:
@@ -100,20 +94,20 @@ def __MakeSortDefinitionsFromList(ctx: JsonContext, jSortList: list) -> list[Sor
 
     for index, jSortLabel in enumerate(jSortList):
         sortCtx: JsonContext = ctx.At(index)
-
         jDate: str = sortCtx.GetOptional(jSortLabel, "date", str)
-        if jDate:
-            definition = SortDefinition()
-            definition.isDate = True
-            definition.sort = __MakeSortFromStr(jDate)
-            definitions.append(definition)
-            continue
-
         jLabel: str = sortCtx.GetOptional(jSortLabel, "label", str)
-        if jLabel:
-            definition = SortDefinition()
+
+        # An entry that names neither sorts by nothing and used to be dropped in silence.
+        # An entry that names both is ambiguous, because only the date would be used.
+        sortCtx.Verify(bool(jDate) != bool(jLabel), "must name exactly one of 'date' or 'label'")
+
+        definition = SortDefinition()
+        if jDate:
+            definition.isDate = True
+            definition.sort = __MakeSortFromStr(sortCtx, jDate)
+        else:
             definition.label = jLabel
-            definitions.append(definition)
+        definitions.append(definition)
 
     return definitions
 
