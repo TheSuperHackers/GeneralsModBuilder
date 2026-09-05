@@ -1,7 +1,8 @@
 import os.path
 from enum import Enum, auto
 from dataclasses import dataclass
-from generalsmodbuilder.util import JsonFile
+from generalsmodbuilder.data.common import FinalizeParsedData, ParsedData
+from generalsmodbuilder.util import JsonContext, JsonFile
 from generalsmodbuilder import util
 
 
@@ -12,7 +13,7 @@ class Sort(Enum):
 
 
 @dataclass(init=False)
-class SortDefinition:
+class SortDefinition(ParsedData):
     isDate: bool
     label: str
     sort: Sort
@@ -28,17 +29,12 @@ class SortDefinition:
     def IsLabelSort(self) -> bool:
         return not self.isDate and bool(self.label)
 
-    def VerifyTypes(self) -> None:
-        util.VerifyType(self.isDate, bool, "SortDefinition.isDate")
-        util.VerifyType(self.label, str, "SortDefinition.label")
-        util.VerifyType(self.sort, Sort, "SortDefinition.sort")
-
     def VerifyValues(self) -> None:
-        util.Verify(self.IsDateSort() or self.IsLabelSort(), "SortDefinition is neither date nor label sort")
+        util.Verify(self.IsDateSort() or self.IsLabelSort(), "changelog.records.sortList entry is neither a date nor a label sort")
 
 
 @dataclass(init=False)
-class ChangeConfigRecord:
+class ChangeConfigRecord(ParsedData):
     absSourceFiles: list[str]
     absTargetFiles: list[str]
     sortDefinitions: list[SortDefinition]
@@ -46,8 +42,8 @@ class ChangeConfigRecord:
     excludeLabels: list[str]
 
     def __init__(self):
-        self.absSourceFiles = None
-        self.absTargetFiles = None
+        self.absSourceFiles = list[str]()
+        self.absTargetFiles = list[str]()
         self.sortDefinitions = list[SortDefinition]()
         self.includeLabels = list[str]()
         self.excludeLabels = list[str]()
@@ -58,37 +54,19 @@ class ChangeConfigRecord:
         for i, file in enumerate(self.absTargetFiles):
             self.absTargetFiles[i] = os.path.normpath(file)
 
-    def VerifyTypes(self) -> None:
-        util.VerifyType(self.absSourceFiles, list, "ChangeConfigRecord.absSourceFiles")
-        util.VerifyType(self.absTargetFiles, list, "ChangeConfigRecord.absTargetFiles")
-        util.VerifyType(self.sortDefinitions, list, "ChangeConfigRecord.sortLabels")
-        util.VerifyType(self.includeLabels, list, "ChangeConfigRecord.includeLabels")
-        util.VerifyType(self.excludeLabels, list, "ChangeConfigRecord.excludeLabels")
-        for file in self.absSourceFiles:
-            util.VerifyType(file, str, "ChangeConfigRecord.absSourceFiles.value")
-        for file in self.absTargetFiles:
-            util.VerifyType(file, str, "ChangeConfigRecord.absTargetFiles.value")
-        for definition in self.sortDefinitions:
-            util.VerifyType(definition, SortDefinition, "ChangeConfigRecord.sortLabels.value")
-            definition.VerifyTypes()
-        for label in self.includeLabels:
-            util.VerifyType(label, str, "ChangeConfigRecord.includeLabels.value")
-        for label in self.excludeLabels:
-            util.VerifyType(label, str, "ChangeConfigRecord.excludeLabels.value")
-
-    def VerifyValues(self) -> None:
-        # self.absSourceFiles is already verified in ResolveWildcards function.
-        for file in self.absTargetFiles:
-            util.Verify(util.IsValidPathName(file), f"ChangeConfigRecord.absTargetFiles.value '{file}' is not a valid file name")
-        for definition in self.sortDefinitions:
-            definition.VerifyValues()
-
     def ResolveWildcards(self) -> None:
         self.absSourceFiles = util.ResolveFileWildcards(self.absSourceFiles)
 
+    def VerifyValues(self) -> None:
+        # The source files are already verified while their wildcards are resolved.
+        for file in self.absTargetFiles:
+            util.Verify(util.IsValidPathName(file), f"changelog.records.targetList '{file}' is not a valid file name")
+        for definition in self.sortDefinitions:
+            definition.VerifyValues()
+
 
 @dataclass(init=False)
-class ChangeConfig:
+class ChangeConfig(ParsedData):
     records: list[ChangeConfigRecord]
 
     def __init__(self):
@@ -98,20 +76,13 @@ class ChangeConfig:
         for record in self.records:
             record.Normalize()
 
-    def VerifyTypes(self) -> None:
-        util.VerifyType(self.records, list, "ChangeConfig.records")
-        for record in self.records:
-            record.VerifyTypes()
-
-    def VerifyValues(self) -> None:
-        for record in self.records:
-            record.VerifyValues()
-
     def ResolveWildcards(self) -> None:
         for record in self.records:
             record.ResolveWildcards()
 
-
+    def VerifyValues(self) -> None:
+        for record in self.records:
+            record.VerifyValues()
 
 
 def __MakeSortFromStr(jStr: str) -> Sort:
@@ -123,11 +94,14 @@ def __MakeSortFromStr(jStr: str) -> Sort:
     return Sort.Zero
 
 
-def __MakeSortDefinitionsFromList(jSortLabelList: list) -> list[SortDefinition]:
+def __MakeSortDefinitionsFromList(ctx: JsonContext, jSortList: list) -> list[SortDefinition]:
     definitions = list[SortDefinition]()
     jSortLabel: dict
-    for jSortLabel in jSortLabelList:
-        jDate: str = util.GetCheckedOptional(jSortLabel, "date", str)
+
+    for index, jSortLabel in enumerate(jSortList):
+        sortCtx: JsonContext = ctx.At(index)
+
+        jDate: str = sortCtx.GetOptional(jSortLabel, "date", str)
         if jDate:
             definition = SortDefinition()
             definition.isDate = True
@@ -135,7 +109,7 @@ def __MakeSortDefinitionsFromList(jSortLabelList: list) -> list[SortDefinition]:
             definitions.append(definition)
             continue
 
-        jLabel: str = util.GetCheckedOptional(jSortLabel, "label", str)
+        jLabel: str = sortCtx.GetOptional(jSortLabel, "label", str)
         if jLabel:
             definition = SortDefinition()
             definition.label = jLabel
@@ -144,44 +118,25 @@ def __MakeSortDefinitionsFromList(jSortLabelList: list) -> list[SortDefinition]:
     return definitions
 
 
-def __MakeAbsFilesFromList(jTargetList: dict, jsonDir: str) -> list[str]:
-    files = list[str]()
-    jFile: str
-    for jFile in jTargetList:
-        jFile = os.path.join(jsonDir, jFile)
-        files.append(jFile)
-
-    return files
+def __MakeAbsFilesFromList(jFileList: list, jsonDir: str) -> list[str]:
+    return [os.path.join(jsonDir, jFile) for jFile in jFileList]
 
 
-def __MakeChangeConfigRecordFromDict(jRecord: dict, jsonDir: str) -> ChangeConfigRecord:
+def __MakeChangeConfigRecordFromDict(ctx: JsonContext, jRecord: dict, jsonDir: str) -> ChangeConfigRecord:
     record = ChangeConfigRecord()
 
-    jSourceList: list = util.GetCheckedOptional(jRecord, "sourceList", list)
-    if jSourceList:
-        record.absSourceFiles = __MakeAbsFilesFromList(jSourceList, jsonDir)
+    record.absSourceFiles = __MakeAbsFilesFromList(
+        ctx.GetMandatory(jRecord, "sourceList", list, elementType=str), jsonDir)
+    record.absTargetFiles = __MakeAbsFilesFromList(
+        ctx.GetMandatory(jRecord, "targetList", list, elementType=str), jsonDir)
 
-    jTargetList: list = util.GetCheckedOptional(jRecord, "targetList", list)
-    if jTargetList:
-        record.absTargetFiles = __MakeAbsFilesFromList(jTargetList, jsonDir)
+    jSortList: list = ctx.GetOptional(jRecord, "sortList", list, default=[], elementType=dict)
+    record.sortDefinitions = __MakeSortDefinitionsFromList(ctx.Sub("sortList"), jSortList)
 
-    jSortList: list = util.GetCheckedOptional(jRecord, "sortList", list)
-    if jSortList:
-        record.sortDefinitions = __MakeSortDefinitionsFromList(jSortList)
-
-    record.includeLabels = jRecord.get("includeLabelList", record.includeLabels)
-    record.excludeLabels = jRecord.get("excludeLabelList", record.excludeLabels)
+    record.includeLabels = ctx.GetOptional(jRecord, "includeLabelList", list, record.includeLabels, elementType=str)
+    record.excludeLabels = ctx.GetOptional(jRecord, "excludeLabelList", list, record.excludeLabels, elementType=str)
 
     return record
-
-
-def __MakeChangeConfigRecordsFromList(jRecords: list, jsonDir: str) -> list[ChangeConfigRecord]:
-    records = list[ChangeConfigRecord]()
-    jRecord: dict
-    for jRecord in jRecords:
-        record: ChangeConfigRecord = __MakeChangeConfigRecordFromDict(jRecord, jsonDir)
-        records.append(record)
-    return records
 
 
 def MakeChangeConfigFromJsons(jsonFiles: list[JsonFile]) -> ChangeConfig:
@@ -189,17 +144,16 @@ def MakeChangeConfigFromJsons(jsonFiles: list[JsonFile]) -> ChangeConfig:
 
     for jsonFile in jsonFiles:
         jsonDir: str = util.GetAbsFileDir(jsonFile.path)
-        jChangelog: dict = util.GetCheckedOptional(jsonFile.data, "changelog", dict)
+        root = util.JsonContext(jsonFile.path)
+        jChangelog: dict = root.GetOptional(jsonFile.data, "changelog", dict)
 
         if jChangelog:
-            jRecords: list = util.GetCheckedOptional(jChangelog, "records", list)
+            ctx = root.Sub("changelog")
+            jRecords: list = ctx.GetOptional(jChangelog, "records", list, default=[], elementType=dict)
+            jRecord: dict
+            for index, jRecord in enumerate(jRecords):
+                config.records.append(
+                    __MakeChangeConfigRecordFromDict(ctx.Sub("records").At(index), jRecord, jsonDir))
 
-            if jRecords:
-                records: list[ChangeConfigRecord] = __MakeChangeConfigRecordsFromList(jRecords, jsonDir)
-                config.records.extend(records)
-
-    config.VerifyTypes()
-    config.Normalize()
-    config.ResolveWildcards()
-    config.VerifyValues()
+    FinalizeParsedData(config)
     return config
