@@ -4,9 +4,8 @@ from copy import copy
 from glob import glob
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Union
-from generalsmodbuilder.data.common import ParamsT, VerifyParamsType
-from generalsmodbuilder.util import JsonFile
+from generalsmodbuilder.data.common import FinalizeParsedData, ParamsT, ParsedData, VerifyParamsType
+from generalsmodbuilder.util import JsonContext, JsonFile
 from generalsmodbuilder import util
 
 
@@ -57,8 +56,14 @@ def IsBundleInstallEvent(type: BundleEventType) -> bool:
             type == BundleEventType.OnFinishBuildInstallBundlePack)
 
 
+# The json name of every event type, built once instead of per item and per pack.
+g_bundleEventTypeByJsonName: dict[str, BundleEventType] = {
+    GetJsonBundleEventName(eventType): eventType for eventType in BundleEventType
+}
+
+
 @dataclass(init=False)
-class BundleEvent:
+class BundleEvent(ParsedData):
     type: BundleEventType
     absScript: str
     funcName: str
@@ -78,15 +83,10 @@ class BundleEvent:
         name, ext = os.path.splitext(base)
         return name
 
-    def VerifyTypes(self) -> None:
-        util.VerifyType(self.type, BundleEventType, "BundleEvent.type")
-        util.VerifyType(self.absScript, str, "BundleEvent.absScript")
-        util.VerifyType(self.funcName, str, "BundleEvent.functionName")
-        util.VerifyType(self.kwargs, dict, "BundleEvent.kwargs")
-
     def VerifyValues(self) -> None:
-        util.Verify(os.path.isfile(self.absScript), f"BundleEvent.absScript '{self.absScript}' is not a valid file")
-        util.Verify(len(self.funcName) > 0, "BundleEvent.functionName cannot be empty")
+        eventName: str = GetJsonBundleEventName(self.type)
+        util.Verify(os.path.isfile(self.absScript), f"bundles {eventName}.script '{self.absScript}' is not a valid file")
+        util.Verify(len(self.funcName) > 0, f"bundles {eventName}.function cannot be empty")
 
     def Normalize(self) -> None:
         self.absScript = os.path.normpath(self.absScript)
@@ -100,35 +100,22 @@ class BundleRegistryDefinition:
     paths: list[str]
     crc32: int
 
-    def __init__(self, paths: list[str]):
-        if paths:
-            self.paths = paths
-            self.__VerifyTypes()
-            self.__Normalize()
-            self.__VerifyValues()
-            pathsStr = "".join(self.paths)
-            pathsBytes = bytes(pathsStr, encoding="utf-8")
-            self.crc32 = zlib.crc32(pathsBytes)
-        else:
-            self.paths = None
-            self.crc32 = 0
-
-    def __VerifyTypes(self) -> None:
-        util.VerifyType(self.paths, list, "BundleFileHashRegistry.paths")
+    def __init__(self, absPaths: list[str]):
+        # One definition is shared by every bundle file of the entry that declares it,
+        # and a wildcard entry can expand into very many of those. It is therefore
+        # normalized and verified here, once, instead of once per file through the
+        # phases that the other data objects run.
+        self.paths = [os.path.normpath(path) for path in absPaths]
         for path in self.paths:
-            util.VerifyType(path, str, "BundleFileHashRegistry.paths.value")
+            util.Verify(os.path.isfile(path), f"bundles.items.files.registryList '{path}' is not a valid file")
 
-    def __VerifyValues(self) -> None:
-        for path in self.paths:
-            util.Verify(os.path.isfile(path), f"BundleFileHashRegistry.paths.value '{path}' is not a valid file")
-
-    def __Normalize(self) -> None:
-        for index, path in enumerate(self.paths):
-            self.paths[index] = os.path.normpath(path)
+        # Identifies the set of registry files, so it is built from the normalized paths.
+        pathsBytes = bytes("".join(self.paths), encoding="utf-8")
+        self.crc32 = zlib.crc32(pathsBytes)
 
 
 @dataclass(init=False)
-class BundleFile:
+class BundleFile(ParsedData):
     absSourceParent: str
     absSourceFiles: list[str]
     isMultiSource: bool
@@ -160,20 +147,14 @@ class BundleFile:
         return absSourceFile.removeprefix(self.absSourceParent).removeprefix("\\").removeprefix("/")
 
     def VerifyTypes(self) -> None:
-        util.VerifyType(self.absSourceParent, str, "BundleFile.absSourceParent")
-        util.VerifyType(self.absSourceFiles, list, "BundleFile.absSourceFiles")
-        util.VerifyType(self.isMultiSource, bool, "BundleFile.isMultiSource")
-        util.Verify(len(self.absSourceFiles) > 0, "BundleFile.absSourceFiles cannot be empty")
-        for absSourceFile in self.absSourceFiles:
-            util.VerifyType(absSourceFile, str, "BundleFile.absSourceFiles.value")
-        util.VerifyType(self.relTargetFile, str, "BundleFile.relTargetFile")
-        VerifyParamsType(self.params, "BundleFile.params")
-        util.VerifyType(self.registryDef, Union[BundleRegistryDefinition, None], "BundleFile.registry")
+        # The json values are verified where they are read. What a read cannot express
+        # is the types of the values inside a params dict.
+        VerifyParamsType(self.params, "bundles.items.files.params")
 
     def VerifyValues(self) -> None:
         # self.absSourceParent, self.absSourceFiles are already verified in ResolveWildcards function.
-        util.Verify(util.IsValidPathName(self.relTargetFile), f"BundleFile.relTargetFile '{self.relTargetFile}' is not a valid file name")
-        util.Verify(not os.path.isabs(self.relTargetFile), f"BundleFile.relTargetFile '{self.relTargetFile}' is not a relative path")
+        util.Verify(util.IsValidPathName(self.relTargetFile), f"bundles.items.files.target '{self.relTargetFile}' is not a valid file name")
+        util.Verify(not os.path.isabs(self.relTargetFile), f"bundles.items.files.target '{self.relTargetFile}' is not a relative path")
 
     def Normalize(self) -> None:
         self.absSourceParent = os.path.normpath(self.absSourceParent)
@@ -183,7 +164,7 @@ class BundleFile:
 
 
 @dataclass(init=False)
-class BundleItem:
+class BundleItem(ParsedData):
     name: str
     files: list[BundleFile]
     namePrefix: str
@@ -221,31 +202,18 @@ class BundleItem:
             return [file.relTargetFile for file in self.files]
 
     def VerifyTypes(self) -> None:
-        util.VerifyType(self.name, str, "BundleItem.name")
-        util.VerifyType(self.files, list, "BundleItem.files")
-        util.VerifyType(self.namePrefix, str, "BundleItem.namePrefix")
-        util.VerifyType(self.nameSuffix, str, "BundleItem.nameSuffix")
-        util.VerifyType(self.isBig, bool, "BundleItem.isBig")
-        util.VerifyType(self.bigSuffix, str, "BundleItem.bigSuffix")
-        util.VerifyType(self.setGameLanguageOnInstall, str, "BundleItem.setGameLanguageOnInstall")
-        util.VerifyType(self.events, dict, "BundleItem.events")
         for file in self.files:
-            util.VerifyType(file, BundleFile, "BundleItem.files.value")
             file.VerifyTypes()
-        for etype, event in self.events.items():
-            util.VerifyType(etype, BundleEventType, "BundleItem.events.key")
-            util.VerifyType(event, BundleEvent, "BundleItem.events.value")
-            event.VerifyTypes()
 
     def VerifyValues(self) -> None:
-        util.Verify(util.IsValidPathName(self.name), f"BundleItem.name '{self.name}' has invalid name")
-        util.Verify(not self.namePrefix or util.IsValidPathName(self.namePrefix), f"BundleItem.namePrefix '{self.namePrefix}' has invalid name")
-        util.Verify(not self.nameSuffix or util.IsValidPathName(self.nameSuffix), f"BundleItem.nameSuffix '{self.nameSuffix}' has invalid name")
-        util.Verify(not self.bigSuffix or util.IsValidPathName(self.bigSuffix), f"BundleItem.bigSuffix '{self.bigSuffix}' has invalid name")
+        util.Verify(util.IsValidPathName(self.name), f"bundles.items.name '{self.name}' has invalid name")
+        util.Verify(not self.namePrefix or util.IsValidPathName(self.namePrefix), f"bundles.items.namePrefix '{self.namePrefix}' has invalid name")
+        util.Verify(not self.nameSuffix or util.IsValidPathName(self.nameSuffix), f"bundles.items.nameSuffix '{self.nameSuffix}' has invalid name")
+        util.Verify(not self.bigSuffix or util.IsValidPathName(self.bigSuffix), f"bundles.items.bigSuffix '{self.bigSuffix}' has invalid name")
         for file in self.files:
             file.VerifyValues()
         # All files of an item are built into the same item directory or big file.
-        util.VerifyUniqueNames([file.relTargetFile for file in self.files], f"BundleItem '{self.name}' target file")
+        util.VerifyUniqueNames([file.relTargetFile for file in self.files], f"bundles.items '{self.name}' target file")
         for event in self.events.values():
             event.VerifyValues()
 
@@ -339,7 +307,7 @@ class BundleItem:
 
 
 @dataclass(init=False)
-class BundlePack:
+class BundlePack(ParsedData):
     name: str
     itemNames: list[str]
     namePrefix: str
@@ -365,27 +333,11 @@ class BundlePack:
         """
         return self.namePrefix + self.name + self.nameSuffix + ".zip"
 
-    def VerifyTypes(self) -> None:
-        util.VerifyType(self.name, str, "BundlePack.name")
-        util.VerifyType(self.itemNames, list, "BundlePack.itemNames")
-        util.VerifyType(self.namePrefix, str, "BundlePack.namePrefix")
-        util.VerifyType(self.nameSuffix, str, "BundlePack.nameSuffix")
-        util.VerifyType(self.allowBuild, bool, "BundlePack.allowBuild")
-        util.VerifyType(self.allowInstall, bool, "BundlePack.allowInstall")
-        util.VerifyType(self.setGameLanguageOnInstall, str, "BundlePack.setGameLanguageOnInstall")
-        util.VerifyType(self.events, dict, "BundlePack.events")
-        for itemName in self.itemNames:
-            util.VerifyType(itemName, str, "BundlePack.itemNames.value")
-        for type,event in self.events.items():
-            util.VerifyType(type, BundleEventType, "BundlePack.events.key")
-            util.VerifyType(event, BundleEvent, "BundlePack.events.value")
-            event.VerifyTypes()
-
     def VerifyValues(self) -> None:
-        util.Verify(util.IsValidPathName(self.name), f"BundlePack.name '{self.name}' has invalid name")
-        util.Verify(not self.namePrefix or util.IsValidPathName(self.namePrefix), f"BundlePack.namePrefix '{self.namePrefix}' has invalid name")
-        util.Verify(not self.nameSuffix or util.IsValidPathName(self.nameSuffix), f"BundlePack.nameSuffix '{self.nameSuffix}' has invalid name")
-        util.VerifyUniqueNames(self.itemNames, f"BundlePack '{self.name}' item name")
+        util.Verify(util.IsValidPathName(self.name), f"bundles.packs.name '{self.name}' has invalid name")
+        util.Verify(not self.namePrefix or util.IsValidPathName(self.namePrefix), f"bundles.packs.namePrefix '{self.namePrefix}' has invalid name")
+        util.Verify(not self.nameSuffix or util.IsValidPathName(self.nameSuffix), f"bundles.packs.nameSuffix '{self.nameSuffix}' has invalid name")
+        util.VerifyUniqueNames(self.itemNames, f"bundles.packs '{self.name}' item name")
         for event in self.events.values():
             event.VerifyValues()
 
@@ -395,7 +347,7 @@ class BundlePack:
 
 
 @dataclass(init=False)
-class Bundles:
+class Bundles(ParsedData):
     items: list[BundleItem]
     packs: list[BundlePack]
 
@@ -484,14 +436,8 @@ class Bundles:
         return bool(packs)
 
     def VerifyTypes(self) -> None:
-        util.VerifyType(self.items, list, "Bundles.items")
-        util.VerifyType(self.packs, list, "Bundles.packs")
         for item in self.items:
-            util.VerifyType(item, BundleItem, "Bundles.items.value")
             item.VerifyTypes()
-        for pack in self.packs:
-            util.VerifyType(pack, BundlePack, "Bundles.packs.value")
-            pack.VerifyTypes()
 
     def VerifyValues(self) -> None:
         timer = util.Timer()
@@ -510,19 +456,19 @@ class Bundles:
 
     def __VerifyUniqueItemNames(self) -> None:
         # Each item is built into its own directory that is named after the item.
-        util.VerifyUniqueNames([item.name for item in self.items], "Bundles.items item name")
+        util.VerifyUniqueNames([item.name for item in self.items], "bundles.items item name")
 
     def __VerifyUniqueItemBigFileNames(self) -> None:
         # The big files of all items are built into the same directory.
-        util.VerifyUniqueNames([item.GetBigFileName() for item in self.items if item.isBig], "Bundles.items big file name")
+        util.VerifyUniqueNames([item.GetBigFileName() for item in self.items if item.isBig], "bundles.items big file name")
 
     def __VerifyUniquePackNames(self) -> None:
         # Each pack is built into its own directory that is named after the pack.
-        util.VerifyUniqueNames([pack.name for pack in self.packs], "Bundles.packs pack name")
+        util.VerifyUniqueNames([pack.name for pack in self.packs], "bundles.packs pack name")
 
     def __VerifyUniquePackReleaseFileNames(self) -> None:
         # The release files of all packs are built into the same directory.
-        util.VerifyUniqueNames([pack.GetReleaseFileName() for pack in self.packs], "Bundles.packs release file name")
+        util.VerifyUniqueNames([pack.GetReleaseFileName() for pack in self.packs], "bundles.packs release file name")
 
     def __VerifyUniquePackTargetFileNames(self) -> None:
         # All items of a pack are built into the same pack directory.
@@ -535,7 +481,7 @@ class Bundles:
                 item: BundleItem = self.FindItemByName(itemName)
                 assert item != None
                 targetFileNames.extend(item.GetPackTargetFileNames())
-            util.VerifyUniqueNames(targetFileNames, f"BundlePack '{pack.name}' target file")
+            util.VerifyUniqueNames(targetFileNames, f"bundles.packs '{pack.name}' target file")
 
     def __VerifyKnownItemsInPacks(self) -> None:
         for pack in self.packs:
@@ -545,7 +491,7 @@ class Bundles:
                     if packItemName == item.name:
                         found = True
                         break
-                util.Verify(found, f"Bundles.packs with pack '{pack.name}' references unknown bundle item '{packItemName}'")
+                util.Verify(found, f"bundles.packs '{pack.name}' references unknown bundle item '{packItemName}'")
 
     def Normalize(self) -> None:
         for item in self.items:
@@ -558,41 +504,50 @@ class Bundles:
             item.ResolveWildcards()
 
 
-def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
+def __MakeRegistryDefinition(ctx: JsonContext, jFile: dict, jsonDir: str) -> BundleRegistryDefinition:
+    jRegistryList: list = ctx.GetOptional(jFile, "registryList", list, elementType=str)
+    if not jRegistryList:
+        return None
+
+    # Builds a new list, so that the parsed json data of the caller is left untouched.
+    return BundleRegistryDefinition([os.path.join(jsonDir, jPath) for jPath in jRegistryList])
+
+
+def __MakeBundleFilesFromDict(ctx: JsonContext, jFile: dict, jsonDir: str) -> list[BundleFile]:
     files: list[BundleFile] = list()
 
-    jSourceParent: str = jFile.get("sourceParent")
+    jSourceParent: str = ctx.GetOptional(jFile, "sourceParent", str)
     if jSourceParent == None:
-        jSourceParent = jFile.get("parent") # Legacy name
+        jSourceParent = ctx.GetOptional(jFile, "parent", str) # Legacy name
     sourceParent: str = util.JoinPathIfValid(jsonDir, jsonDir, jSourceParent)
 
-    params: ParamsT = jFile.get("params", ParamsT())
+    params: ParamsT = ctx.GetOptional(jFile, "params", dict, default=ParamsT())
+    registryDef: BundleRegistryDefinition = __MakeRegistryDefinition(ctx, jFile, jsonDir)
 
-    registryPaths: list[str] = jFile.get("registryList", list[str]())
-    for index, path in enumerate(registryPaths):
-        registryPaths[index] = os.path.join(jsonDir, path)
-    registryDef = BundleRegistryDefinition(registryPaths) if registryPaths else None
-
-    jSource: str = jFile.get("source")
-    jSourceList: list = jFile.get("sourceList")
-    jSourceTargetList: list = jFile.get("sourceTargetList")
-    jMultiSource: list = jFile.get("multiSource")
-    jMultiSourceTargetList: list = jFile.get("multiSourceTargetList")
+    jSource: str = ctx.GetOptional(jFile, "source", str)
+    jTarget: str = ctx.GetOptional(jFile, "target", str)
+    jSourceList: list = ctx.GetOptional(jFile, "sourceList", list, elementType=str)
+    jSourceTargetList: list = ctx.GetOptional(jFile, "sourceTargetList", list, elementType=dict)
+    jMultiSource: list = ctx.GetOptional(jFile, "multiSource", list, elementType=str)
+    jMultiSourceTargetList: list = ctx.GetOptional(jFile, "multiSourceTargetList", list, elementType=dict)
 
     util.Verify(not (jSource and jMultiSource), "Bundle file cannot specify 'source' and 'multiSource' together, because both would build the same 'target' file")
 
-    def MakeMultiSourceBundleFile(jMultiSourceElement: list, jTarget: str) -> BundleFile:
-        util.VerifyType(jMultiSourceElement, list, "BundleFile.multiSource")
+    def MakeSourceFile(fileCtx: JsonContext, jElement: str, key: str) -> str:
+        fileCtx.Verify(bool(jElement), "must not be empty", key=key)
+        return os.path.join(sourceParent, jElement)
+
+    def MakeMultiSourceBundleFile(multiCtx: JsonContext, jMultiSourceElement: list, jMultiTarget: str) -> BundleFile:
         util.Verify(bool(jMultiSourceElement), "BundleFile.multiSource cannot be empty")
-        util.Verify(bool(jTarget), "BundleFile.target is mandatory with 'multiSource', because it cannot be derived from a single source file name")
-        util.VerifyType(jTarget, str, "BundleFile.target")
-        util.Verify(not "*" in jTarget, f"BundleFile.target '{jTarget}' cannot contain a wildcard with 'multiSource', because it cannot be derived from a single source file name")
+        util.Verify(bool(jMultiTarget), "BundleFile.target is mandatory with 'multiSource', because it cannot be derived from a single source file name")
+        util.Verify(not "*" in jMultiTarget, f"BundleFile.target '{jMultiTarget}' cannot contain a wildcard with 'multiSource', because it cannot be derived from a single source file name")
 
         bundleFile = BundleFile()
         bundleFile.absSourceParent = sourceParent
-        bundleFile.absSourceFiles = [util.JoinPathIfValid(None, sourceParent, jElement) for jElement in jMultiSourceElement]
+        bundleFile.absSourceFiles = [MakeSourceFile(multiCtx, jElement, "multiSource")
+                                     for jElement in jMultiSourceElement]
         bundleFile.isMultiSource = True
-        bundleFile.relTargetFile = jTarget
+        bundleFile.relTargetFile = jMultiTarget
         bundleFile.params = params
         bundleFile.registryDef = registryDef
         return bundleFile
@@ -600,18 +555,18 @@ def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
     if jSource:
         bundleFile = BundleFile()
         bundleFile.absSourceParent = sourceParent
-        bundleFile.absSourceFiles = [util.JoinPathIfValid(None, sourceParent, jSource)]
-        bundleFile.relTargetFile = jFile.get("target", jSource)
+        bundleFile.absSourceFiles = [MakeSourceFile(ctx, jSource, "source")]
+        bundleFile.relTargetFile = jTarget if jTarget != None else jSource
         bundleFile.params = params
         bundleFile.registryDef = registryDef
         files.append(bundleFile)
 
     if jSourceList:
         jElement: str
-        for jElement in jSourceList:
+        for index, jElement in enumerate(jSourceList):
             bundleFile = BundleFile()
             bundleFile.absSourceParent = sourceParent
-            bundleFile.absSourceFiles = [util.JoinPathIfValid(None, sourceParent, jElement)]
+            bundleFile.absSourceFiles = [MakeSourceFile(ctx.Sub("sourceList").At(index), jElement, "")]
             bundleFile.relTargetFile = jElement
             bundleFile.params = params
             bundleFile.registryDef = registryDef
@@ -619,12 +574,13 @@ def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
 
     if jSourceTargetList:
         jElement: dict[str, str]
-        for jElement in jSourceTargetList:
-            jElementSource: str = jElement.get("source")
+        for index, jElement in enumerate(jSourceTargetList):
+            elementCtx: JsonContext = ctx.Sub("sourceTargetList").At(index)
+            jElementSource: str = elementCtx.GetMandatory(jElement, "source", str)
             bundleFile = BundleFile()
             bundleFile.absSourceParent = sourceParent
-            bundleFile.absSourceFiles = [util.JoinPathIfValid(None, sourceParent, jElementSource)]
-            bundleFile.relTargetFile = jElement.get("target", jElementSource)
+            bundleFile.absSourceFiles = [MakeSourceFile(elementCtx, jElementSource, "source")]
+            bundleFile.relTargetFile = elementCtx.GetOptional(jElement, "target", str, default=jElementSource)
             bundleFile.params = params
             bundleFile.registryDef = registryDef
             files.append(bundleFile)
@@ -632,64 +588,70 @@ def __MakeBundleFilesFromDict(jFile: dict, jsonDir: str) -> list[BundleFile]:
     # Tested against None, so that an empty list is reported as a bad configuration
     # instead of silently building no target file at all.
     if jMultiSource != None:
-        files.append(MakeMultiSourceBundleFile(jMultiSource, jFile.get("target")))
+        files.append(MakeMultiSourceBundleFile(ctx, jMultiSource, jTarget))
 
     if jMultiSourceTargetList:
         jElement: dict[str, str | list[str]]
-        for jElement in jMultiSourceTargetList:
-            files.append(MakeMultiSourceBundleFile(jElement.get("multiSource"), jElement.get("target")))
+        for index, jElement in enumerate(jMultiSourceTargetList):
+            elementCtx: JsonContext = ctx.Sub("multiSourceTargetList").At(index)
+            files.append(MakeMultiSourceBundleFile(
+                elementCtx,
+                elementCtx.GetMandatory(jElement, "multiSource", list, elementType=str),
+                elementCtx.GetOptional(jElement, "target", str)))
 
     return files
 
 
-def __MakeBundleEventsFromDict(jThing: dict, jsonDir: str) -> BundleEventsT:
+def __MakeBundleEventsFromDict(ctx: JsonContext, jThing: dict, jsonDir: str) -> BundleEventsT:
     events = BundleEventsT()
+    eventName: str
     eventType: BundleEventType
 
-    for eventType in BundleEventType:
-        eventName: str = GetJsonBundleEventName(eventType)
-        jEvent: dict = jThing.get(eventName)
+    for eventName, eventType in g_bundleEventTypeByJsonName.items():
+        jEvent: dict = ctx.GetOptional(jThing, eventName, dict)
         if jEvent:
+            eventCtx: JsonContext = ctx.Sub(eventName)
             event = BundleEvent()
             event.type = eventType
-            event.absScript = util.JoinPathIfValid(None, jsonDir, jEvent.get("script"))
-            event.funcName = jEvent.get("function", event.funcName)
-            event.kwargs = jEvent.get("kwargs", event.kwargs)
+            event.absScript = os.path.join(jsonDir, eventCtx.GetMandatory(jEvent, "script", str))
+            event.funcName = eventCtx.GetOptional(jEvent, "function", str, event.funcName)
+            event.kwargs = eventCtx.GetOptional(jEvent, "kwargs", dict, event.kwargs)
             events[event.type] = event
 
     return events
 
 
-def __MakeBundleItemFromDict(jItem: dict, jsonDir: str) -> BundleItem:
+def __MakeBundleItemFromDict(ctx: JsonContext, jItem: dict, jsonDir: str) -> BundleItem:
     item = BundleItem()
-    item.name = jItem.get("name")
-    item.namePrefix = jItem.get("namePrefix", item.namePrefix)
-    item.nameSuffix = jItem.get("nameSuffix", item.nameSuffix)
-    item.isBig = jItem.get("big", item.isBig)
-    item.bigSuffix = jItem.get("bigSuffix", item.bigSuffix)
-    item.setGameLanguageOnInstall = jItem.get("setGameLanguageOnInstall", item.setGameLanguageOnInstall)
+    item.name = ctx.GetMandatory(jItem, "name", str)
+    item.namePrefix = ctx.GetOptional(jItem, "namePrefix", str, item.namePrefix)
+    item.nameSuffix = ctx.GetOptional(jItem, "nameSuffix", str, item.nameSuffix)
+    item.isBig = ctx.GetOptional(jItem, "big", bool, item.isBig)
+    item.bigSuffix = ctx.GetOptional(jItem, "bigSuffix", str, item.bigSuffix)
+    item.setGameLanguageOnInstall = ctx.GetOptional(
+        jItem, "setGameLanguageOnInstall", str, item.setGameLanguageOnInstall)
 
-    jFiles = jItem.get("files")
-    if jFiles:
-        jFile: dict
-        for jFile in jFiles:
-            item.files.extend(__MakeBundleFilesFromDict(jFile, jsonDir))
+    jFiles: list = ctx.GetOptional(jItem, "files", list, default=[], elementType=dict)
+    jFile: dict
+    for index, jFile in enumerate(jFiles):
+        item.files.extend(__MakeBundleFilesFromDict(ctx.Sub("files").At(index), jFile, jsonDir))
 
-    item.events = __MakeBundleEventsFromDict(jItem, jsonDir)
+    item.events = __MakeBundleEventsFromDict(ctx, jItem, jsonDir)
 
     return item
 
 
-def __MakeBundlePackFromDict(jPack: dict, jsonDir: str) -> BundlePack:
+def __MakeBundlePackFromDict(ctx: JsonContext, jPack: dict, jsonDir: str) -> BundlePack:
     pack = BundlePack()
-    pack.name = jPack.get("name")
-    pack.namePrefix = jPack.get("namePrefix", pack.namePrefix)
-    pack.nameSuffix = jPack.get("nameSuffix", pack.nameSuffix)
-    pack.itemNames = jPack.get("itemNames")
-    pack.allowInstall = jPack.get("install", pack.allowInstall)
-    pack.allowBuild = jPack.get("build", pack.allowBuild)
-    pack.setGameLanguageOnInstall = jPack.get("setGameLanguageOnInstall", pack.setGameLanguageOnInstall)
-    pack.events = __MakeBundleEventsFromDict(jPack, jsonDir)
+    pack.name = ctx.GetMandatory(jPack, "name", str)
+    pack.namePrefix = ctx.GetOptional(jPack, "namePrefix", str, pack.namePrefix)
+    pack.nameSuffix = ctx.GetOptional(jPack, "nameSuffix", str, pack.nameSuffix)
+    pack.itemNames = ctx.GetMandatory(jPack, "itemNames", list, elementType=str)
+    pack.allowInstall = ctx.GetOptional(jPack, "install", bool, pack.allowInstall)
+    pack.allowBuild = ctx.GetOptional(jPack, "build", bool, pack.allowBuild)
+    pack.setGameLanguageOnInstall = ctx.GetOptional(
+        jPack, "setGameLanguageOnInstall", str, pack.setGameLanguageOnInstall)
+    pack.events = __MakeBundleEventsFromDict(ctx, jPack, jsonDir)
 
     return pack
 
@@ -703,23 +665,27 @@ def AddBundlePacksFromJsons(jsonFiles: list[JsonFile], bundles: Bundles) -> None
 
     for jsonFile in jsonFiles:
         jsonDir: str = util.GetAbsFileDir(jsonFile.path)
-        jBundles: dict = jsonFile.data.get("bundles")
+        root = util.JsonContext(jsonFile.path)
+        jBundles: dict = root.GetOptional(jsonFile.data, "bundles", dict)
 
         if jBundles:
-            jPacksPrefix: str = jBundles.get("packsPrefix", jPacksPrefix)
-            jPacksSuffix: str = jBundles.get("packsSuffix", jPacksSuffix)
-            jPacks: dict = jBundles.get("packs")
-            if jPacks:
-                jPack: dict
-                for jPack in jPacks:
-                    bundlePack: BundlePack = __MakeBundlePackFromDict(jPack, jsonDir)
+            ctx = root.Sub("bundles")
+            # The prefixes are deliberately not reset per json file. A prefix declared
+            # in one file keeps applying to the packs of the following files.
+            jPacksPrefix: str = ctx.GetOptional(jBundles, "packsPrefix", str, jPacksPrefix)
+            jPacksSuffix: str = ctx.GetOptional(jBundles, "packsSuffix", str, jPacksSuffix)
+            jPacks: list = ctx.GetOptional(jBundles, "packs", list, default=[], elementType=dict)
+            jPack: dict
+            for index, jPack in enumerate(jPacks):
+                packCtx: JsonContext = ctx.Sub("packs").At(index, jPack.get("name", ""))
+                bundlePack: BundlePack = __MakeBundlePackFromDict(packCtx, jPack, jsonDir)
 
-                    if not bundlePack.namePrefix and jPacksPrefix:
-                        bundlePack.namePrefix = jPacksPrefix
-                    if not bundlePack.nameSuffix and jPacksSuffix:
-                        bundlePack.nameSuffix = jPacksSuffix
+                if not bundlePack.namePrefix and jPacksPrefix:
+                    bundlePack.namePrefix = jPacksPrefix
+                if not bundlePack.nameSuffix and jPacksSuffix:
+                    bundlePack.nameSuffix = jPacksSuffix
 
-                    bundles.packs.append(bundlePack)
+                bundles.packs.append(bundlePack)
     return
 
 
@@ -732,24 +698,27 @@ def AddBundleItemsFromJsons(jsonFiles: list[JsonFile], bundles: Bundles) -> None
 
     for jsonFile in jsonFiles:
         jsonDir: str = util.GetAbsFileDir(jsonFile.path)
-        jBundles: dict = jsonFile.data.get("bundles")
+        root = util.JsonContext(jsonFile.path)
+        jBundles: dict = root.GetOptional(jsonFile.data, "bundles", dict)
 
         if jBundles:
-            jItemsPrefix: str = jBundles.get("itemsPrefix", jItemsPrefix)
-            jItemsSuffix: str = jBundles.get("itemsSuffix", jItemsSuffix)
-            jItems: dict = jBundles.get("items")
+            ctx = root.Sub("bundles")
+            # The prefixes are deliberately not reset per json file. A prefix declared
+            # in one file keeps applying to the items of the following files.
+            jItemsPrefix: str = ctx.GetOptional(jBundles, "itemsPrefix", str, jItemsPrefix)
+            jItemsSuffix: str = ctx.GetOptional(jBundles, "itemsSuffix", str, jItemsSuffix)
+            jItems: list = ctx.GetOptional(jBundles, "items", list, default=[], elementType=dict)
+            jItem: dict
+            for index, jItem in enumerate(jItems):
+                itemCtx: JsonContext = ctx.Sub("items").At(index, jItem.get("name", ""))
+                bundleItem: BundleItem = __MakeBundleItemFromDict(itemCtx, jItem, jsonDir)
 
-            if jItems:
-                jItem: dict
-                for jItem in jItems:
-                    bundleItem: BundleItem = __MakeBundleItemFromDict(jItem, jsonDir)
+                if not bundleItem.namePrefix and jItemsPrefix:
+                    bundleItem.namePrefix = jItemsPrefix
+                if not bundleItem.nameSuffix and jItemsSuffix:
+                    bundleItem.nameSuffix = jItemsSuffix
 
-                    if not bundleItem.namePrefix and jItemsPrefix:
-                        bundleItem.namePrefix = jItemsPrefix
-                    if not bundleItem.nameSuffix and jItemsSuffix:
-                        bundleItem.nameSuffix = jItemsSuffix
-
-                    bundles.items.append(bundleItem)
+                bundles.items.append(bundleItem)
     return
 
 
@@ -759,9 +728,6 @@ def MakeBundlesFromJsons(jsonFiles: list[JsonFile]) -> Bundles:
     AddBundleItemsFromJsons(jsonFiles, bundles)
     AddBundlePacksFromJsons(jsonFiles, bundles)
 
-    bundles.VerifyTypes()
-    bundles.Normalize()
-    bundles.ResolveWildcards()
-    bundles.VerifyValues()
+    FinalizeParsedData(bundles)
 
     return bundles
