@@ -43,8 +43,7 @@ class ToolCallInstruction(ParsedData):
 
 
     def Normalize(self) -> None:
-        if self.absCall:
-            self.absCall = os.path.normpath(self.absCall)
+        self.absCall = os.path.normpath(self.absCall)
 
 
     def VerifyTypes(self) -> None:
@@ -52,8 +51,7 @@ class ToolCallInstruction(ParsedData):
 
 
     def VerifyValues(self) -> None:
-        if self.absCall:
-            util.Verify(util.IsValidPathName(self.absCall), f"tools.list.files.callList.call '{self.absCall}' is not a valid file name")
+        util.Verify(util.IsValidPathName(self.absCall), f"tools.list.files.callList.call '{self.absCall}' is not a valid file name")
 
 
 @dataclass(init=False)
@@ -185,11 +183,10 @@ class ToolFile(ParsedData):
         if result.Ok():
             instruction: ToolCallInstruction
             for instruction in self.callInstructions:
-                if instruction.absCall:
-                    args: list[str] = [instruction.absCall]
-                    args.extend(ParamsToArgs(instruction.callArgs))
-                    if not util.RunProcess(args):
-                        result = InstallResult(InstallResultCode.CallError, 0)
+                args: list[str] = [instruction.absCall]
+                args.extend(ParamsToArgs(instruction.callArgs))
+                if not util.RunProcess(args):
+                    result = InstallResult(InstallResultCode.CallError, 0)
 
         if result.Ok():
             if self.autoDeleteAfterInstall:
@@ -219,14 +216,12 @@ class ToolFile(ParsedData):
 class Tool(ParsedData):
     name: str
     files: list[ToolFile]
-    version: float
     versionStr: str
 
 
     def __init__(self):
         self.name = None
         self.files = list[ToolFile]()
-        self.version = 0.0
         self.versionStr = ""
 
 
@@ -241,7 +236,10 @@ class Tool(ParsedData):
 
 
     def VerifyValues(self) -> None:
-        util.Verify(self.GetExecutable() != None, f"tools.list '{self.name}' has no runnable file")
+        runnableCount: int = sum(1 for file in self.files if file.runnable)
+        util.Verify(runnableCount > 0, f"tools.list '{self.name}' has no runnable file")
+        util.Verify(runnableCount < 2, f"tools.list '{self.name}' marks {runnableCount} files as runnable, "
+                                       f"but only one of them can be the executable")
         for file in self.files:
             file.VerifyValues()
 
@@ -277,7 +275,10 @@ class Tool(ParsedData):
                     print(f"File '{file.absTarget}' is extracted to '{file.absExtractDir}'")
             else:
                 msg: str = f"Tool '{self.name} {self.versionStr}' file '{file.absTarget}' was not installed"
-                if result.code == InstallResultCode.SizeMismatch:
+                if result.code == InstallResultCode.NoInstall:
+                    msg += (" - No url is configured to download it from, and the file is missing"
+                            " or does not match its configured size or hash")
+                elif result.code == InstallResultCode.SizeMismatch:
                     msg += " - Size mismatch was detected"
                 elif result.code == InstallResultCode.HashMismatch:
                     msg += " - Hash mismatch was detected"
@@ -342,9 +343,10 @@ def __MakeToolFileFromDict(ctx: JsonContext, jFile: dict, rootDir: str, aliases:
         for index, jCall in enumerate(jCallList):
             callCtx: JsonContext = ctx.Sub("callList").At(index)
             instruction = ToolCallInstruction()
+            jCallPath: str = callCtx.GetMandatory(jCall, "call", str)
+            callCtx.Verify(bool(jCallPath), "must not be empty", key="call")
             instruction.absCall = util.JoinPathIfValid(
-                instruction.absCall, rootDir,
-                __ProcessAliases(callCtx.GetOptional(jCall, "call", str, instruction.absCall), aliases))
+                instruction.absCall, rootDir, __ProcessAliases(jCallPath, aliases))
             instruction.callArgs = __ProcessAliases(
                 callCtx.GetOptional(jCall, "callArgs", dict, instruction.callArgs), aliases)
             toolFile.callInstructions.append(instruction)
@@ -356,7 +358,10 @@ def __MakeToolFromDict(ctx: JsonContext, jTool: dict, rootDir: str, jVersion: in
     tool = Tool()
     tool.name = ctx.GetMandatory(jTool, "name", str)
     if jVersion <= 1:
-        tool.version = ctx.GetOptional(jTool, "version", float, tool.version)
+        # Version 1 wrote the tool version as a number rather than as a string.
+        jToolVersion = ctx.GetOptional(jTool, "version", (int, float))
+        if jToolVersion != None:
+            tool.versionStr = str(jToolVersion)
     else:
         tool.versionStr = ctx.GetOptional(jTool, "version", str, tool.versionStr)
 

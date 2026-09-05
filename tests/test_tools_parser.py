@@ -162,3 +162,39 @@ def test_a_disabled_tool_is_skipped(MakeJsonFile, tmp_path):
     jsonFile = MakeJsonFile(MakeToolsJson([{"target": "sample.exe", "runnable": True}]))
     jsonFile.data["tools"]["list"][0]["enabled"] = False
     assert MakeToolsFromJsons([jsonFile], rootDir=str(tmp_path)) == {}
+
+
+def test_a_version_1_tool_version_is_kept_as_a_string(MakeJsonFile, tmp_path):
+    # Version 1 wrote the tool version as a number, which nothing read, so a version 1
+    # tool was logged without any version at all.
+    jsonFile = MakeJsonFile({"tools": {"version": 1, "list": [
+        {"name": "sample", "version": 1.04, "files": [{"target": "sample.exe", "runnable": True}]}]}})
+    tools = MakeToolsFromJsons([jsonFile], rootDir=str(tmp_path))
+    assert tools["sample"].versionStr == "1.04"
+
+
+def test_a_version_1_tool_version_may_be_an_integer(MakeJsonFile, tmp_path):
+    jsonFile = MakeJsonFile({"tools": {"version": 1, "list": [
+        {"name": "sample", "version": 2, "files": [{"target": "sample.exe", "runnable": True}]}]}})
+    tools = MakeToolsFromJsons([jsonFile], rootDir=str(tmp_path))
+    assert tools["sample"].versionStr == "2"
+
+
+def test_more_than_one_runnable_file_is_rejected(MakeJsonFile, tmp_path):
+    jsonFile = MakeJsonFile(MakeToolsJson([
+        {"target": "a.exe", "runnable": True},
+        {"target": "b.exe", "runnable": True}]))
+    with pytest.raises(AssertionError) as error:
+        MakeToolsFromJsons([jsonFile], rootDir=str(tmp_path))
+    assert str(error.value) == ("tools.list 'sample' marks 2 files as runnable, "
+                                "but only one of them can be the executable")
+
+
+def test_a_call_instruction_without_a_call_is_rejected(MakeJsonFile, tmp_path):
+    # Such an entry used to be kept and then silently skipped when the tool installs.
+    jsonFile = MakeJsonFile(MakeToolsJson([
+        {"target": "sample.exe", "runnable": True, "callList": [{"callArgs": {"-a": ""}}]}]))
+    with pytest.raises(AssertionError) as error:
+        MakeToolsFromJsons([jsonFile], rootDir=str(tmp_path))
+    assert str(error.value).endswith(
+        "tools.list[0] 'sample'.files[0].callList[0].call is required but is not set")
