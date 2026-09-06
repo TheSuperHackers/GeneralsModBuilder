@@ -2,13 +2,15 @@
 Covers BuildCopy end to end on the paths that need no build tool, and on the tool paths
 with the process call standing in for the tool, so that these run anywhere.
 """
+import concurrent.futures
 import io
 import os
 
 import pytest
 
 from generalsmodbuilder import util
-from generalsmodbuilder.build.copy import BuildCopy, BuildCopyOption
+from generalsmodbuilder.build.copy import BuildCopy, BuildCopyOption, BuildCopyResult
+from generalsmodbuilder.build.thing import BuildFile, BuildFileStatus, BuildThing
 from generalsmodbuilder.data.tools import Tool, ToolFile, ToolsT
 
 
@@ -313,3 +315,55 @@ def test_the_first_backup_is_the_one_that_is_kept(tmp_path):
 
     # The backup holds the game file, not the mod file that was installed over it before.
     assert ReadFile(original + ".BAK") == "Original" + CRLF
+
+
+def MakeThing(tmp_path, absSources: list, relTarget: str):
+    thing = BuildThing()
+    thing.name = "TestThing"
+    thing.absParentDir = str(tmp_path / "Out")
+    buildFile = BuildFile()
+    buildFile.absSources = absSources
+    buildFile.relTarget = relTarget
+    buildFile.targetStatus = BuildFileStatus.Changed
+    buildFile.params = {}
+    thing.files = [buildFile]
+    return thing
+
+
+class RecordingPool:
+    """
+    Stands in for the process pool and records what a worker would have been given.
+    """
+    def __init__(self):
+        self.calls = []
+
+    def submit(self, function, tools, options, buildJob):
+        self.calls.append((tools, options, buildJob))
+        buildJob.result = BuildCopyResult(success=True)
+        future = concurrent.futures.Future()
+        future.set_result(buildJob)
+        return future
+
+
+def test_copy_thing_builds_every_file_that_needs_it(tmp_path):
+    source = WriteFile(tmp_path / "Src" / "Weapon.ini", "Weapon" + CRLF)
+    thing = MakeThing(tmp_path, [source], "Data/INI/Weapon.ini")
+
+    BuildCopy(tools=ToolsT()).CopyThing(thing)
+
+    assert ReadFile(tmp_path / "Out" / "Data" / "INI" / "Weapon.ini") == "Weapon" + CRLF
+
+
+def test_a_worker_is_given_the_options_of_this_process(tmp_path):
+    # A build tool is told how loud to be by EnableLogging, so a worker must be given the
+    # same options, or the same project would produce different tool output depending on
+    # whether the build was configured with a process pool.
+    source = WriteFile(tmp_path / "Src" / "Weapon.ini", "Weapon" + CRLF)
+    thing = MakeThing(tmp_path, [source], "Data/INI/Weapon.ini")
+    pool = RecordingPool()
+    options = BuildCopyOption.EnableLogging | BuildCopyOption.EnableSymlinks
+
+    BuildCopy(tools=ToolsT(), options=options, processPool=pool).CopyThing(thing)
+
+    assert len(pool.calls) == 1
+    assert pool.calls[0][1] == options

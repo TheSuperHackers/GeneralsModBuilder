@@ -673,7 +673,10 @@ class BuildCopy:
 
 
     def CopyThingMultiProcess(self, thing: BuildThing) -> None:
-        options = self.options & ~BuildCopyOption.EnableLogging
+        # The options travel to the worker as they are. A worker copies files and prints
+        # nothing of its own, this process prints the results it collects below, and the
+        # options also tell a build tool how loud to be, which must not depend on whether
+        # the build was given a process pool.
         futures = list[Future]()
         future: Future
         buildJob: BuildJob
@@ -685,7 +688,7 @@ class BuildCopy:
                     absSources=file.AbsSources(),
                     absTarget=file.AbsTarget(thing.absParentDir),
                     params=file.params)
-                future = self.processPool.submit(CopyWithProcess, self.tools, options, buildJob)
+                future = self.processPool.submit(CopyWithProcess, self.tools, self.options, buildJob)
                 futures.append(future)
 
         concurrent.futures.wait(futures, return_when=concurrent.futures.ALL_COMPLETED)
