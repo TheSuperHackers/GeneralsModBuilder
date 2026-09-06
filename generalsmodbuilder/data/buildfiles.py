@@ -7,7 +7,10 @@ from generalsmodbuilder import util
 
 LATEST_BUILD_VERSION = 1
 
-BUILD_KEYS = {"version", "files"}
+BUILD_KEYS = {
+    "version",
+    "files"
+}
 
 
 @dataclass(init=False)

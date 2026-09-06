@@ -8,9 +8,23 @@ from generalsmodbuilder import util
 
 LATEST_CHANGELOG_VERSION = 1
 
-CHANGELOG_KEYS = {"version", "records"}
-CHANGELOG_RECORD_KEYS = {"sourceList", "targetList", "sortList", "includeLabelList", "excludeLabelList"}
-CHANGELOG_SORT_KEYS = {"date", "label"}
+CHANGELOG_KEYS = {
+    "version",
+    "records"
+}
+
+CHANGELOG_RECORD_KEYS = {
+    "sourceList",
+    "targetList",
+    "sortList",
+    "includeLabelList",
+    "excludeLabelList"
+}
+
+CHANGELOG_SORT_KEYS = {
+    "date",
+    "label"
+}
 
 
 class Sort(Enum):

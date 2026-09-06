@@ -7,7 +7,11 @@ from generalsmodbuilder import util
 
 LATEST_FOLDERS_VERSION = 1
 
-FOLDERS_KEYS = {"version", "releaseDir", "buildDir"}
+FOLDERS_KEYS = {
+    "version",
+    "releaseDir",
+    "buildDir"
+}
 
 
 @dataclass(init=False)
