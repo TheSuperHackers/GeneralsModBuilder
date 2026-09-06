@@ -249,3 +249,67 @@ def test_a_marked_region_may_span_two_appended_files(tmp_path):
         {"excludeMarkersList": [[";begin-exclusion-marker", ";end-exclusion-marker"]]})
 
     assert ReadFile(target) == "Keep = 1" + CRLF + "Keep = 2" + CRLF
+
+
+def test_a_missing_source_is_named(tmp_path):
+    present = WriteFile(tmp_path / "Src" / "A.ini", "A" + CRLF)
+    missing = str(tmp_path / "Src" / "B.ini")
+    target = str(tmp_path / "Out" / "Joined.ini")
+
+    with pytest.raises(AssertionError) as error:
+        BuildCopy(tools=ToolsT()).Copy([present, missing], target)
+
+    assert missing in str(error.value)
+    assert "does not exist" in str(error.value)
+
+
+def test_removing_a_file_that_is_not_there_is_not_a_failure(tmp_path):
+    copy = BuildCopy(tools=ToolsT())
+    target = WriteFile(tmp_path / "Out" / "Weapon.ini", "Weapon" + CRLF)
+
+    assert copy.Uncopy(target)
+    assert not os.path.isfile(target)
+    # A second removal has nothing to do, which is the state that was asked for.
+    assert not copy.Uncopy(target)
+
+
+def test_a_backup_is_made_and_put_back(tmp_path):
+    original = WriteFile(tmp_path / "Game" / "Weapon.ini", "Original" + CRLF)
+    source = WriteFile(tmp_path / "Src" / "Weapon.ini", "Modded" + CRLF)
+    copy = BuildCopy(tools=ToolsT(), options=BuildCopyOption.EnableBackup)
+
+    copy.Copy([source], original)
+    assert ReadFile(original) == "Modded" + CRLF
+    assert ReadFile(original + ".BAK") == "Original" + CRLF
+
+    copy.Uncopy(original)
+    assert ReadFile(original) == "Original" + CRLF
+    assert not os.path.isfile(original + ".BAK")
+
+
+def test_a_second_uncopy_leaves_the_restored_file_alone(tmp_path):
+    original = WriteFile(tmp_path / "Game" / "Weapon.ini", "Original" + CRLF)
+    source = WriteFile(tmp_path / "Src" / "Weapon.ini", "Modded" + CRLF)
+    copy = BuildCopy(tools=ToolsT(), options=BuildCopyOption.EnableBackup)
+
+    copy.Copy([source], original)
+    copy.Uncopy(original)
+    copy.Uncopy(original)
+
+    # The restored file was removed by the second uncopy, and there is no backup left to
+    # put back, so nothing of the mod and nothing of a stale backup remains.
+    assert not os.path.isfile(original)
+    assert not os.path.isfile(original + ".BAK")
+
+
+def test_the_first_backup_is_the_one_that_is_kept(tmp_path):
+    original = WriteFile(tmp_path / "Game" / "Weapon.ini", "Original" + CRLF)
+    first = WriteFile(tmp_path / "Src" / "First.ini", "First" + CRLF)
+    second = WriteFile(tmp_path / "Src" / "Second.ini", "Second" + CRLF)
+    copy = BuildCopy(tools=ToolsT(), options=BuildCopyOption.EnableBackup)
+
+    copy.Copy([first], original)
+    copy.Copy([second], original)
+
+    # The backup holds the game file, not the mod file that was installed over it before.
+    assert ReadFile(original + ".BAK") == "Original" + CRLF
