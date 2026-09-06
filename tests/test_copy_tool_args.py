@@ -176,3 +176,12 @@ def test_a_target_path_the_compiler_cannot_read_is_reported():
     with pytest.raises(AssertionError) as error:
         MergeArgs(["A.str", "B.str"], "Mod,v2/Merged.csf")
     assert "Mod,v2/Merged.csf" in str(error.value)
+
+
+def test_params_to_args_can_exclude_by_name():
+    from generalsmodbuilder.build.common import ParamsToArgs
+    params = {"-quality": 255, "rescale": 0.5}
+    assert ParamsToArgs(params, includeRegex="^-") == ["-quality", "255"]
+    assert ParamsToArgs(params, excludeRegex="^-") == ["rescale", "0.5"]
+    assert ParamsToArgs(params) == ["-quality", "255", "rescale", "0.5"]
+    assert ParamsToArgs(None) == []
