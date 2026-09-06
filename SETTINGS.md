@@ -52,6 +52,54 @@ their targets from their own source files and would ignore it.
 prefix declared in one configuration file keeps applying to the items and packs of every
 file that is read after it, until another file declares its own.
 
+### File Params
+
+`params` on a file entry describe how the target file is built from the source file. The
+params that the builder reads itself are listed below, and their values are verified when
+the configuration is read. Every other param is passed on to the build tool of the file as
+a command line argument, which is how the arguments of the crunch texture compressor are
+written, for example `"-quality": 255`.
+
+Param names are not case sensitive. A param applies to every file that its entry builds,
+including every file that a wild card in that entry expands into.
+
+| Param                    | Value                                        | Applies to        |
+|--------------------------|----------------------------------------------|-------------------|
+| forceEOL                 | The line ending to write, for example \r\n | ini, wnd, str, csf |
+| deleteComments           | The token that begins a comment              | ini, wnd, str, csf |
+| deleteWhitespace         | A number above 0 deletes obsolete whitespace and empty lines | ini, wnd, str, csf |
+| sourceEncoding           | Name of the python codec to read with, default utf-8 | ini, wnd, str, csf |
+| targetEncoding           | Name of the python codec to write with, default utf-8 | ini, wnd, str, csf |
+| excludeMarkersList       | List of `[begin, end]` token pairs whose lines are left out | ini, wnd, str, csf |
+| language                 | Name of a game language                      | str, csf          |
+| swapAndSetLanguage       | Name of a game language to swap the strings to | str, csf        |
+| resize                   | A number, or a list of one or two numbers, naming the target size | bmp, tga, dds |
+| rescale                  | A number, or a list of one or two numbers, multiplying the source size | bmp, tga, dds |
+| resampling               | NEAREST, BOX, BILINEAR, HAMMING, BICUBIC or LANCZOS, default BILINEAR | bmp, tga, dds |
+| w3dExportHierarchy       | true or false, default true                  | w3d               |
+| w3dExportAnimation       | true or false, default false                 | w3d               |
+| w3dExportMesh            | true or false, default true                  | w3d               |
+| w3dUseExistingSkeleton   | true or false, default false                 | w3d               |
+| w3dCompressTimeCoded     | true or false, default false                 | w3d               |
+| w3dForceVertexMaterials  | true or false, default false                 | w3d               |
+| w3dCreateIndividualFiles | true or false, default false                 | w3d               |
+| w3dCreateTextureXmls     | true or false, default false                 | w3d               |
+
+A text file keeps the line endings of its source file unless `forceEOL` names another one,
+so a param that says nothing about line endings does not change them.
+
+An exclusion marker region is counted over all source files of a target file together, so a
+region may open in one source file of a `multiSource` and close in a later one. A region
+that is closed without being opened, or opened without being closed, is an error.
+
+The w3d exporter exports hierarchy, animation and mesh together, or hierarchy with mesh, or
+each of the three on its own. Hierarchy with animation but without mesh, and animation with
+mesh but without hierarchy, are not export modes and are rejected.
+
+A dds source file is only compressed again when a param asks for texture work, which is a
+resize, a rescale, a resampling mode, or any param that begins with a dash. Without one it
+is copied as it is.
+
 ### Multi Source Files
 
 A regular `source` builds one target file per source file. A wild card in it does not change
@@ -81,14 +129,22 @@ mandatory with `multiSource` and cannot contain a wild card.
 
 The supported file types and the way that they are combined are:
 
-| Target file | Source files | Combined by                                                                   |
-|-------------|--------------|-------------------------------------------------------------------------------|
-| ini, wnd    | Same type    | Appending the text of each source file in the listed order                     |
-| str         | str          | Appending the text of each source file in the listed order                     |
-| str, csf    | str, csf     | Merging the string labels, where a label of a later file overwrites an earlier one |
+| Target file | Source files      | Combined by                                                                        |
+|-------------|-------------------|------------------------------------------------------------------------------------|
+| ini, wnd    | Same type         | Appending the text of each source file in the listed order                         |
+| str         | str only          | Appending the text of each source file in the listed order                         |
+| str         | str and csf       | Merging the string labels, where a label of a later file overwrites an earlier one |
+| csf         | str, csf, or both | Merging the string labels, where a label of a later file overwrites an earlier one |
+
+A str target is appended as text while every source file is a str file, and is merged by the
+game text compiler as soon as one source file is a csf file, because a csf file has to be
+read as text before its labels can be appended to anything.
 
 All `params` of the bundle file apply to the combined result. For a merged str or csf file the
 text params are applied to each source file before they are merged.
+
+Because the game text compiler names its files inside its own command syntax, a source or
+target file of a merged str or csf file may not contain a comma or a closing parenthesis.
 
 Any other target file type is rejected, because there is no meaningful way to combine
 multiple source files into it.
