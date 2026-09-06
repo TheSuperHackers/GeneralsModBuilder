@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Any, Callable, Union
 from generalsmodbuilder import util
 
 
@@ -67,4 +67,111 @@ def VerifyParamsType(params: ParamsT, name: str) -> None:
         if isinstance(value, list):
             for subValue in value:
                 util.VerifyType(subValue, (str, int, float, bool, list), f"{name}.value.value")
+
+
+class ParamValueType:
+    """
+    The values that one known param accepts, and a description of them for a message.
+    """
+    description: str
+    IsValid: Callable[[Any], bool]
+
+    def __init__(self, description: str, isValid: Callable[[Any], bool]):
+        self.description = description
+        self.IsValid = isValid
+
+
+def __IsString(value: Any) -> bool:
+    return isinstance(value, str)
+
+
+def __IsBool(value: Any) -> bool:
+    return isinstance(value, bool)
+
+
+def __IsCount(value: Any) -> bool:
+    # bool is an int in python, but a switch is not a count and must be written as a number.
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def __IsNumber(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def __IsNumberOrNumberPair(value: Any) -> bool:
+    # One number applies to both dimensions of an image, two apply one per dimension.
+    if isinstance(value, list):
+        return len(value) in (1, 2) and all(__IsNumber(element) for element in value)
+    return __IsNumber(value)
+
+
+def __IsMarkerList(value: Any) -> bool:
+    if not isinstance(value, list):
+        return False
+    for marker in value:
+        if not isinstance(marker, list) or len(marker) != 2:
+            return False
+        if not all(__IsString(token) and token for token in marker):
+            return False
+    return True
+
+
+__TEXT_PARAM_TYPES: dict[str, ParamValueType] = {
+    "forceeol": ParamValueType("a string, for example a carriage return and a line feed", __IsString),
+    "deletecomments": ParamValueType("a string, the token that begins a comment", __IsString),
+    "deletewhitespace": ParamValueType("a number, where any number above 0 deletes whitespace", __IsCount),
+    "sourceencoding": ParamValueType("a string, the name of a python codec", __IsString),
+    "targetencoding": ParamValueType("a string, the name of a python codec", __IsString),
+    "excludemarkerslist": ParamValueType("a list of [begin, end] pairs of non empty strings", __IsMarkerList),
+}
+
+__GAME_TEXT_PARAM_TYPES: dict[str, ParamValueType] = {
+    "language": ParamValueType("a string, the name of a game language", __IsString),
+    "swapandsetlanguage": ParamValueType("a string, the name of a game language", __IsString),
+}
+
+__IMAGE_PARAM_TYPES: dict[str, ParamValueType] = {
+    "resize": ParamValueType("a number, or a list of one or two numbers", __IsNumberOrNumberPair),
+    "rescale": ParamValueType("a number, or a list of one or two numbers", __IsNumberOrNumberPair),
+    "resampling": ParamValueType("a string, the name of a resampling mode", __IsString),
+}
+
+__W3D_PARAM_TYPES: dict[str, ParamValueType] = {
+    name.lower(): ParamValueType("true or false", __IsBool) for name in (
+        "w3dExportHierarchy",
+        "w3dExportAnimation",
+        "w3dExportMesh",
+        "w3dUseExistingSkeleton",
+        "w3dCompressTimeCoded",
+        "w3dForceVertexMaterials",
+        "w3dCreateIndividualFiles",
+        "w3dCreateTextureXmls",
+    )
+}
+
+# The params that the build step reads, by their lower case name, because a bundle file may
+# spell a param name in any case. Every other param is an argument of a build tool and is
+# passed on as it is written.
+KNOWN_BUILD_FILE_PARAM_TYPES: dict[str, ParamValueType] = {
+    **__TEXT_PARAM_TYPES,
+    **__GAME_TEXT_PARAM_TYPES,
+    **__IMAGE_PARAM_TYPES,
+    **__W3D_PARAM_TYPES,
+}
+
+
+def VerifyBuildFileParams(params: ParamsT, name: str) -> None:
+    """
+    Verifies the params of a bundle file. A param that the build step reads is verified
+    against the values that it accepts, so that a wrong one is reported here instead of
+    being ignored in silence while the build goes on to write a file that the param was
+    meant to change. A param that the build step does not know is a build tool argument and
+    is left alone, so that a tool can be given any argument it takes.
+    """
+    VerifyParamsType(params, name)
+
+    for key, value in params.items():
+        paramType: ParamValueType = KNOWN_BUILD_FILE_PARAM_TYPES.get(key.lower())
+        if paramType != None and not paramType.IsValid(value):
+            raise AssertionError(f'Object "{name}.{key}" is {value!r} but should be {paramType.description}')
 
