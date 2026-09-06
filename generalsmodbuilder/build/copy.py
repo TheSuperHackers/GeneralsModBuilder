@@ -602,8 +602,9 @@ class BuildCopy:
             return self.__CopyToTextFile
 
         if targetT == BuildFileType.dds and sourceT == BuildFileType.dds:
-            # Without processing params the file is simply copied and requires no tool.
-            if bool(params):
+            # Without a param that asks for texture work the file is simply copied and
+            # requires no tool. It is already a dds file.
+            if BuildCopy.__HasCrunchParams(params):
                 return self.__CopyToDDS
             else:
                 return self.__CopyTo
@@ -973,6 +974,26 @@ class BuildCopy:
     def __HasResizeParams(params: ParamsT) -> bool:
         iparams = CaseInsensitiveDict(params)
         return (iparams.get("resize") != None) or (iparams.get("rescale") != None)
+
+
+    @staticmethod
+    def __HasCrunchParams(params: ParamsT) -> bool:
+        """
+        Tells whether any param asks for work that the crunch tool does.
+        The params of a json entry are shared by every file that the entry builds, so a
+        param that says nothing about textures must not compress an already compressed dds
+        file a second time, with a texture format that nobody chose.
+        """
+        if BuildCopy.__HasResizeParams(params):
+            return True
+
+        iparams = CaseInsensitiveDict(params)
+        if iparams.get("resampling") != None:
+            return True
+
+        # All command line arguments of crunch begin with a dash, which is also how
+        # __CopyToDDS picks the params that it passes on to the tool.
+        return any(key.startswith("-") for key in iparams)
 
 
     @staticmethod

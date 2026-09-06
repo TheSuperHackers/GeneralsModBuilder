@@ -74,3 +74,25 @@ def test_an_unknown_target_type_is_copied():
 
 def test_a_csf_source_builds_a_str_target():
     assert RequiredTool("Data/generals.csf", "Data/generals.str") == "gametextcompiler"
+
+
+def test_a_dds_file_is_only_compressed_again_for_a_texture_param():
+    source, target = "Art/Texture.dds", "Art/Texture.dds"
+    # The params of a json entry are shared by every file that the entry builds, so a param
+    # that says nothing about textures must leave an already compressed dds alone.
+    assert RequiredTool(source, target) == None
+    assert RequiredTool(source, target, {}) == None
+    assert RequiredTool(source, target, {"forceEOL": chr(13) + chr(10)}) == None
+    assert RequiredTool(source, target, {"language": "English"}) == None
+    # These do ask for texture work.
+    assert RequiredTool(source, target, {"-quality": 255}) == "crunch"
+    assert RequiredTool(source, target, {"-mipmode": "Generate"}) == "crunch"
+    assert RequiredTool(source, target, {"rescale": 0.5}) == "crunch"
+    assert RequiredTool(source, target, {"resize": [512, 512]}) == "crunch"
+    assert RequiredTool(source, target, {"resampling": "BICUBIC"}) == "crunch"
+
+
+def test_a_texture_conversion_needs_crunch_with_or_without_params():
+    # A dds built from another file type is always crunched, params or not.
+    assert RequiredTool("Art/Texture.tga", "Art/Texture.dds") == "crunch"
+    assert RequiredTool("Art/Texture.tga", "Art/Texture.dds", {"-quality": 255}) == "crunch"
