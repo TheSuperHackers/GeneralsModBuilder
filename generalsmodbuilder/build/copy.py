@@ -474,6 +474,25 @@ def MakeW3DExportMode(source: str, exportHierarchy: bool, exportAnimation: bool,
         f"together, or hierarchy with mesh, or each of the three on its own.")
 
 
+# The characters of the compiler command syntax that a file path cannot carry. A merge
+# names its files inside commands of the form COMMAND(KEY:value,KEY:value), where a comma
+# ends a value and a closing parenthesis ends the command, and the compiler offers no way
+# of quoting or escaping either of them: a path written in quotes is opened with the quotes
+# as part of its name. A space is not among them, because every command is passed to the
+# tool as one argument of its own and is never split on spaces.
+GameTextPathReservedChars: str = ",)"
+
+
+def VerifyGameTextMergePath(path: str) -> None:
+    """
+    Fails a file path that a game text merge command line cannot carry.
+    """
+    for character in GameTextPathReservedChars:
+        util.Verify(character not in path,
+                    f"Path '{path}' contains a '{character}', which the game text compiler cannot "
+                    f"read in a merge, because it is part of its command syntax and cannot be escaped")
+
+
 def MakeGameTextMergeArgs(
         exec: str,
         sources: list[str],
@@ -485,6 +504,10 @@ def MakeGameTextMergeArgs(
     Each source file is loaded into its own compiler slot and is merged over the first slot,
     so a label that is defined again in a later source file overwrites the earlier one.
     """
+    for path in sources:
+        VerifyGameTextMergePath(path)
+    VerifyGameTextMergePath(target)
+
     iparams = CaseInsensitiveDict(params)
     args: list[str] = [exec]
 
