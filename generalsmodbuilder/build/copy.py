@@ -642,15 +642,18 @@ class BuildCopy:
     options: BuildCopyOption = field(default=BuildCopyOption.Zero)
     processPool: ProcessPoolExecutor = field(default=None)
 
-    def CopyThing(self, thing: BuildThing) -> bool:
+    def CopyThing(self, thing: BuildThing) -> None:
+        """
+        Builds every file of the thing that requires a rebuild. A file that cannot be built
+        ends the build with a message that names it.
+        """
         if self.processPool != None:
-            return self.CopyThingMultiProcess(thing)
+            self.CopyThingMultiProcess(thing)
         else:
-            return self.CopyThingSingleProcess(thing)
+            self.CopyThingSingleProcess(thing)
 
 
-    def CopyThingSingleProcess(self, thing: BuildThing) -> bool:
-        success: bool = True
+    def CopyThingSingleProcess(self, thing: BuildThing) -> None:
         file: BuildFile
 
         for file in thing.files:
@@ -659,18 +662,13 @@ class BuildCopy:
                 absTarget: str = file.AbsTarget(thing.absParentDir)
                 params: ParamsT = file.params
                 result: BuildCopyResult = self.Copy(absSources, absTarget, params)
-                success &= result.success
-                if result.success:
-                    if self.options & BuildCopyOption.EnableLogging:
-                        BuildCopy.__PrintResult(result.printType, absSources, absTarget)
-                else:
-                    raise Exception(f"Unable to copy source(s) '{BuildCopy.__JoinSources(absSources)}' to target '{absTarget}'.")
+                BuildCopy.__VerifyCopied(result, absSources, absTarget)
 
-        return success
+                if self.options & BuildCopyOption.EnableLogging:
+                    BuildCopy.__PrintResult(result.printType, absSources, absTarget)
 
 
-    def CopyThingMultiProcess(self, thing: BuildThing) -> bool:
-        success: bool = True
+    def CopyThingMultiProcess(self, thing: BuildThing) -> None:
         options = self.options & ~BuildCopyOption.EnableLogging
         futures = list[Future]()
         future: Future
@@ -691,26 +689,23 @@ class BuildCopy:
 
         for future in futures:
             buildJob = future.result()
-            success &= buildJob.result.success
-            if buildJob.result.success:
-                if self.options & BuildCopyOption.EnableLogging:
-                    BuildCopy.__PrintResult(buildJob.result.printType, buildJob.absSources, buildJob.absTarget)
-            else:
-                raise Exception(f"Unable to copy source(s) '{BuildCopy.__JoinSources(buildJob.absSources)}' to target '{buildJob.absTarget}'.")
+            BuildCopy.__VerifyCopied(buildJob.result, buildJob.absSources, buildJob.absTarget)
 
-        return success
+            if self.options & BuildCopyOption.EnableLogging:
+                BuildCopy.__PrintResult(buildJob.result.printType, buildJob.absSources, buildJob.absTarget)
 
 
-    def UncopyThing(self, thing: BuildThing, respectBuildFileStatus=True) -> bool:
-        success: bool = True
+    def UncopyThing(self, thing: BuildThing, respectBuildFileStatus=True) -> None:
+        """
+        Removes the files of the thing that a build has written. A file that is not there
+        is not an error, because being gone is the state that this asks for.
+        """
         file: BuildFile
 
         for file in thing.files:
             if file.RequiresRebuild() or not respectBuildFileStatus:
                 absTarget: str = file.AbsTarget(thing.absParentDir)
-                success &= self.Uncopy(absTarget)
-
-        return success
+                self.Uncopy(absTarget)
 
 
     def Copy(
@@ -729,8 +724,8 @@ class BuildCopy:
 
         source: str
         for source in sources:
-            if not os.path.exists(source):
-                return BuildCopyResult(success=False)
+            util.Verify(os.path.exists(source),
+                        f"Source file '{source}' of target '{target}' does not exist")
 
         if sourceType == BuildFileType.Auto:
             sourceType = GetFileType(sources[0])
@@ -770,17 +765,22 @@ class BuildCopy:
 
 
     def Uncopy(self, file: str) -> bool:
-        success: bool = False
+        """
+        Removes a file that a build has written and puts back the file that it replaced.
+        Tells whether there was anything to remove. Nothing to remove is not a failure: a
+        target that is already gone is the state that this asks for.
+        """
+        removed: bool = util.DeleteFileOrDir(file)
 
-        if util.DeleteFileOrDir(file):
-            if self.options & BuildCopyOption.EnableLogging:
-                BuildCopy.__PrintUncopyResult(file)
-            success = True
+        if removed and self.options & BuildCopyOption.EnableLogging:
+            BuildCopy.__PrintUncopyResult(file)
 
-        if self.options & BuildCopyOption.EnableBackup:
+        # The backup is only put back once the file that replaced it is gone, so that a
+        # target which could not be removed is not overwritten by the file it replaced.
+        if not os.path.lexists(file) and self.options & BuildCopyOption.EnableBackup:
             BuildCopy.__RevertBackup(file)
 
-        return success
+        return removed
 
 
     @staticmethod
@@ -809,6 +809,16 @@ class BuildCopy:
     @staticmethod
     def __MakeBackupFileName(file: str) -> str:
         return file + ".BAK"
+
+
+    @staticmethod
+    def __VerifyCopied(result: BuildCopyResult, sources: list[str], target: str) -> None:
+        """
+        A copy that does not do its work reports it by raising, so this only holds the last
+        word of the contract, for a copy function that answers a failure instead.
+        """
+        util.Verify(result.success,
+                    f"Unable to copy source(s) '{BuildCopy.__JoinSources(sources)}' to target '{target}'.")
 
 
     @staticmethod
