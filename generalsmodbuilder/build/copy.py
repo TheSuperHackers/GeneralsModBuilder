@@ -402,6 +402,97 @@ class BuildJob:
     params: ParamsT
 
 
+def ResizeImageWithParams(img: PILImage, params: ParamsT) -> PILImage:
+    """
+    Returns the image in the size that the params ask for, or the image itself when they
+    ask for the size that it already has. 'resize' names the size, 'rescale' multiplies the
+    size that the image has, and 'rescale' applies to the result of 'resize'.
+    """
+    iparams = CaseInsensitiveDict(params)
+    size: tuple[int, int] = img.size
+
+    # Resize, for example 512 512 to 1024 1024
+
+    resize: list[int, int] = iparams.get("resize")
+    if isinstance(resize, list):
+        if len(resize) == 1:
+            size = (int(resize[0]), int(resize[0]))
+        elif len(resize) == 2:
+            size = (int(resize[0]), int(resize[1]))
+    elif isinstance(resize, (float, int)):
+        size = (int(resize), int(resize))
+
+    # Rescale, for example 512*2 512*2
+
+    rescale: list[float, float] = iparams.get("rescale")
+    if isinstance(rescale, list):
+        if len(rescale) == 1:
+            size = (int(rescale[0] * size[0]), int(rescale[0] * size[1]))
+        elif len(rescale) == 2:
+            size = (int(rescale[0] * size[0]), int(rescale[1] * size[1]))
+    elif isinstance(rescale, (float, int)):
+        size = (int(rescale * size[0]), int(rescale * size[1]))
+
+    # Resampling mode. Options:
+    # NEAREST
+    # BOX
+    # BILINEAR
+    # HAMMING
+    # BICUBIC
+    # LANCZOS
+
+    resample = Resampling.BILINEAR
+    resampling: str = iparams.get("resampling")
+    if isinstance(resampling, str):
+        resampling = resampling.lower()
+        for option in Resampling:
+            if option.name.lower() == resampling:
+                resample = option
+                break
+
+    if size != img.size:
+        r: PILImage
+        g: PILImage
+        b: PILImage
+        a: PILImage
+
+        if img.mode == "RGBA":
+            # The RGB channels lose color information on image resize where the Alpha channel is black.
+            # To workaround this issue, resize each channel separately.
+            r, g, b, a = img.split()
+            r = r.resize(size=size, resample=resample)
+            g = g.resize(size=size, resample=resample)
+            b = b.resize(size=size, resample=resample)
+            a = a.resize(size=size, resample=resample)
+            img = PIL.Image.merge("RGBA", (r, g, b, a))
+
+        else:
+            img = img.resize(size=size, resample=resample)
+
+    return img
+
+
+def HasAlphaChannel(source: str, fileType: BuildFileType) -> bool:
+    """
+    Tells whether the image file carries an alpha channel, which decides the dds texture
+    format when the params name none. Only the header of the file is read for it.
+    """
+    hasAlpha: bool = False
+
+    if fileType == BuildFileType.psd:
+        psd: PSDImage = PSDImage.open(fp=source)
+        hasAlpha = psd.channels > 3
+
+    elif (fileType == BuildFileType.tga or
+          fileType == BuildFileType.dds or
+          fileType == BuildFileType.tiff):
+        img: PILImage = PIL.Image.open(fp=source)
+        hasAlpha = img.mode == "RGBA" or img.mode == "RGBX"
+        img.close()
+
+    return hasAlpha
+
+
 def HasCrunchTextureFormat(params: ParamsT) -> bool:
     """
     Tells whether the params already name the dds texture format that crunch is to write.
@@ -1049,7 +1140,7 @@ class BuildCopy:
             img = PIL.Image.open(fp=source)
 
         if img != None:
-            img = BuildCopy.__ResizeImageWithParams(img, params)
+            img = ResizeImageWithParams(img, params)
             img.save(target, compression=None)
             img.close()
             success = True
@@ -1138,7 +1229,7 @@ class BuildCopy:
 
         if not HasCrunchTextureFormat(params):
             # Auto select the dds texture format depending on the source image.
-            hasAlpha: bool = BuildCopy.__HasAlphaChannel(tmpSource, tmpSourceType)
+            hasAlpha: bool = HasAlphaChannel(tmpSource, tmpSourceType)
             textureFormat = "-DXT5" if hasAlpha else "-DXT1"
 
         exec: str = self.__GetToolExePath("crunch")
@@ -1178,90 +1269,6 @@ class BuildCopy:
         # All command line arguments of crunch begin with a dash, which is also how
         # __CopyToDDS picks the params that it passes on to the tool.
         return any(key.startswith("-") for key in iparams)
-
-
-    @staticmethod
-    def __ResizeImageWithParams(img: PILImage, params: ParamsT) -> PILImage:
-        iparams = CaseInsensitiveDict(params)
-        size: tuple[int, int] = img.size
-
-        # Resize, for example 512 512 to 1024 1024
-
-        resize: list[int, int] = iparams.get("resize")
-        if isinstance(resize, list):
-            if len(resize) == 1:
-                size = (int(resize[0]), int(resize[0]))
-            elif len(resize) == 2:
-                size = (int(resize[0]), int(resize[1]))
-        elif isinstance(resize, (float, int)):
-            size = (int(resize), int(resize))
-
-        # Rescale, for example 512*2 512*2
-
-        rescale: list[float, float] = iparams.get("rescale")
-        if isinstance(rescale, list):
-            if len(rescale) == 1:
-                size = (int(rescale[0] * size[0]), int(rescale[0] * size[1]))
-            elif len(rescale) == 2:
-                size = (int(rescale[0] * size[0]), int(rescale[1] * size[1]))
-        elif isinstance(rescale, (float, int)):
-            size = (int(rescale * size[0]), int(rescale * size[1]))
-
-        # Resampling mode. Options:
-        # NEAREST
-        # BOX
-        # BILINEAR
-        # HAMMING
-        # BICUBIC
-        # LANCZOS
-
-        resample = Resampling.BILINEAR
-        resampling: str = iparams.get("resampling")
-        if isinstance(resampling, str):
-            resampling = resampling.lower()
-            for option in Resampling:
-                if option.name.lower() == resampling:
-                    resample = option
-                    break
-
-        if size != img.size:
-            r: PILImage
-            g: PILImage
-            b: PILImage
-            a: PILImage
-
-            if img.mode == "RGBA":
-                # The RGB channels lose color information on image resize where the Alpha channel is black.
-                # To workaround this issue, resize each channel separately.
-                r, g, b, a = img.split()
-                r = r.resize(size=size, resample=resample)
-                g = g.resize(size=size, resample=resample)
-                b = b.resize(size=size, resample=resample)
-                a = a.resize(size=size, resample=resample)
-                img = PIL.Image.merge("RGBA", (r, g, b, a))
-
-            else:
-                img = img.resize(size=size, resample=resample)
-
-        return img
-
-
-    @staticmethod
-    def __HasAlphaChannel(source: str, fileType: BuildFileType) -> bool:
-        hasAlpha: bool = False
-
-        if fileType == BuildFileType.psd:
-            psd: PSDImage = PSDImage.open(fp=source)
-            hasAlpha = psd.channels > 3
-
-        elif (fileType == BuildFileType.tga or
-              fileType == BuildFileType.dds or
-              fileType == BuildFileType.tiff):
-            img: PILImage = PIL.Image.open(fp=source)
-            hasAlpha = img.mode == "RGBA" or img.mode == "RGBX"
-            img.close()
-
-        return hasAlpha
 
 
     def __GetToolExePath(self, name: str) -> str:
