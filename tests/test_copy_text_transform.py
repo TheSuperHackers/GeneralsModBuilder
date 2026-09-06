@@ -35,7 +35,7 @@ def Apply(tmp_path, text: str, params: dict, name: str = "Source.ini") -> str:
     source = MakeTextFile(tmp_path, name, text)
     target = str(tmp_path / ("Target_" + name))
     transform = TextTransform(params)
-    transform.WriteLines(target, transform.TransformLines(transform.ReadLines(source)))
+    transform.WriteLines(target, transform.TransformLines(transform.ReadLines(source), [source]))
     return ReadBytes(target)
 
 
@@ -111,3 +111,98 @@ def test_params_are_read_case_insensitively():
     transform = TextTransform({"FORCEEOL": CRLF, "DeleteComments": ";"})
     assert transform.forceEOL == CRLF
     assert transform.deleteComments == ";"
+
+
+BEGIN = ";begin-exclusion-marker"
+END = ";end-exclusion-marker"
+MARKERS = {"excludeMarkersList": [[BEGIN, END]]}
+
+
+def test_marked_region_is_removed_with_its_begin_and_end_lines(tmp_path):
+    text = ("Keep = 1" + CRLF +
+            BEGIN + CRLF +
+            "Drop = 1" + CRLF +
+            END + CRLF +
+            "Keep = 2" + CRLF)
+    assert Apply(tmp_path, text, MARKERS) == "Keep = 1" + CRLF + "Keep = 2" + CRLF
+
+
+def test_marker_pair_on_one_line_removes_that_line(tmp_path):
+    # The whole region is on this line, so the line is inside it and must go.
+    text = "Keep = 1" + CRLF + BEGIN + " Drop = 1 " + END + CRLF + "Keep = 2" + CRLF
+    assert Apply(tmp_path, text, MARKERS) == "Keep = 1" + CRLF + "Keep = 2" + CRLF
+
+
+def test_same_marker_can_open_again_inside_itself(tmp_path):
+    text = ("Keep = 1" + CRLF +
+            BEGIN + CRLF + "Drop = 1" + CRLF +
+            BEGIN + CRLF + "Drop = 2" + CRLF + END + CRLF +
+            "Drop = 3" + CRLF + END + CRLF +
+            "Keep = 2" + CRLF)
+    assert Apply(tmp_path, text, MARKERS) == "Keep = 1" + CRLF + "Keep = 2" + CRLF
+
+
+def test_two_marker_pairs_are_filtered_independently(tmp_path):
+    params = {"excludeMarkersList": [[BEGIN, END], [";core-begin", ";core-end"]]}
+    text = ("Keep = 1" + CRLF +
+            BEGIN + CRLF + "Drop = 1" + CRLF + END + CRLF +
+            ";core-begin" + CRLF + "Drop = 2" + CRLF + ";core-end" + CRLF +
+            "Keep = 2" + CRLF)
+    assert Apply(tmp_path, text, params) == "Keep = 1" + CRLF + "Keep = 2" + CRLF
+
+
+def test_close_without_open_is_reported(tmp_path):
+    text = "Keep = 1" + CRLF + END + CRLF
+    try:
+        Apply(tmp_path, text, MARKERS)
+    except AssertionError as error:
+        assert "was never opened" in str(error)
+        assert END in str(error)
+        assert "Source.ini" in str(error)
+    else:
+        raise AssertionError("a close without an open must be reported")
+
+
+def test_open_without_close_is_reported(tmp_path):
+    # An unclosed marker would otherwise swallow the rest of the text in silence.
+    text = "Keep = 1" + CRLF + BEGIN + CRLF + "Drop = 1" + CRLF
+    try:
+        Apply(tmp_path, text, MARKERS)
+    except AssertionError as error:
+        assert "without closing it" in str(error)
+        assert BEGIN in str(error)
+    else:
+        raise AssertionError("an open without a close must be reported")
+
+
+def test_empty_marker_list_changes_nothing(tmp_path):
+    text = "Keep = 1" + CRLF
+    assert Apply(tmp_path, text, {"excludeMarkersList": [], "targetEncoding": "ascii"}) == text
+
+
+def test_region_may_open_in_one_source_file_and_close_in_the_next(tmp_path):
+    # The sample project relies on this: a multi source ini opens the marker in the first
+    # part and closes it in the second, so the balance is over all source files together.
+    first = MakeTextFile(tmp_path, "10_First.ini", "Keep = 1" + CRLF + BEGIN + CRLF + "Drop = 1" + CRLF)
+    second = MakeTextFile(tmp_path, "20_Second.ini", "Drop = 2" + CRLF + END + CRLF + "Keep = 2" + CRLF)
+    target = str(tmp_path / "Joined.ini")
+
+    transform = TextTransform(MARKERS)
+    lines = transform.ReadLines(first) + transform.ReadLines(second)
+    transform.WriteLines(target, transform.TransformLines(lines, [first, second]))
+
+    assert ReadBytes(target) == "Keep = 1" + CRLF + "Keep = 2" + CRLF
+
+
+def test_a_bad_marker_names_every_source_file(tmp_path):
+    first = MakeTextFile(tmp_path, "First.ini", "Keep = 1" + CRLF)
+    second = MakeTextFile(tmp_path, "Second.ini", END + CRLF)
+
+    transform = TextTransform(MARKERS)
+    lines = transform.ReadLines(first) + transform.ReadLines(second)
+    try:
+        transform.TransformLines(lines, [first, second])
+    except AssertionError as error:
+        assert "First.ini" in str(error) and "Second.ini" in str(error)
+    else:
+        raise AssertionError("a bad marker must be reported")
