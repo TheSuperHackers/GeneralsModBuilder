@@ -42,18 +42,16 @@ def MakeFoldersFromJsons(jsonFiles: list[JsonFile]) -> Folders:
 
     for jsonFile in jsonFiles:
         jsonDir: str = util.GetAbsFileDir(jsonFile.path)
-        root = util.JsonContext(jsonFile.path)
-        jFolders: dict = root.GetOptional(jsonFile.data, "folders", dict)
+        root = util.JsonNode(jsonFile.path, jsonFile.data)
 
-        if jFolders:
-            ctx = root.Sub("folders")
-            ctx.VerifyKnownKeys(jFolders, FOLDERS_KEYS)
-            VerifyFormatVersion(ctx, jFolders, LATEST_FOLDERS_VERSION)
+        if node := root.SubOptional("folders"):
+            node.VerifyKnownKeys(FOLDERS_KEYS)
+            VerifyFormatVersion(node, LATEST_FOLDERS_VERSION)
 
             folders.absReleaseDir = util.JoinPathIfValid(
-                folders.absReleaseDir, jsonDir, ctx.GetOptional(jFolders, "releaseDir", str))
+                folders.absReleaseDir, jsonDir, node.GetOptional("releaseDir", str))
             folders.absBuildDir = util.JoinPathIfValid(
-                folders.absBuildDir, jsonDir, ctx.GetOptional(jFolders, "buildDir", str))
+                folders.absBuildDir, jsonDir, node.GetOptional("buildDir", str))
 
     FinalizeParsedData(folders)
     return folders

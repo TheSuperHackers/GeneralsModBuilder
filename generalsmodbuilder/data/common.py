@@ -44,16 +44,16 @@ def FinalizeParsedData(data: ParsedData) -> None:
     data.VerifyValues()
 
 
-def VerifyFormatVersion(ctx: util.JsonContext, jSection: dict, latestVersion: int) -> int:
+def VerifyFormatVersion(node: util.JsonNode, latestVersion: int) -> int:
     """
     Reads the format version of a section. The version exists so that the parsers can
     adapt to older and newer data once a breaking change is made to the json format, so
     a version that this build does not know is rejected here rather than parsed as if it
     were the current one. A section without a version is assumed to be the current one.
     """
-    version: int = ctx.GetOptional(jSection, "version", int, latestVersion)
-    ctx.Verify(version >= 1, f"is {version}, but a format version starts at 1", key="version")
-    ctx.Verify(version <= latestVersion,
+    version: int = node.GetOptional("version", int, latestVersion)
+    node.Verify(version >= 1, f"is {version}, but a format version starts at 1", key="version")
+    node.Verify(version <= latestVersion,
                f"is {version}, but this build knows the format only up to version {latestVersion}",
                key="version")
     return version

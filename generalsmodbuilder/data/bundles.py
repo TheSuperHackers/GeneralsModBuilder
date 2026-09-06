@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from enum import Enum, auto
 from generalsmodbuilder.data.common import (
     FinalizeParsedData, ParamsT, ParsedData, VerifyFormatVersion, VerifyParamsType)
-from generalsmodbuilder.util import JsonContext, JsonFile
+from generalsmodbuilder.util import JsonNode, JsonFile
 from generalsmodbuilder import util
 
 
@@ -525,8 +525,8 @@ class Bundles(ParsedData):
             item.ResolveWildcards()
 
 
-def __MakeRegistryDefinition(ctx: JsonContext, jFile: dict, jsonDir: str) -> BundleRegistryDefinition:
-    jRegistryList: list = ctx.GetOptional(jFile, "registryList", list, elementType=str)
+def __MakeRegistryDefinition(node: JsonNode, jsonDir: str) -> BundleRegistryDefinition:
+    jRegistryList: list = node.GetOptional("registryList", list, elementType=str)
     if not jRegistryList:
         return None
 
@@ -534,24 +534,26 @@ def __MakeRegistryDefinition(ctx: JsonContext, jFile: dict, jsonDir: str) -> Bun
     return BundleRegistryDefinition([os.path.join(jsonDir, jPath) for jPath in jRegistryList])
 
 
-def __MakeBundleFilesFromDict(ctx: JsonContext, jFile: dict, jsonDir: str) -> list[BundleFile]:
+def __MakeBundleFilesFromDict(node: JsonNode, jsonDir: str) -> list[BundleFile]:
     files: list[BundleFile] = list()
-    ctx.VerifyKnownKeys(jFile, BUNDLE_FILE_KEYS)
+    node.VerifyKnownKeys(BUNDLE_FILE_KEYS)
 
-    jSourceParent: str = ctx.GetOptional(jFile, "sourceParent", str)
+    jSourceParent: str = node.GetOptional("sourceParent", str)
     if jSourceParent == None:
-        jSourceParent = ctx.GetOptional(jFile, "parent", str) # Legacy name
+        jSourceParent = node.GetOptional("parent", str) # Legacy name
     sourceParent: str = util.JoinPathIfValid(jsonDir, jsonDir, jSourceParent)
 
-    params: ParamsT = ctx.GetOptional(jFile, "params", dict, default=ParamsT())
-    registryDef: BundleRegistryDefinition = __MakeRegistryDefinition(ctx, jFile, jsonDir)
+    params: ParamsT = node.GetOptional("params", dict, default=ParamsT())
+    registryDef: BundleRegistryDefinition = __MakeRegistryDefinition(node, jsonDir)
 
-    jSource: str = ctx.GetOptional(jFile, "source", str)
-    jTarget: str = ctx.GetOptional(jFile, "target", str)
-    jSourceList: list = ctx.GetOptional(jFile, "sourceList", list, elementType=str)
-    jSourceTargetList: list = ctx.GetOptional(jFile, "sourceTargetList", list, elementType=dict)
-    jMultiSource: list = ctx.GetOptional(jFile, "multiSource", list, elementType=str)
-    jMultiSourceTargetList: list = ctx.GetOptional(jFile, "multiSourceTargetList", list, elementType=dict)
+    # A key that is only read stays a plain read. A key whose elements are walked below
+    # is descended into once here, so that its name is written a single time.
+    jSource: str = node.GetOptional("source", str)
+    jTarget: str = node.GetOptional("target", str)
+    jMultiSource: list = node.GetOptional("multiSource", list, elementType=str)
+    sourceListNode: JsonNode = node.SubOptional("sourceList", list, elementType=str)
+    sourceTargetListNode: JsonNode = node.SubOptional("sourceTargetList", list, elementType=dict)
+    multiSourceTargetListNode: JsonNode = node.SubOptional("multiSourceTargetList", list, elementType=dict)
 
     # Is tested first, so that an entry naming both keeps being reported as that.
     util.Verify(not (jSource and jMultiSource), "Bundle file cannot specify 'source' and 'multiSource' together, because both would build the same 'target' file")
@@ -560,36 +562,36 @@ def __MakeBundleFilesFromDict(ctx: JsonContext, jFile: dict, jsonDir: str) -> li
     # and hides a misspelled key. An empty source collection does the same.
     jSourceKeys: dict = {
         "source": jSource,
-        "sourceList": jSourceList,
-        "sourceTargetList": jSourceTargetList,
+        "sourceList": sourceListNode.data,
+        "sourceTargetList": sourceTargetListNode.data,
         "multiSource": jMultiSource,
-        "multiSourceTargetList": jMultiSourceTargetList,
+        "multiSourceTargetList": multiSourceTargetListNode.data,
     }
     jPresentKeys: list[str] = [key for key, value in jSourceKeys.items() if value != None]
-    ctx.Verify(bool(jPresentKeys),
+    node.Verify(bool(jPresentKeys),
                "must name at least one of 'source', 'sourceList', 'sourceTargetList', "
                "'multiSource' or 'multiSourceTargetList', otherwise it builds no file at all")
     for key in jPresentKeys:
-        ctx.Verify(bool(jSourceKeys[key]), "must not be empty, otherwise it builds no file at all", key=key)
+        node.Verify(bool(jSourceKeys[key]), "must not be empty, otherwise it builds no file at all", key=key)
 
     # The targets of a sourceList and of a sourceTargetList are derived from their own
     # source files, so a target next to them alone would be silently ignored.
     if jTarget != None:
-        ctx.Verify(jSource != None or jMultiSource != None,
-                   "is only used together with 'source' or 'multiSource'", key="target")
+        node.Verify(jSource != None or jMultiSource != None,
+                    "is only used together with 'source' or 'multiSource'", key="target")
 
-    def MakeSourceFile(fileCtx: JsonContext, jElement: str, key: str) -> str:
-        fileCtx.Verify(bool(jElement), "must not be empty", key=key)
+    def MakeSourceFile(fileNode: JsonNode, jElement: str, key: str) -> str:
+        fileNode.Verify(bool(jElement), "must not be empty", key=key)
         return os.path.join(sourceParent, jElement)
 
-    def MakeMultiSourceBundleFile(multiCtx: JsonContext, jMultiSourceElement: list, jMultiTarget: str) -> BundleFile:
-        multiCtx.Verify(bool(jMultiSourceElement), "must not be empty, otherwise it builds no file at all", key="multiSource")
-        multiCtx.Verify(bool(jMultiTarget), "is mandatory with 'multiSource', because it cannot be derived from a single source file name", key="target")
-        multiCtx.Verify(not "*" in jMultiTarget, f"'{jMultiTarget}' cannot contain a wildcard with 'multiSource', because it cannot be derived from a single source file name", key="target")
+    def MakeMultiSourceBundleFile(multiNode: JsonNode, jMultiSourceElement: list, jMultiTarget: str) -> BundleFile:
+        multiNode.Verify(bool(jMultiSourceElement), "must not be empty, otherwise it builds no file at all", key="multiSource")
+        multiNode.Verify(bool(jMultiTarget), "is mandatory with 'multiSource', because it cannot be derived from a single source file name", key="target")
+        multiNode.Verify(not "*" in jMultiTarget, f"'{jMultiTarget}' cannot contain a wildcard with 'multiSource', because it cannot be derived from a single source file name", key="target")
 
         bundleFile = BundleFile()
         bundleFile.absSourceParent = sourceParent
-        bundleFile.absSourceFiles = [MakeSourceFile(multiCtx, jElement, "multiSource")
+        bundleFile.absSourceFiles = [MakeSourceFile(multiNode, jElement, "multiSource")
                                      for jElement in jMultiSourceElement]
         bundleFile.isMultiSource = True
         bundleFile.relTargetFile = jMultiTarget
@@ -600,108 +602,98 @@ def __MakeBundleFilesFromDict(ctx: JsonContext, jFile: dict, jsonDir: str) -> li
     if jSource:
         bundleFile = BundleFile()
         bundleFile.absSourceParent = sourceParent
-        bundleFile.absSourceFiles = [MakeSourceFile(ctx, jSource, "source")]
+        bundleFile.absSourceFiles = [MakeSourceFile(node, jSource, "source")]
         bundleFile.relTargetFile = jTarget if jTarget != None else jSource
         bundleFile.params = params
         bundleFile.registryDef = registryDef
         files.append(bundleFile)
 
-    if jSourceList:
-        jElement: str
-        for index, jElement in enumerate(jSourceList):
-            bundleFile = BundleFile()
-            bundleFile.absSourceParent = sourceParent
-            bundleFile.absSourceFiles = [MakeSourceFile(ctx.Sub("sourceList").At(index), jElement, "")]
-            bundleFile.relTargetFile = jElement
-            bundleFile.params = params
-            bundleFile.registryDef = registryDef
-            files.append(bundleFile)
+    elementNode: JsonNode
+    for elementNode in sourceListNode.Elements():
+        bundleFile = BundleFile()
+        bundleFile.absSourceParent = sourceParent
+        bundleFile.absSourceFiles = [MakeSourceFile(elementNode, elementNode.data, "")]
+        bundleFile.relTargetFile = elementNode.data
+        bundleFile.params = params
+        bundleFile.registryDef = registryDef
+        files.append(bundleFile)
 
-    if jSourceTargetList:
-        jElement: dict[str, str]
-        for index, jElement in enumerate(jSourceTargetList):
-            elementCtx: JsonContext = ctx.Sub("sourceTargetList").At(index)
-            elementCtx.VerifyKnownKeys(jElement, BUNDLE_SOURCE_TARGET_KEYS)
-            jElementSource: str = elementCtx.GetMandatory(jElement, "source", str)
-            bundleFile = BundleFile()
-            bundleFile.absSourceParent = sourceParent
-            bundleFile.absSourceFiles = [MakeSourceFile(elementCtx, jElementSource, "source")]
-            bundleFile.relTargetFile = elementCtx.GetOptional(jElement, "target", str, default=jElementSource)
-            bundleFile.params = params
-            bundleFile.registryDef = registryDef
-            files.append(bundleFile)
+    for elementNode in sourceTargetListNode.Elements():
+        elementNode.VerifyKnownKeys(BUNDLE_SOURCE_TARGET_KEYS)
+        jElementSource: str = elementNode.GetMandatory("source", str)
+        bundleFile = BundleFile()
+        bundleFile.absSourceParent = sourceParent
+        bundleFile.absSourceFiles = [MakeSourceFile(elementNode, jElementSource, "source")]
+        bundleFile.relTargetFile = elementNode.GetOptional("target", str, default=jElementSource)
+        bundleFile.params = params
+        bundleFile.registryDef = registryDef
+        files.append(bundleFile)
 
     # Tested against None, so that an empty list is reported as a bad configuration
     # instead of silently building no target file at all.
     if jMultiSource != None:
-        files.append(MakeMultiSourceBundleFile(ctx, jMultiSource, jTarget))
+        files.append(MakeMultiSourceBundleFile(node, jMultiSource, jTarget))
 
-    if jMultiSourceTargetList:
-        jElement: dict[str, str | list[str]]
-        for index, jElement in enumerate(jMultiSourceTargetList):
-            elementCtx: JsonContext = ctx.Sub("multiSourceTargetList").At(index)
-            elementCtx.VerifyKnownKeys(jElement, BUNDLE_MULTI_SOURCE_TARGET_KEYS)
-            files.append(MakeMultiSourceBundleFile(
-                elementCtx,
-                elementCtx.GetMandatory(jElement, "multiSource", list, elementType=str),
-                elementCtx.GetOptional(jElement, "target", str)))
+    for elementNode in multiSourceTargetListNode.Elements():
+        elementNode.VerifyKnownKeys(BUNDLE_MULTI_SOURCE_TARGET_KEYS)
+        files.append(MakeMultiSourceBundleFile(
+            elementNode,
+            elementNode.GetMandatory("multiSource", list, elementType=str),
+            elementNode.GetOptional("target", str)))
 
     return files
 
 
-def __MakeBundleEventsFromDict(ctx: JsonContext, jThing: dict, jsonDir: str) -> BundleEventsT:
+def __MakeBundleEventsFromDict(node: JsonNode, jsonDir: str) -> BundleEventsT:
     events = BundleEventsT()
     eventName: str
     eventType: BundleEventType
 
     for eventName, eventType in g_bundleEventTypeByJsonName.items():
-        jEvent: dict = ctx.GetOptional(jThing, eventName, dict)
-        if jEvent:
-            eventCtx: JsonContext = ctx.Sub(eventName)
-            eventCtx.VerifyKnownKeys(jEvent, BUNDLE_EVENT_KEYS)
+        if eventNode := node.SubOptional(eventName):
+            eventNode.VerifyKnownKeys(BUNDLE_EVENT_KEYS)
             event = BundleEvent()
             event.type = eventType
-            event.absScript = os.path.join(jsonDir, eventCtx.GetMandatory(jEvent, "script", str))
-            event.funcName = eventCtx.GetOptional(jEvent, "function", str, event.funcName)
-            event.kwargs = eventCtx.GetOptional(jEvent, "kwargs", dict, event.kwargs)
+            event.absScript = os.path.join(jsonDir, eventNode.GetMandatory("script", str))
+            event.funcName = eventNode.GetOptional("function", str, event.funcName)
+            event.kwargs = eventNode.GetOptional("kwargs", dict, event.kwargs)
             events[event.type] = event
 
     return events
 
 
-def __MakeBundleItemFromDict(ctx: JsonContext, jItem: dict, jsonDir: str) -> BundleItem:
+def __MakeBundleItemFromDict(node: JsonNode, jsonDir: str) -> BundleItem:
     item = BundleItem()
-    ctx.VerifyKnownKeys(jItem, BUNDLE_ITEM_KEYS)
-    item.name = ctx.GetMandatory(jItem, "name", str)
-    item.namePrefix = ctx.GetOptional(jItem, "namePrefix", str, item.namePrefix)
-    item.nameSuffix = ctx.GetOptional(jItem, "nameSuffix", str, item.nameSuffix)
-    item.isBig = ctx.GetOptional(jItem, "big", bool, item.isBig)
-    item.bigSuffix = ctx.GetOptional(jItem, "bigSuffix", str, item.bigSuffix)
-    item.setGameLanguageOnInstall = ctx.GetOptional(
-        jItem, "setGameLanguageOnInstall", str, item.setGameLanguageOnInstall)
+    node.VerifyKnownKeys(BUNDLE_ITEM_KEYS)
+    item.name = node.GetMandatory("name", str)
+    item.namePrefix = node.GetOptional("namePrefix", str, item.namePrefix)
+    item.nameSuffix = node.GetOptional("nameSuffix", str, item.nameSuffix)
+    item.isBig = node.GetOptional("big", bool, item.isBig)
+    item.bigSuffix = node.GetOptional("bigSuffix", str, item.bigSuffix)
+    item.setGameLanguageOnInstall = node.GetOptional(
+        "setGameLanguageOnInstall", str, item.setGameLanguageOnInstall)
 
-    jFiles: list = ctx.GetOptional(jItem, "files", list, default=[], elementType=dict)
-    jFile: dict
-    for index, jFile in enumerate(jFiles):
-        item.files.extend(__MakeBundleFilesFromDict(ctx.Sub("files").At(index), jFile, jsonDir))
+    fileNode: JsonNode
+    for fileNode in node.Elements("files", dict):
+        item.files.extend(__MakeBundleFilesFromDict(fileNode, jsonDir))
 
-    item.events = __MakeBundleEventsFromDict(ctx, jItem, jsonDir)
+    item.events = __MakeBundleEventsFromDict(node, jsonDir)
 
     return item
 
 
-def __MakeBundlePackFromDict(ctx: JsonContext, jPack: dict, jsonDir: str) -> BundlePack:
+def __MakeBundlePackFromDict(node: JsonNode, jsonDir: str) -> BundlePack:
     pack = BundlePack()
-    ctx.VerifyKnownKeys(jPack, BUNDLE_PACK_KEYS)
-    pack.name = ctx.GetMandatory(jPack, "name", str)
-    pack.namePrefix = ctx.GetOptional(jPack, "namePrefix", str, pack.namePrefix)
-    pack.nameSuffix = ctx.GetOptional(jPack, "nameSuffix", str, pack.nameSuffix)
-    pack.itemNames = ctx.GetMandatory(jPack, "itemNames", list, elementType=str)
-    pack.allowInstall = ctx.GetOptional(jPack, "install", bool, pack.allowInstall)
-    pack.allowBuild = ctx.GetOptional(jPack, "build", bool, pack.allowBuild)
-    pack.setGameLanguageOnInstall = ctx.GetOptional(
-        jPack, "setGameLanguageOnInstall", str, pack.setGameLanguageOnInstall)
-    pack.events = __MakeBundleEventsFromDict(ctx, jPack, jsonDir)
+    node.VerifyKnownKeys(BUNDLE_PACK_KEYS)
+    pack.name = node.GetMandatory("name", str)
+    pack.namePrefix = node.GetOptional("namePrefix", str, pack.namePrefix)
+    pack.nameSuffix = node.GetOptional("nameSuffix", str, pack.nameSuffix)
+    pack.itemNames = node.GetMandatory("itemNames", list, elementType=str)
+    pack.allowInstall = node.GetOptional("install", bool, pack.allowInstall)
+    pack.allowBuild = node.GetOptional("build", bool, pack.allowBuild)
+    pack.setGameLanguageOnInstall = node.GetOptional(
+        "setGameLanguageOnInstall", str, pack.setGameLanguageOnInstall)
+    pack.events = __MakeBundleEventsFromDict(node, jsonDir)
 
     return pack
 
@@ -715,23 +707,19 @@ def AddBundlePacksFromJsons(jsonFiles: list[JsonFile], bundles: Bundles) -> None
 
     for jsonFile in jsonFiles:
         jsonDir: str = util.GetAbsFileDir(jsonFile.path)
-        root = util.JsonContext(jsonFile.path)
-        jBundles: dict = root.GetOptional(jsonFile.data, "bundles", dict)
+        root = util.JsonNode(jsonFile.path, jsonFile.data)
 
-        if jBundles:
-            ctx = root.Sub("bundles")
-            ctx.VerifyKnownKeys(jBundles, BUNDLES_KEYS)
-            VerifyFormatVersion(ctx, jBundles, LATEST_BUNDLES_VERSION)
+        if node := root.SubOptional("bundles"):
+            node.VerifyKnownKeys(BUNDLES_KEYS)
+            VerifyFormatVersion(node, LATEST_BUNDLES_VERSION)
 
             # The prefixes are deliberately not reset per json file. A prefix declared
             # in one file keeps applying to the packs of the following files.
-            jPacksPrefix: str = ctx.GetOptional(jBundles, "packsPrefix", str, jPacksPrefix)
-            jPacksSuffix: str = ctx.GetOptional(jBundles, "packsSuffix", str, jPacksSuffix)
-            jPacks: list = ctx.GetOptional(jBundles, "packs", list, default=[], elementType=dict)
-            jPack: dict
-            for index, jPack in enumerate(jPacks):
-                packCtx: JsonContext = ctx.Sub("packs").At(index, jPack.get("name", ""))
-                bundlePack: BundlePack = __MakeBundlePackFromDict(packCtx, jPack, jsonDir)
+            jPacksPrefix: str = node.GetOptional("packsPrefix", str, jPacksPrefix)
+            jPacksSuffix: str = node.GetOptional("packsSuffix", str, jPacksSuffix)
+            packNode: JsonNode
+            for packNode in node.Elements("packs", dict, nameKey="name"):
+                bundlePack: BundlePack = __MakeBundlePackFromDict(packNode, jsonDir)
 
                 if not bundlePack.namePrefix and jPacksPrefix:
                     bundlePack.namePrefix = jPacksPrefix
@@ -751,23 +739,19 @@ def AddBundleItemsFromJsons(jsonFiles: list[JsonFile], bundles: Bundles) -> None
 
     for jsonFile in jsonFiles:
         jsonDir: str = util.GetAbsFileDir(jsonFile.path)
-        root = util.JsonContext(jsonFile.path)
-        jBundles: dict = root.GetOptional(jsonFile.data, "bundles", dict)
+        root = util.JsonNode(jsonFile.path, jsonFile.data)
 
-        if jBundles:
-            ctx = root.Sub("bundles")
-            ctx.VerifyKnownKeys(jBundles, BUNDLES_KEYS)
-            VerifyFormatVersion(ctx, jBundles, LATEST_BUNDLES_VERSION)
+        if node := root.SubOptional("bundles"):
+            node.VerifyKnownKeys(BUNDLES_KEYS)
+            VerifyFormatVersion(node, LATEST_BUNDLES_VERSION)
 
             # The prefixes are deliberately not reset per json file. A prefix declared
             # in one file keeps applying to the items of the following files.
-            jItemsPrefix: str = ctx.GetOptional(jBundles, "itemsPrefix", str, jItemsPrefix)
-            jItemsSuffix: str = ctx.GetOptional(jBundles, "itemsSuffix", str, jItemsSuffix)
-            jItems: list = ctx.GetOptional(jBundles, "items", list, default=[], elementType=dict)
-            jItem: dict
-            for index, jItem in enumerate(jItems):
-                itemCtx: JsonContext = ctx.Sub("items").At(index, jItem.get("name", ""))
-                bundleItem: BundleItem = __MakeBundleItemFromDict(itemCtx, jItem, jsonDir)
+            jItemsPrefix: str = node.GetOptional("itemsPrefix", str, jItemsPrefix)
+            jItemsSuffix: str = node.GetOptional("itemsSuffix", str, jItemsSuffix)
+            itemNode: JsonNode
+            for itemNode in node.Elements("items", dict, nameKey="name"):
+                bundleItem: BundleItem = __MakeBundleItemFromDict(itemNode, jsonDir)
 
                 if not bundleItem.namePrefix and jItemsPrefix:
                     bundleItem.namePrefix = jItemsPrefix
