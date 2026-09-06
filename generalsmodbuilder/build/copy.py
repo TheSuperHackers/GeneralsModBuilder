@@ -264,15 +264,18 @@ class TextTransform:
                 targetFile.write(line.eol)
 
 
-    def TransformLines(self, lines: list[TextLine]) -> list[TextLine]:
+    def TransformLines(self, lines: list[TextLine], sources: list[str] = None) -> list[TextLine]:
         """
         Applies all text transformations of the params to the given lines.
         A line keeps the line ending that it was read with, unless 'forceEOL' names another
         one, so that a param that says nothing about line endings does not change them.
+        sources : list[str]
+            The files that the lines were read from. Names them in a message about a bad
+            exclusion marker, which is the one transformation that can fail.
         """
         # Exclude text inside markers ...
         if self.excludeMarkers:
-            lines = TextTransform.__FilterText(lines, self.excludeMarkers)
+            lines = TextTransform.__FilterText(lines, self.excludeMarkers, sources)
 
         # Delete comments ...
         if self.deleteComments != None:
@@ -296,24 +299,56 @@ class TextTransform:
 
 
     @staticmethod
-    def __FilterText(lines: list[TextLine], markers: list[TextMarker]) -> list[TextLine]:
-        outputLines = []
-        activeMarkers = []
+    def __FilterText(lines: list[TextLine], markers: list[TextMarker], sources: list[str]) -> list[TextLine]:
+        """
+        Removes every line of a marked region, including the lines that open and close it.
+        A region is counted, not flagged, so that the same marker can open again inside
+        itself. It may also open in one source file and close in a later one, because the
+        lines of all source files of a target file are filtered here as one text.
+        """
+        outputLines = list[TextLine]()
+        openCounts = [0] * len(markers)
+        marker: TextMarker
 
         for line in lines:
-            hadActiveMarkers = bool(activeMarkers)
+            wasOpen: bool = any(openCounts)
+            opensHere: bool = False
 
-            for marker in markers:
+            for index, marker in enumerate(markers):
                 if marker.begin in line.text:
-                    activeMarkers.append(marker)
-                if marker.end in line.text:
-                    activeMarkers.remove(marker)
+                    openCounts[index] += 1
+                    opensHere = True
 
-            hasActiveMarkers = bool(activeMarkers)
-            if not hadActiveMarkers and not hasActiveMarkers:
+                if marker.end in line.text:
+                    openCounts[index] -= 1
+                    util.Verify(openCounts[index] >= 0,
+                                f"Text of {TextTransform.__NameSources(sources)} closes exclusion marker "
+                                f"'{marker.end}' in line '{line.text}', but it was never opened with "
+                                f"'{marker.begin}'")
+
+            # A line that opens a region is part of it, even when the region closes again on
+            # that same line, so it is dropped along with everything the region contains.
+            if not wasOpen and not opensHere and not any(openCounts):
                 outputLines.append(line)
 
+        for index, marker in enumerate(markers):
+            util.Verify(openCounts[index] == 0,
+                        f"Text of {TextTransform.__NameSources(sources)} opens exclusion marker "
+                        f"'{marker.begin}' {openCounts[index]} time(s) without closing it with "
+                        f"'{marker.end}'")
+
         return outputLines
+
+
+    @staticmethod
+    def __NameSources(sources: list[str]) -> str:
+        """
+        Names the source files of a message about them. All of them are named, because a
+        marked region may span several of them and the bad one is not known.
+        """
+        if not sources:
+            return "the source file"
+        return "'" + "', '".join(sources) + "'"
 
 
 class BuildJob:
@@ -1025,7 +1060,7 @@ class BuildCopy:
         for source in sources:
             lines.extend(transform.ReadLines(source))
 
-        lines = transform.TransformLines(lines)
+        lines = transform.TransformLines(lines, sources)
         transform.WriteLines(target, lines)
 
         return BuildCopyResult(success=True, printType=BuildCopyPrintType.Make)
