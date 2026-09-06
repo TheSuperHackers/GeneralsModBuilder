@@ -6,7 +6,9 @@ The expectations follow the command reference that gametextcompiler.exe v1.1 pri
 is run without arguments, in particular that the LANGUAGE of MERGE_AND_OVERWRITE is
 optional and that leaving it out merges the language the loaded files already carry.
 """
-from generalsmodbuilder.build.copy import BuildFileType, MakeGameTextMergeArgs
+import pytest
+
+from generalsmodbuilder.build.copy import BuildFileType, MakeGameTextMergeArgs, MakeW3DExportMode
 
 
 EXE = "gametextcompiler.exe"
@@ -72,3 +74,32 @@ def test_swap_and_set_language_runs_before_the_file_is_saved():
     args = MergeArgs(["A.str", "B.str"], "Merged.csf", {"swapAndSetLanguage": "German"})
     assert args[-2] == "SWAP_AND_SET_LANGUAGE(FILE_ID:0,LANGUAGE:German)"
     assert args[-1].startswith("SAVE_CSF")
+
+
+# The combinations that the patch project exports with, and the two that the exporter has
+# no mode for. Hierarchy with animation but no mesh, and animation with mesh but no
+# hierarchy, were silently exported as H and as A before, losing what was asked for.
+EXPORT_MODES = [
+    (True, True, True, "HAM"),
+    (True, False, True, "HM"),
+    (True, False, False, "H"),
+    (False, True, False, "A"),
+    (False, False, True, "M"),
+]
+
+
+@pytest.mark.parametrize("hierarchy,animation,mesh,expected", EXPORT_MODES)
+def test_an_export_setup_names_its_mode(hierarchy, animation, mesh, expected):
+    assert MakeW3DExportMode("Model.blend", hierarchy, animation, mesh) == expected
+
+
+@pytest.mark.parametrize("hierarchy,animation,mesh", [
+    (True, True, False),
+    (False, True, True),
+    (False, False, False),
+])
+def test_an_export_setup_without_a_mode_is_reported(hierarchy, animation, mesh):
+    with pytest.raises(Exception) as error:
+        MakeW3DExportMode("Model.blend", hierarchy, animation, mesh)
+    assert "Model.blend" in str(error.value)
+    assert "no export mode" in str(error.value)

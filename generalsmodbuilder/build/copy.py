@@ -398,6 +398,36 @@ class BuildJob:
     params: ParamsT
 
 
+def MakeW3DExportMode(source: str, exportHierarchy: bool, exportAnimation: bool, exportMesh: bool) -> str:
+    """
+    Tells the export mode that the blender w3d exporter takes for the wanted parts of a
+    model. The exporter knows hierarchy, animation and mesh together, hierarchy with mesh,
+    and each of the three on its own. It has no mode for hierarchy with animation but
+    without mesh, and none for animation with mesh but without hierarchy, so those two are
+    reported rather than exported as something that nobody asked for.
+    """
+    if exportHierarchy and exportAnimation and exportMesh:
+        return "HAM"
+
+    if exportHierarchy and exportMesh:
+        return "HM"
+
+    if exportHierarchy and not exportAnimation:
+        return "H"
+
+    if exportAnimation and not exportHierarchy and not exportMesh:
+        return "A"
+
+    if exportMesh and not exportHierarchy and not exportAnimation:
+        return "M"
+
+    raise Exception(
+        f"Source '{source}' asks for w3dExportHierarchy:{exportHierarchy}, "
+        f"w3dExportAnimation:{exportAnimation}, w3dExportMesh:{exportMesh}, which the w3d "
+        f"exporter has no export mode for. It exports hierarchy, animation and mesh "
+        f"together, or hierarchy with mesh, or each of the three on its own.")
+
+
 def MakeGameTextMergeArgs(
         exec: str,
         sources: list[str],
@@ -1222,6 +1252,8 @@ class BuildCopy:
 
     @RequiresTool("blender")
     def __CopyToW3D(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
+        # The type of every flag read here is verified where the params are parsed, so a
+        # value that is present is a bool and can be written into the expression below.
         iparams = CaseInsensitiveDict(params)
         w3dExportHierarchy: bool = iparams.get("w3dExportHierarchy", True)
         w3dExportAnimation: bool = iparams.get("w3dExportAnimation", False)
@@ -1232,23 +1264,10 @@ class BuildCopy:
         w3dCreateIndividualFiles: bool = iparams.get("w3dCreateIndividualFiles", False)
         w3dCreateTextureXmls: bool = iparams.get("w3dCreateTextureXmls", False)
 
-        if w3dExportHierarchy and w3dExportAnimation and w3dExportMesh:
-            export_mode = "HAM"
-        elif w3dExportHierarchy and w3dExportMesh:
-            export_mode = "HM"
-        elif w3dExportHierarchy:
-            export_mode = "H"
-        elif w3dExportAnimation:
-            export_mode = "A"
-        elif w3dExportMesh:
-            export_mode = "M"
-        else:
-            raise Exception(f"Source '{source}' has unrecognized export setup")
+        exportMode: str = MakeW3DExportMode(
+            source, w3dExportHierarchy, w3dExportAnimation, w3dExportMesh)
 
-        if w3dCompressTimeCoded:
-            animation_compression = "TC"
-        else:
-            animation_compression = "U"
+        animationCompression: str = "TC" if w3dCompressTimeCoded else "U"
 
         expr = f"""
 import bpy
@@ -1257,9 +1276,9 @@ bpy.ops.export_mesh.westwood_w3d(
     filepath=r'{target}',
     check_existing=False,
     file_format='W3D',
-    export_mode='{export_mode}',
+    export_mode='{exportMode}',
     use_existing_skeleton={w3dUseExistingSkeleton},
-    animation_compression='{animation_compression}',
+    animation_compression='{animationCompression}',
     force_vertex_materials={w3dForceVertexMaterials},
     individual_files={w3dCreateIndividualFiles},
     create_texture_xmls={w3dCreateTextureXmls})
