@@ -398,6 +398,54 @@ class BuildJob:
     params: ParamsT
 
 
+def MakeGameTextMergeArgs(
+        exec: str,
+        sources: list[str],
+        target: str,
+        params: ParamsT,
+        targetT: BuildFileType) -> list[str]:
+    """
+    Builds the command line that merges several game text files into one target file.
+    Each source file is loaded into its own compiler slot and is merged over the first slot,
+    so a label that is defined again in a later source file overwrites the earlier one.
+    """
+    iparams = CaseInsensitiveDict(params)
+    args: list[str] = [exec]
+
+    language: str = iparams.get("language")
+    hasLanguage: bool = bool(language)
+
+    # The language of a merge is optional, and without it the compiler merges the language
+    # that the loaded files already carry. That is what a merge without the param wants, and
+    # naming no language is the only way to ask for it.
+    mergeLanguage: str = f",LANGUAGE:{language}" if hasLanguage else ""
+
+    for index, source in enumerate(sources):
+        if GetFileType(source) == BuildFileType.csf:
+            args.append(f"LOAD_CSF(FILE_ID:{index},FILE_PATH:{source})")
+        elif hasLanguage:
+            args.append(f"LOAD_MULTI_STR(FILE_ID:{index},FILE_PATH:{source},LANGUAGE:{language})")
+        else:
+            args.append(f"LOAD_STR(FILE_ID:{index},FILE_PATH:{source})")
+
+        if index > 0:
+            args.append(f"MERGE_AND_OVERWRITE(FILE_ID:0,FILE_ID:{index}{mergeLanguage})")
+
+    swapAndSetLanguage: str = iparams.get("swapAndSetLanguage")
+    if swapAndSetLanguage:
+        args.append(f"SWAP_AND_SET_LANGUAGE(FILE_ID:0,LANGUAGE:{swapAndSetLanguage})")
+
+    # A CSF file stores its language, but a STR file needs the language(s) written out with it.
+    if targetT == BuildFileType.csf:
+        args.append(f"SAVE_CSF(FILE_ID:0,FILE_PATH:{target})")
+    elif hasLanguage:
+        args.append(f"SAVE_MULTI_STR(FILE_ID:0,FILE_PATH:{target},LANGUAGE:{language})")
+    else:
+        args.append(f"SAVE_STR(FILE_ID:0,FILE_PATH:{target})")
+
+    return args
+
+
 @dataclass
 class BuildCopy:
     tools: ToolsT
@@ -792,15 +840,8 @@ class BuildCopy:
     def __MergeGameText(self, sources: list[str], target: str, params: ParamsT, targetT: BuildFileType) -> BuildCopyResult:
         """
         Builds one game text file from multiple game text files.
-        Each source file is loaded into its own compiler slot and is merged over the first slot,
-        so a label that is defined again in a later source file overwrites the earlier one.
         """
-        iparams = CaseInsensitiveDict(params)
         exec: str = self.__GetToolExePath("gametextcompiler")
-        args: list[str] = [exec]
-
-        language: str = iparams.get("language")
-        hasLanguage: bool = isinstance(language, str) and bool(language)
 
         # Text params cannot be applied by the compiler, so pre process each text source file into a temp file.
         tmpSources = list[str]()
@@ -816,29 +857,7 @@ class BuildCopy:
                         mergeSources[index] = tmpSource
                         tmpSources.append(tmpSource)
 
-        for index, source in enumerate(mergeSources):
-            if GetFileType(source) == BuildFileType.csf:
-                args.append(f"LOAD_CSF(FILE_ID:{index},FILE_PATH:{source})")
-            elif hasLanguage:
-                args.append(f"LOAD_MULTI_STR(FILE_ID:{index},FILE_PATH:{source},LANGUAGE:{language})")
-            else:
-                args.append(f"LOAD_STR(FILE_ID:{index},FILE_PATH:{source})")
-
-            if index > 0:
-                args.append(f"MERGE_AND_OVERWRITE(FILE_ID:0,FILE_ID:{index},LANGUAGE:{language})")
-
-        swapAndSetLanguage: str = iparams.get("swapAndSetLanguage")
-        if isinstance(swapAndSetLanguage, str) and bool(swapAndSetLanguage):
-            args.append(f"SWAP_AND_SET_LANGUAGE(FILE_ID:0,LANGUAGE:{swapAndSetLanguage})")
-
-        # A CSF file stores its language, but a STR file needs the language(s) written out with it.
-        if targetT == BuildFileType.csf:
-            args.append(f"SAVE_CSF(FILE_ID:0,FILE_PATH:{target})")
-        elif hasLanguage:
-            args.append(f"SAVE_MULTI_STR(FILE_ID:0,FILE_PATH:{target},LANGUAGE:{language})")
-        else:
-            args.append(f"SAVE_STR(FILE_ID:0,FILE_PATH:{target})")
-
+        args: list[str] = MakeGameTextMergeArgs(exec, mergeSources, target, params, targetT)
         success: bool = util.RunProcess(args)
 
         for tmpSource in tmpSources:
