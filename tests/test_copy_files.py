@@ -131,3 +131,59 @@ def test_a_zip_holds_the_source_tree(tmp_path):
         names = [name for name in archive.namelist() if not name.endswith("/")]
         assert sorted(names) == ["Data/INI/Weapon.ini", "readme.txt"]
         assert archive.read("readme.txt") == b"read me" + CRLF.encode()
+
+
+def ListDir(path) -> list:
+    return sorted(os.listdir(str(path)))
+
+
+def test_a_failed_str_to_csf_leaves_no_temp_file(tmp_path, StandInForProcess):
+    source = WriteFile(tmp_path / "Src" / "generals.str", "LABEL" + LF)
+    target = str(tmp_path / "Out" / "generals.csf")
+    os.makedirs(str(tmp_path / "Out"), exist_ok=True)
+    StandInForProcess(fail=True)
+
+    copy = BuildCopy(tools=MakeTools("gametextcompiler"))
+    with pytest.raises(Exception):
+        copy.Copy([source], target, {"deleteComments": ";"})
+
+    assert ListDir(tmp_path / "Out") == []
+
+
+def test_a_failed_csf_to_str_leaves_no_temp_file(tmp_path, StandInForProcess):
+    source = WriteFile(tmp_path / "Src" / "generals.csf", "")
+    target = str(tmp_path / "Out" / "generals.str")
+    os.makedirs(str(tmp_path / "Out"), exist_ok=True)
+    StandInForProcess(fail=True)
+
+    copy = BuildCopy(tools=MakeTools("gametextcompiler"))
+    with pytest.raises(Exception):
+        copy.Copy([source], target, {"deleteComments": ";"})
+
+    assert ListDir(tmp_path / "Out") == []
+
+
+def test_a_failed_game_text_merge_leaves_no_temp_files(tmp_path, StandInForProcess):
+    first = WriteFile(tmp_path / "Src" / "base.str", "LABEL" + LF)
+    second = WriteFile(tmp_path / "Src" / "override.str", "LABEL" + LF)
+    target = str(tmp_path / "Out" / "generals.csf")
+    os.makedirs(str(tmp_path / "Out"), exist_ok=True)
+    StandInForProcess(fail=True)
+
+    copy = BuildCopy(tools=MakeTools("gametextcompiler"))
+    with pytest.raises(Exception):
+        copy.Copy([first, second], target, {"deleteComments": ";"})
+
+    assert ListDir(tmp_path / "Out") == []
+
+
+def test_a_successful_game_text_merge_leaves_no_temp_files(tmp_path, StandInForProcess):
+    first = WriteFile(tmp_path / "Src" / "base.str", "LABEL" + LF)
+    second = WriteFile(tmp_path / "Src" / "override.str", "LABEL" + LF)
+    target = str(tmp_path / "Out" / "generals.csf")
+    StandInForProcess(writeTarget=target, text="")
+
+    copy = BuildCopy(tools=MakeTools("gametextcompiler"))
+    assert copy.Copy([first, second], target, {"deleteComments": ";"}).success
+
+    assert ListDir(tmp_path / "Out") == ["generals.csf"]
