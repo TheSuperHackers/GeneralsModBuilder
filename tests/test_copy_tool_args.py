@@ -8,7 +8,8 @@ optional and that leaving it out merges the language the loaded files already ca
 """
 import pytest
 
-from generalsmodbuilder.build.copy import BuildFileType, MakeGameTextMergeArgs, MakeW3DExportMode
+from generalsmodbuilder.build.copy import (
+    BuildFileType, HasCrunchTextureFormat, MakeCrunchArgs, MakeGameTextMergeArgs, MakeW3DExportMode)
 
 
 EXE = "gametextcompiler.exe"
@@ -103,3 +104,54 @@ def test_an_export_setup_without_a_mode_is_reported(hierarchy, animation, mesh):
         MakeW3DExportMode("Model.blend", hierarchy, animation, mesh)
     assert "Model.blend" in str(error.value)
     assert "no export mode" in str(error.value)
+
+
+CRUNCH = "crunch.exe"
+
+
+def CrunchArgs(params: dict = None, textureFormat: str = "", quiet: bool = False) -> list:
+    return MakeCrunchArgs(CRUNCH, "Texture.tga", "Texture.dds", params, textureFormat, quiet)
+
+
+def test_a_texture_is_written_as_dds_without_progress():
+    assert CrunchArgs() == [
+        CRUNCH, "-file", "Texture.tga", "-out", "Texture.dds", "-fileformat", "dds", "-noprogress"]
+
+
+def test_the_params_of_the_build_file_are_passed_on():
+    args = CrunchArgs({"-quality": 255, "-mipmode": "Generate"})
+    assert args[-4:] == ["-quality", "255", "-mipmode", "Generate"]
+
+
+def test_a_format_param_without_a_value_stays_a_bare_flag():
+    # The patch project writes the format as "-DXT1": "", where the empty value is dropped.
+    assert CrunchArgs({"-DXT1": ""})[-1] == "-DXT1"
+
+
+def test_a_texture_format_is_recognized_in_any_case():
+    # crunch reads its arguments in any case, so a format written in lower case is a format
+    # and must not have an automatically chosen one appended after it.
+    assert HasCrunchTextureFormat({"-DXT1": ""})
+    assert HasCrunchTextureFormat({"-dxt5": ""})
+    assert HasCrunchTextureFormat({"-DXT5_CCxY": ""})
+    assert not HasCrunchTextureFormat({"-quality": 255, "-mipmode": "Generate"})
+    assert not HasCrunchTextureFormat({})
+    assert not HasCrunchTextureFormat(None)
+
+
+def test_the_automatic_texture_format_comes_last():
+    args = CrunchArgs({"-quality": 255}, textureFormat="-DXT5")
+    assert args[-1] == "-DXT5"
+
+
+def test_quiet_is_asked_for_by_the_caller():
+    assert "-quiet" not in CrunchArgs(quiet=False)
+    assert "-quiet" in CrunchArgs(quiet=True)
+
+
+def test_every_known_texture_format_is_recognized():
+    from generalsmodbuilder.build.copy import CrunchTextureFormatSet
+    for name in CrunchTextureFormatSet:
+        assert HasCrunchTextureFormat({name: ""})
+        assert HasCrunchTextureFormat({name.lower(): ""})
+        assert HasCrunchTextureFormat({name.upper(): ""})
