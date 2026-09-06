@@ -660,14 +660,13 @@ class BuildCopy:
         """
         Selects the function that builds one target file from multiple source files.
         Symlinks are never taken here, because a merged file has no single source to link to.
+
+        Whether the source files are of a type that can build this target at all is decided
+        by SupportsMultiSource, which the Pre Build step applies to every bundle file, so
+        that a bad configuration fails before the long running Build step and with the name
+        of the bundle item in the message. It is not asked again here.
         """
         source: str
-        for source in sources:
-            sourceT: BuildFileType = GetFileType(source)
-            if not SupportsMultiSource(sourceT, targetT):
-                raise Exception(
-                    f"Source '{source}' of type '{sourceT.name}' cannot build target '{target}' of type '{targetT.name}' "
-                    f"together with other source files.")
 
         if targetT == BuildFileType.csf:
             return self.__MergeToCSF
@@ -678,7 +677,14 @@ class BuildCopy:
                 if GetFileType(source) == BuildFileType.csf:
                     return self.__MergeToSTR
 
-        return self.__ConcatToTextFile
+        if (targetT == BuildFileType.ini or
+            targetT == BuildFileType.wnd or
+            targetT == BuildFileType.str):
+            return self.__ConcatToTextFile
+
+        raise Exception(
+            f"Target '{target}' of type '{targetT.name}' cannot be built from multiple source files, "
+            f"because there is no meaningful way to combine them into this file type.")
 
 
     def __CopyTo(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:

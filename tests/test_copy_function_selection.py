@@ -96,3 +96,23 @@ def test_a_texture_conversion_needs_crunch_with_or_without_params():
     # A dds built from another file type is always crunched, params or not.
     assert RequiredTool("Art/Texture.tga", "Art/Texture.dds") == "crunch"
     assert RequiredTool("Art/Texture.tga", "Art/Texture.dds", {"-quality": 255}) == "crunch"
+
+
+def test_multi_source_text_files_are_appended_without_a_tool():
+    assert RequiredToolOfMulti(["A.ini", "B.ini"], "Joined.ini") == None
+    assert RequiredToolOfMulti(["A.wnd", "B.wnd"], "Joined.wnd") == None
+    assert RequiredToolOfMulti(["A.str", "B.str"], "Joined.str") == None
+
+
+def test_multi_source_game_text_files_are_merged_by_the_tool():
+    # A csf source has to become text before it can merge, which only the tool can do.
+    assert RequiredToolOfMulti(["A.str", "B.csf"], "Joined.str") == "gametextcompiler"
+    assert RequiredToolOfMulti(["A.str", "B.str"], "Joined.csf") == "gametextcompiler"
+    assert RequiredToolOfMulti(["A.csf", "B.csf"], "Joined.csf") == "gametextcompiler"
+
+
+def test_a_target_that_cannot_be_combined_is_reported():
+    with pytest.raises(Exception) as error:
+        RequiredToolOfMulti(["A.ini", "B.ini"], "Art/Joined.tga")
+    assert "Art/Joined.tga" in str(error.value)
+    assert "multiple source files" in str(error.value)
