@@ -211,3 +211,29 @@ def test_a_bad_marker_names_every_source_file(tmp_path):
         assert "First.ini" in str(error) and "Second.ini" in str(error)
     else:
         raise AssertionError("a bad marker must be reported")
+
+
+def test_the_text_params_of_a_real_mod_project_are_read():
+    # The params block of the CoreINI item of the patch project, as it is written there.
+    transform = TextTransform({
+        "forceEOL": CRLF,
+        "deleteComments": ";",
+        "deleteWhitespace": 1,
+        "sourceEncoding": "ascii",
+        "targetEncoding": "ascii",
+        "excludeMarkersList": [[";patch104p-optional-begin", ";patch104p-optional-end"]]})
+
+    assert transform.forceEOL == CRLF
+    assert transform.deleteComments == ";"
+    assert transform.deleteWhitespace
+    assert transform.GetSourceEncoding() == "ascii"
+    assert transform.GetTargetEncoding() == "ascii"
+    assert len(transform.excludeMarkers) == 1
+    assert transform.excludeMarkers[0].begin == ";patch104p-optional-begin"
+    assert transform.excludeMarkers[0].end == ";patch104p-optional-end"
+
+
+def test_encodings_fall_back_to_utf_8():
+    transform = TextTransform({})
+    assert transform.GetSourceEncoding() == "utf-8"
+    assert transform.GetTargetEncoding() == "utf-8"
