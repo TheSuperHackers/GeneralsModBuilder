@@ -815,15 +815,26 @@ class BuildCopy:
     def __CopyCSFtoSTR(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
         iparams = CaseInsensitiveDict(params)
         exec: str = self.__GetToolExePath("gametextcompiler")
+
+        # All params of a build file apply to the file that it builds, but the compiler can
+        # apply none of the text ones, so it writes a temp file that they are applied to.
+        transform = TextTransform(params)
+        toolTarget: str = f"{target}.tmp.str" if transform.IsRequired() else target
+
         args: list[str] = [exec,
             "-LOAD_CSF", source,
-            "-SAVE_STR", target]
+            "-SAVE_STR", toolTarget]
 
         language: str = iparams.get("language")
-        if isinstance(language, str) and bool(language):
+        if language:
             args.extend(["-SAVE_STR_LANGUAGES", language])
 
         success: bool = util.RunProcess(args)
+
+        if toolTarget != target:
+            BuildCopy.__WriteTextFile([toolTarget], target, transform)
+            util.DeleteFile(toolTarget)
+
         return BuildCopyResult(success=success, printType=BuildCopyPrintType.Make)
 
 
