@@ -65,22 +65,67 @@ g_bundleEventTypeByJsonName: dict[str, BundleEventType] = {
 
 LATEST_BUNDLES_VERSION = 1
 
-BUNDLES_KEYS = {"version", "items", "itemsPrefix", "itemsSuffix", "packs", "packsPrefix", "packsSuffix"}
-BUNDLE_EVENT_KEYS = {"script", "function", "kwargs"}
-BUNDLE_ITEM_KEYS = {
-    "name", "files", "namePrefix", "nameSuffix", "big", "bigSuffix", "setGameLanguageOnInstall",
-} | set(g_bundleEventTypeByJsonName)
-BUNDLE_PACK_KEYS = {
-    "name", "itemNames", "namePrefix", "nameSuffix", "install", "build", "setGameLanguageOnInstall",
-} | set(g_bundleEventTypeByJsonName)
-BUNDLE_FILE_KEYS = {
-    "sourceParent", "parent", "source", "target", "params", "sourceList", "sourceTargetList",
-    "multiSource", "multiSourceTargetList", "registryList",
+BUNDLES_KEYS = {
+    "version",
+    "items",
+    "itemsPrefix",
+    "itemsSuffix",
+    "packs",
+    "packsPrefix",
+    "packsSuffix"
 }
+
+BUNDLE_EVENT_KEYS = {
+    "script",
+    "function",
+    "kwargs"
+}
+
+BUNDLE_ITEM_KEYS = {
+    "name",
+    "files",
+    "namePrefix",
+    "nameSuffix",
+    "big",
+    "bigSuffix",
+    "setGameLanguageOnInstall",
+} | set(g_bundleEventTypeByJsonName)
+
+BUNDLE_PACK_KEYS = {
+    "name",
+    "itemNames",
+    "namePrefix",
+    "nameSuffix",
+    "install",
+    "build",
+    "setGameLanguageOnInstall",
+} | set(g_bundleEventTypeByJsonName)
+
+BUNDLE_FILE_KEYS = {
+    "sourceParent",
+    "parent",
+    "source",
+    "target",
+    "params",
+    "sourceList",
+    "sourceTargetList",
+    "multiSource",
+    "multiSourceTargetList",
+    "registryList",
+}
+
 # params is documented but is not implemented on an element of a sourceTargetList. It
 # stays a known key so that a configuration that carries it keeps working.
-BUNDLE_SOURCE_TARGET_KEYS = {"source", "target", "params"}
-BUNDLE_MULTI_SOURCE_TARGET_KEYS = {"multiSource", "target"}
+BUNDLE_SOURCE_TARGET_KEYS = {
+    "source",
+    "target",
+    "params"
+}
+
+BUNDLE_MULTI_SOURCE_TARGET_KEYS = {
+    "multiSource",
+    "target"
+}
 
 
 @dataclass(init=False)

@@ -9,8 +9,15 @@ from generalsmodbuilder import util
 LATEST_RUNNER_VERSION = 1
 
 RUNNER_KEYS = {
-    "version", "gameExeFile", "gameExeArgs", "relevantGameDataFileTypes", "regularGameDataFiles",
-    "gameLanguageRegKey", "gameInstallPath", "gameInstallRegKey", "gameInstall2RegKey",
+    "version",
+    "gameExeFile",
+    "gameExeArgs",
+    "relevantGameDataFileTypes",
+    "regularGameDataFiles",
+    "gameLanguageRegKey",
+    "gameInstallPath",
+    "gameInstallRegKey",
+    "gameInstall2RegKey",
     "tuczhGameInstallRegKey",
 }
 

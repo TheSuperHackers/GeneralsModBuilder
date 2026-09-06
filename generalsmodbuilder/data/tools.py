@@ -16,14 +16,38 @@ from generalsmodbuilder.build.common import ParamsToArgs
 
 LATEST_TOOLS_VERSION = 2
 
-TOOLS_KEYS = {"version", "aliases", "list"}
-# info is not consumed. It describes a tool for whoever reads the configuration.
-TOOL_KEYS = {"name", "version", "info", "enabled", "files"}
-TOOL_FILE_KEYS = {
-    "url", "target", "extractDir", "md5", "sha256", "size", "callList", "runnable",
-    "autoDeleteAfterInstall", "skipIfRunnableExists",
+TOOLS_KEYS = {
+    "version",
+    "aliases",
+    "list"
+
 }
-TOOL_CALL_KEYS = {"call", "callArgs"}
+# info is not consumed. It describes a tool for whoever reads the configuration.
+TOOL_KEYS = {
+    "name",
+    "version",
+    "info",
+    "enabled",
+    "files"
+}
+
+TOOL_FILE_KEYS = {
+    "url",
+    "target",
+    "extractDir",
+    "md5",
+    "sha256",
+    "size",
+    "callList",
+    "runnable",
+    "autoDeleteAfterInstall",
+    "skipIfRunnableExists",
+}
+
+TOOL_CALL_KEYS = {
+    "call",
+    "callArgs"
+}
 
 
 class InstallResultCode(Enum):
