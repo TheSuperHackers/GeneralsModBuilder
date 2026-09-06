@@ -5,6 +5,11 @@ from generalsmodbuilder.data.common import ParamT, ParamsT
 def ParamsToArgs(params: ParamsT, includeRegex: str = None, excludeRegex: str = None) -> list[str]:
     args = list()
 
+    # Treat None as empty, so that optional params can be passed in without a null check,
+    # the way CaseInsensitiveDict does.
+    if params == None:
+        return args
+
     for key, value in params.items():
 
         if includeRegex:

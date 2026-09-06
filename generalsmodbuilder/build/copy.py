@@ -111,6 +111,10 @@ CrunchTextureFormatSet: set[str] = {
     "-A8R8G8B8"
 }
 
+# The same formats in upper case, to look one up by. Some of them are spelled with lower
+# case letters of their own, so the set above cannot be compared against directly.
+CrunchTextureFormatKeySet: set[str] = {name.upper() for name in CrunchTextureFormatSet}
+
 
 class BuildCopyOption(Flag):
     Zero = 0
@@ -396,6 +400,48 @@ class BuildJob:
     absSources: list[str]
     absTarget: str
     params: ParamsT
+
+
+def HasCrunchTextureFormat(params: ParamsT) -> bool:
+    """
+    Tells whether the params already name the dds texture format that crunch is to write.
+    Names are compared in upper case, because crunch reads its arguments in any case, so a
+    format written as -dxt5 names the same format as -DXT5 and must not be overruled by an
+    automatically chosen one.
+    """
+    return any(arg.upper() in CrunchTextureFormatKeySet
+               for arg in ParamsToArgs(params, includeRegex="^-"))
+
+
+def MakeCrunchArgs(
+        exec: str,
+        source: str,
+        target: str,
+        params: ParamsT,
+        textureFormat: str,
+        quiet: bool) -> list[str]:
+    """
+    Builds the command line that compresses the source image into the target dds file.
+    textureFormat : str
+        The texture format to write when the params name none of their own. Is empty when
+        they do, because crunch is then told the format twice.
+    """
+    args: list[str] = [exec,
+        "-file", source,
+        "-out", target,
+        "-fileformat", "dds",
+        "-noprogress"]
+
+    if quiet:
+        args.append("-quiet")
+
+    # Append all params that begin with a dash, because all command line arguments of crunch do.
+    args.extend(ParamsToArgs(params, includeRegex="^-"))
+
+    if textureFormat:
+        args.append(textureFormat)
+
+    return args
 
 
 def MakeW3DExportMode(source: str, exportHierarchy: bool, exportAnimation: bool, exportMesh: bool) -> str:
@@ -1058,27 +1104,16 @@ class BuildCopy:
             result: BuildCopyResult = self.__CopyToTGA(source, tmpSource, params)
             assert result.success == True
 
-        exec: str = self.__GetToolExePath("crunch")
-        args: list[str] = [exec,
-            "-file", tmpSource,
-            "-out", target,
-            "-fileformat", "dds",
-            "-noprogress"]
+        textureFormat: str = ""
 
-        # Quiet crunching.
-        if not (self.options & BuildCopyOption.EnableLogging):
-            args.append("-quiet")
-
-        # Append all args that begin with a dash, because all command line arguments of crunch do.
-        userArgs: list[str] = ParamsToArgs(params, includeRegex="^-")
-        args.extend(userArgs)
-
-        hasTextureFormat = bool(CrunchTextureFormatSet & set(userArgs))
-
-        if not hasTextureFormat:
-            # Auto select DDS texture format depending on source format.
+        if not HasCrunchTextureFormat(params):
+            # Auto select the dds texture format depending on the source image.
             hasAlpha: bool = BuildCopy.__HasAlphaChannel(tmpSource, tmpSourceType)
-            args.append("-DXT5" if hasAlpha else "-DXT1")
+            textureFormat = "-DXT5" if hasAlpha else "-DXT1"
+
+        exec: str = self.__GetToolExePath("crunch")
+        quiet: bool = not (self.options & BuildCopyOption.EnableLogging)
+        args: list[str] = MakeCrunchArgs(exec, tmpSource, target, params, textureFormat, quiet)
 
         success: bool = util.RunProcess(args)
 
