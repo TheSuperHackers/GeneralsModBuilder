@@ -346,9 +346,10 @@ def __MakeToolFileFromDict(ctx: JsonContext, jFile: dict, rootDir: str, aliases:
     # Aliases are replaced before the path is joined to the root directory, so that an
     # alias that stands for an absolute path yields that path instead of being appended
     # to the root directory.
-    toolFile.absTarget = util.JoinPathIfValid(None, rootDir, __ProcessAliases(jTarget, aliases))
-    toolFile.absExtractDir = util.JoinPathIfValid(
-        toolFile.absExtractDir, rootDir, __ProcessAliases(ctx.GetOptional(jFile, "extractDir", str), aliases))
+    toolFile.absTarget = __ProcessAliases(jTarget, aliases)
+    toolFile.absTarget = util.JoinPathIfValid(None, rootDir, toolFile.absTarget)
+    toolFile.absExtractDir = __ProcessAliases(ctx.GetOptional(jFile, "extractDir", str, toolFile.absExtractDir), aliases)
+    toolFile.absExtractDir = util.JoinPathIfValid(toolFile.absExtractDir, rootDir, toolFile.absExtractDir)
 
     jCallList: list = ctx.GetOptional(jFile, "callList", list, elementType=dict)
     if jCallList is not None:
@@ -360,10 +361,10 @@ def __MakeToolFileFromDict(ctx: JsonContext, jFile: dict, rootDir: str, aliases:
             instruction = ToolCallInstruction()
             jCallPath: str = callCtx.GetMandatory(jCall, "call", str)
             callCtx.Verify(bool(jCallPath), "must not be empty", key="call")
-            instruction.absCall = util.JoinPathIfValid(
-                instruction.absCall, rootDir, __ProcessAliases(jCallPath, aliases))
-            instruction.callArgs = __ProcessAliases(
-                callCtx.GetOptional(jCall, "callArgs", dict, instruction.callArgs), aliases)
+            instruction.absCall = __ProcessAliases(jCallPath, aliases)
+            instruction.absCall = util.JoinPathIfValid(instruction.absCall, rootDir, instruction.absCall)
+            instruction.callArgs = callCtx.GetOptional(jCall, "callArgs", dict, instruction.callArgs)
+            instruction.callArgs = __ProcessAliases(instruction.callArgs, aliases)
             toolFile.callInstructions.append(instruction)
 
     return toolFile
