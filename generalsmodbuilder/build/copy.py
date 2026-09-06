@@ -860,29 +860,31 @@ class BuildCopy:
 
     @RequiresTool("gametextcompiler")
     def __CopySTRtoCSF(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
-        tmpTarget: str = target + ".tmp"
-        result: BuildCopyResult = self.__CopyToTextFileIfNeeded(source, tmpTarget, params)
-        if result.success:
-            source = tmpTarget
+        # The compiler cannot apply the text params, so they are applied to a temp file that
+        # it reads in place of the source file.
+        tmpSource: str = f"{target}.tmp.str"
+        result: BuildCopyResult = self.__CopyToTextFileIfNeeded(source, tmpSource, params)
+        toolSource: str = tmpSource if result.success else source
 
         iparams = CaseInsensitiveDict(params)
         exec: str = self.__GetToolExePath("gametextcompiler")
         args: list[str] = [exec,
-            "-LOAD_STR", source,
+            "-LOAD_STR", toolSource,
             "-SAVE_CSF", target]
 
         language: str = iparams.get("language")
-        if isinstance(language, str) and bool(language):
+        if language:
             args.extend(["-LOAD_STR_LANGUAGES", language])
 
         swapAndSetLanguage: str = iparams.get("swapAndSetLanguage")
-        if isinstance(swapAndSetLanguage, str) and bool(swapAndSetLanguage):
+        if swapAndSetLanguage:
             args.extend(["-SWAP_AND_SET_LANGUAGE", swapAndSetLanguage])
 
-        success: bool = util.RunProcess(args)
-
-        if tmpTarget == source:
-            util.DeleteFile(tmpTarget)
+        try:
+            success: bool = util.RunProcess(args)
+        finally:
+            if toolSource != source:
+                util.DeleteFile(tmpSource)
 
         return BuildCopyResult(success=success, printType=BuildCopyPrintType.Make)
 
@@ -905,11 +907,14 @@ class BuildCopy:
         if language:
             args.extend(["-SAVE_STR_LANGUAGES", language])
 
-        success: bool = util.RunProcess(args)
+        try:
+            success: bool = util.RunProcess(args)
 
-        if toolTarget != target:
-            BuildCopy.__WriteTextFile([toolTarget], target, transform)
-            util.DeleteFile(toolTarget)
+            if toolTarget != target:
+                BuildCopy.__WriteTextFile([toolTarget], target, transform)
+        finally:
+            if toolTarget != target:
+                util.DeleteFile(toolTarget)
 
         return BuildCopyResult(success=success, printType=BuildCopyPrintType.Make)
 
@@ -945,10 +950,12 @@ class BuildCopy:
                         tmpSources.append(tmpSource)
 
         args: list[str] = MakeGameTextMergeArgs(exec, mergeSources, target, params, targetT)
-        success: bool = util.RunProcess(args)
 
-        for tmpSource in tmpSources:
-            util.DeleteFile(tmpSource)
+        try:
+            success: bool = util.RunProcess(args)
+        finally:
+            for tmpSource in tmpSources:
+                util.DeleteFile(tmpSource)
 
         return BuildCopyResult(success=success, printType=BuildCopyPrintType.Make)
 
@@ -1115,10 +1122,11 @@ class BuildCopy:
         quiet: bool = not (self.options & BuildCopyOption.EnableLogging)
         args: list[str] = MakeCrunchArgs(exec, tmpSource, target, params, textureFormat, quiet)
 
-        success: bool = util.RunProcess(args)
-
-        if tmpSource != source:
-            util.DeleteFile(tmpSource)
+        try:
+            success: bool = util.RunProcess(args)
+        finally:
+            if tmpSource != source:
+                util.DeleteFile(tmpSource)
 
         return BuildCopyResult(success=success, printType=BuildCopyPrintType.Make)
 
