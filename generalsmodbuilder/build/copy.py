@@ -207,8 +207,15 @@ class TextTransform:
 
     @staticmethod
     def __GetMarkers(iparams: CaseInsensitiveDict, key: str) -> list[TextMarker]:
+        """
+        A list without markers is treated as absent, the way __GetNonEmptyString treats an
+        empty string, so that it does not make a transformation required that changes
+        nothing about the text.
+        """
         value: list[list[str]] = iparams.get(key)
-        return [TextMarker(t[0], t[1]) for t in value] if isinstance(value, list) else None
+        if not isinstance(value, list) or not value:
+            return None
+        return [TextMarker(t[0], t[1]) for t in value]
 
 
     def IsRequired(self) -> bool:

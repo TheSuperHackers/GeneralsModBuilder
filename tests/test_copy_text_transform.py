@@ -104,6 +104,11 @@ def test_is_required_only_for_params_that_change_the_text():
     assert TextTransform({"sourceEncoding": "ascii"}).IsRequired()
     assert TextTransform({"targetEncoding": "ascii"}).IsRequired()
     assert TextTransform({"excludeMarkersList": [[";begin", ";end"]]}).IsRequired()
+    # A list without markers changes nothing and must not require the file to be written.
+    assert not TextTransform({"excludeMarkersList": []}).IsRequired()
+    assert not TextTransform({"forceEOL": ""}).IsRequired()
+    assert not TextTransform({"deleteComments": ""}).IsRequired()
+    assert not TextTransform({"deleteWhitespace": 0}).IsRequired()
 
 
 def test_params_are_read_case_insensitively():
