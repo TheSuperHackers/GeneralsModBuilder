@@ -98,3 +98,36 @@ def test_csf_to_str_without_text_params_keeps_what_the_tool_wrote(tmp_path, Stan
     # The tool writes the target itself when there is nothing to apply to it afterwards.
     assert calls[0][1:] == ["-LOAD_CSF", source, "-SAVE_STR", target, "-SAVE_STR_LANGUAGES", "English"]
     assert ReadFile(target) == toolText
+
+
+def MakeSourceTree(tmp_path) -> str:
+    WriteFile(tmp_path / "Pack" / "Data" / "INI" / "Weapon.ini", "Weapon" + CRLF)
+    WriteFile(tmp_path / "Pack" / "readme.txt", "read me" + CRLF)
+    return str(tmp_path / "Pack")
+
+
+@pytest.mark.parametrize("targetName", ["Mod.zip", "Mod.tar", "Mod.gz"])
+def test_an_archive_is_written_to_the_target_that_was_asked_for(tmp_path, targetName):
+    # make_archive appends the suffix of its format, which is .tar.gz for a gztar, so the
+    # file it writes is not the target file unless it is moved onto it.
+    source = MakeSourceTree(tmp_path)
+    target = str(tmp_path / "Release" / targetName)
+
+    result = BuildCopy(tools=ToolsT()).Copy([source], target)
+
+    assert result.success
+    assert os.path.isfile(target)
+    assert os.listdir(str(tmp_path / "Release")) == [targetName]
+
+
+def test_a_zip_holds_the_source_tree(tmp_path):
+    import zipfile
+    source = MakeSourceTree(tmp_path)
+    target = str(tmp_path / "Release" / "Mod.zip")
+
+    BuildCopy(tools=ToolsT()).Copy([source], target)
+
+    with zipfile.ZipFile(target) as archive:
+        names = [name for name in archive.namelist() if not name.endswith("/")]
+        assert sorted(names) == ["Data/INI/Weapon.ini", "readme.txt"]
+        assert archive.read("readme.txt") == b"read me" + CRLF.encode()
