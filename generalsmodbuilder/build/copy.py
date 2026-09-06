@@ -151,6 +151,20 @@ class TextMarker:
         self.end = end
 
 
+class TextLine:
+    """
+    One line of a text file: its text without the line ending, and the line ending that
+    followed it. The two are kept together so that a transformation can change the text of
+    a line, or drop the line entirely, without losing the line ending that it came with.
+    """
+    text: str
+    eol: str
+
+    def __init__(self, text: str, eol: str):
+        self.text = text
+        self.eol = eol
+
+
 class TextTransform:
     """
     Holds the text transformation params of a build file in evaluated form.
@@ -219,21 +233,42 @@ class TextTransform:
         return self.targetEncoding or "utf-8"
 
 
-    def ReadLines(self, source: str) -> list[str]:
-        with open(source, "r", encoding=self.GetSourceEncoding()) as sourceFile:
-            return [line.rstrip("\r\n") for line in sourceFile]
+    def ReadLines(self, source: str) -> list[TextLine]:
+        """
+        Reads the lines of a text file, each with the line ending that follows it. The file
+        is opened without newline translation, so that a line keeps the ending it was
+        written with and only 'forceEOL' can change it.
+        A last line that has no ending of its own is given the ending of the line before it,
+        so that an unterminated file does not end in an ending foreign to it, and does not
+        merge into the first line of the next file when several files are appended.
+        """
+        with open(source, "r", encoding=self.GetSourceEncoding(), newline="") as sourceFile:
+            lines: list[TextLine] = [TextTransform.__SplitLineEnding(line) for line in sourceFile]
+
+        if lines and not lines[-1].eol:
+            lines[-1].eol = lines[-2].eol if len(lines) > 1 else "\n"
+
+        return lines
 
 
-    def WriteLines(self, target: str, lines: list[str]) -> None:
+    @staticmethod
+    def __SplitLineEnding(line: str) -> TextLine:
+        text: str = line.rstrip("\r\n")
+        return TextLine(text, line[len(text):])
+
+
+    def WriteLines(self, target: str, lines: list[TextLine]) -> None:
         with open(target, "w", encoding=self.GetTargetEncoding(), newline="") as targetFile:
             for line in lines:
-                targetFile.write(line)
+                targetFile.write(line.text)
+                targetFile.write(line.eol)
 
 
-    def TransformLines(self, lines: list[str]) -> list[str]:
+    def TransformLines(self, lines: list[TextLine]) -> list[TextLine]:
         """
         Applies all text transformations of the params to the given lines.
-        Lines are expected to be read without line ending and are returned with line ending.
+        A line keeps the line ending that it was read with, unless 'forceEOL' names another
+        one, so that a param that says nothing about line endings does not change them.
         """
         # Exclude text inside markers ...
         if self.excludeMarkers:
@@ -241,27 +276,27 @@ class TextTransform:
 
         # Delete comments ...
         if self.deleteComments != None:
-            for i, s in enumerate(lines):
-                lines[i] = s.split(self.deleteComments, 1)[0]
+            for line in lines:
+                line.text = line.text.split(self.deleteComments, 1)[0]
 
         if self.deleteWhitespace:
             # Delete obsolete spaces ...
-            for i, s in enumerate(lines):
-                lines[i] = " ".join(s.split())
+            for line in lines:
+                line.text = " ".join(line.text.split())
 
             # Delete empty lines ...
-            lines[:] = [line for line in lines if line.strip()]
+            lines[:] = [line for line in lines if line.text]
 
         # Set line ending ...
-        eol: str = self.forceEOL if self.forceEOL != None else "\n"
-        for i, s in enumerate(lines):
-            lines[i] = s + eol
+        if self.forceEOL != None:
+            for line in lines:
+                line.eol = self.forceEOL
 
         return lines
 
 
     @staticmethod
-    def __FilterText(lines: list[str], markers: list[TextMarker]) -> list[str]:
+    def __FilterText(lines: list[TextLine], markers: list[TextMarker]) -> list[TextLine]:
         outputLines = []
         activeMarkers = []
 
@@ -269,9 +304,9 @@ class TextTransform:
             hadActiveMarkers = bool(activeMarkers)
 
             for marker in markers:
-                if marker.begin in line:
+                if marker.begin in line.text:
                     activeMarkers.append(marker)
-                if marker.end in line:
+                if marker.end in line.text:
                     activeMarkers.remove(marker)
 
             hasActiveMarkers = bool(activeMarkers)
@@ -984,7 +1019,7 @@ class BuildCopy:
         Lines are read without their line ending and are written back with one, so the last line
         of a source file can never merge into the first line of the next one.
         """
-        lines = list[str]()
+        lines = list[TextLine]()
         source: str
 
         for source in sources:
