@@ -177,6 +177,11 @@ class TextTransform:
     excludeMarkers: list[TextMarker]
 
     def __init__(self, params: ParamsT):
+        """
+        The type of every param read here is verified where the params are parsed, in
+        data.common.VerifyBuildFileParams, so a value that is present is a value of the
+        right type and is only tested for saying something.
+        """
         iparams = CaseInsensitiveDict(params)
 
         self.forceEOL = TextTransform.__GetNonEmptyString(iparams, "forceEOL")
@@ -189,8 +194,7 @@ class TextTransform:
 
     @staticmethod
     def __GetString(iparams: CaseInsensitiveDict, key: str) -> str:
-        value: str = iparams.get(key)
-        return value if isinstance(value, str) else None
+        return iparams.get(key)
 
 
     @staticmethod
@@ -202,7 +206,7 @@ class TextTransform:
     @staticmethod
     def __HasPositiveNumber(iparams: CaseInsensitiveDict, key: str) -> bool:
         value: int = iparams.get(key)
-        return isinstance(value, int) and value > 0
+        return value != None and value > 0
 
 
     @staticmethod
@@ -213,9 +217,9 @@ class TextTransform:
         nothing about the text.
         """
         value: list[list[str]] = iparams.get(key)
-        if not isinstance(value, list) or not value:
+        if not value:
             return None
-        return [TextMarker(t[0], t[1]) for t in value]
+        return [TextMarker(marker[0], marker[1]) for marker in value]
 
 
     def IsRequired(self) -> bool:
