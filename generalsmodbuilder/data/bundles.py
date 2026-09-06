@@ -171,12 +171,9 @@ class BundleFile(ParsedData):
         return absSourceFile.removeprefix(self.absSourceParent).removeprefix("\\").removeprefix("/")
 
     def VerifyTypes(self) -> None:
-        # The json values are verified where they are read. What a read cannot express
-        # is the types of the values inside a params dict.
         VerifyParamsType(self.params, "bundles.items.files.params")
 
     def VerifyValues(self) -> None:
-        # self.absSourceParent, self.absSourceFiles are already verified in ResolveWildcards function.
         util.Verify(util.IsValidPathName(self.relTargetFile), f"bundles.items.files.target '{self.relTargetFile}' is not a valid file name")
         util.Verify(not os.path.isabs(self.relTargetFile), f"bundles.items.files.target '{self.relTargetFile}' is not a relative path")
 

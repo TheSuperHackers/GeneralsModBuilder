@@ -20,9 +20,6 @@ class Folders(ParsedData):
         self.absBuildDir = None
 
     def VerifyTypes(self) -> None:
-        # The json values are verified where they are read. What is left is that the
-        # merged result has both directories, because either one may be set by any of
-        # the configuration files. This has to hold before Normalize runs.
         util.Verify(self.absReleaseDir != None, "folders.releaseDir is not set by any configuration file")
         util.Verify(self.absBuildDir != None, "folders.buildDir is not set by any configuration file")
 

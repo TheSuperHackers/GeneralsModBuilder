@@ -24,6 +24,7 @@ class Runner(ParsedData):
     relGameExeFile: str
     gameExeArgs: ParamsT
     relevantGameDataFileTypes: list[str]
+    # This list says which game data files are allowed to be present, not which ones are required.
     absRegularGameDataFiles: list[str]
     gameLanguageRegKey: str
 
@@ -40,14 +41,9 @@ class Runner(ParsedData):
         return os.path.join(self.absGameInstallDir, self.relGameExeFile)
 
     def VerifyTypes(self) -> None:
-        # The json values are verified where they are read. What a read cannot express
-        # is the types of the values inside the arguments dict.
         VerifyParamsType(self.gameExeArgs, "runner.gameExeArgs")
 
     def Normalize(self) -> None:
-        # An empty path is left empty. normpath turns it into the current directory,
-        # which would make a game installation that was never found look like a valid
-        # one and would resolve the game data files against the working directory.
         if self.absGameInstallDir:
             self.absGameInstallDir = os.path.normpath(self.absGameInstallDir)
         if self.relGameExeFile:
@@ -56,9 +52,6 @@ class Runner(ParsedData):
             self.absRegularGameDataFiles[i] = os.path.normpath(file)
 
     def ResolveWildcards(self) -> None:
-        # This list says which game data files are allowed to be present, not which ones
-        # are required. Every entry of a language that is not installed matches nothing,
-        # which is expected and is not reported.
         self.absRegularGameDataFiles = util.ResolveFileWildcards(
             self.absRegularGameDataFiles, filesMustExist=False)
 
