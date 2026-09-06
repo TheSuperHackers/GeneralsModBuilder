@@ -476,7 +476,7 @@ class BuildCopy:
             multiCopyFunction: BuildMultiCopyFunctionT = self.__GetMultiCopyFunction(sources, target, targetType)
             return multiCopyFunction(sources, target, params)
 
-        copyFunction: BuildCopyFunctionT = self.__GetCopyFunction(sourceType, targetType, params)
+        copyFunction: BuildCopyFunctionT = self.__GetCopyFunction(sources[0], target, sourceType, targetType, params)
         return copyFunction(sources[0], target, params)
 
 
@@ -491,7 +491,8 @@ class BuildCopy:
             multiCopyFunction: BuildMultiCopyFunctionT = self.__GetMultiCopyFunction(sources, target, targetType)
             return GetRequiredToolNameOfCopyFunction(multiCopyFunction)
 
-        copyFunction: BuildCopyFunctionT = self.__GetCopyFunction(GetFileType(sources[0]), targetType, params)
+        copyFunction: BuildCopyFunctionT = self.__GetCopyFunction(
+            sources[0], target, GetFileType(sources[0]), targetType, params)
         return GetRequiredToolNameOfCopyFunction(copyFunction)
 
 
@@ -577,7 +578,20 @@ class BuildCopy:
         print("Remove", file)
 
 
-    def __GetCopyFunction(self, sourceT: BuildFileType, targetT: BuildFileType, params: ParamsT) -> BuildCopyFunctionT:
+    def __GetCopyFunction(
+            self,
+            source: str,
+            target: str,
+            sourceT: BuildFileType,
+            targetT: BuildFileType,
+            params: ParamsT) -> BuildCopyFunctionT:
+        """
+        Selects the function that builds the target file from the source file.
+        Fails on a pair of file types that the builder has no conversion for, so that a
+        source file is never copied into a target file whose type it is not.
+        source, target : str
+            Name the files of that message. They take no part in the selection.
+        """
         if targetT == BuildFileType.ini:
             return self.__CopyToTextFile
 
@@ -636,7 +650,9 @@ class BuildCopy:
         if targetT == BuildFileType.w3d and sourceT == BuildFileType.blend:
             return self.__CopyToW3D
 
-        return self.__CopyTo
+        raise Exception(
+            f"Source '{source}' of type '{sourceT.name}' cannot build target '{target}' of type '{targetT.name}', "
+            f"because there is no conversion between these file types.")
 
 
     def __GetMultiCopyFunction(self, sources: list[str], target: str, targetT: BuildFileType) -> BuildMultiCopyFunctionT:
