@@ -21,6 +21,18 @@ from typing import Callable
 
 
 class BuildFileType(Enum):
+    """
+    The file types that the builder knows, followed by two markers that are not file types
+    at all and must never be treated as a file extension.
+
+    Any is an extension that the builder has no conversion rule for. A file of such a type
+    is copied as it is, because there is nothing to convert it into.
+
+    Auto is not a type but a request to work the type out from the file path. It is only
+    ever given to BuildCopy.Copy, which replaces it with the result of GetFileType, so no
+    other function ever sees it.
+    """
+    # File types ...
     big = enum.auto()
     blend = enum.auto()
     bmp = enum.auto()
@@ -36,19 +48,36 @@ class BuildFileType(Enum):
     w3d = enum.auto()
     wnd = enum.auto()
     zip = enum.auto()
+
+    # Markers, not file types ...
     Any = enum.auto()
     Auto = enum.auto()
 
+
+BuildFileTypeMarkers: set[BuildFileType] = {BuildFileType.Any, BuildFileType.Auto}
+
+
 def __BuildFileTypeStringMap() -> dict[str, BuildFileType]:
+    """
+    Maps a lower case file extension to the file type that it names.
+    The markers are left out, because they are not file types and name no extension, so
+    that a file called Foo.any is an unknown extension like any other and never resolves
+    to a marker by the name of it.
+    """
     d = dict()
     for type in BuildFileType:
-        d[type.name] = type
+        if type not in BuildFileTypeMarkers:
+            d[type.name.lower()] = type
     d["tif"] = BuildFileType.tiff
     return d
 
 FileTypeStringDict: dict[str, BuildFileType] = __BuildFileTypeStringMap()
 
 def GetFileType(filePath: str) -> BuildFileType:
+    """
+    Tells the file type of a file path, or Any when the builder knows no conversion for its
+    extension. Never returns Auto, which is a request for this function and not a type.
+    """
     ext: str = util.GetFileExt(filePath).lower()
     type: BuildFileType = FileTypeStringDict.get(ext)
     if type == None:
@@ -453,6 +482,12 @@ class BuildCopy:
             params: ParamsT = None,
             sourceType = BuildFileType.Auto,
             targetType = BuildFileType.Auto) -> BuildCopyResult:
+        """
+        Builds the target file from the source file(s).
+        sourceType, targetType : BuildFileType
+            Auto works the type out from the file path, which is what a build does. Another
+            type builds the files as that type instead, whatever their extensions say.
+        """
 
         source: str
         for source in sources:
