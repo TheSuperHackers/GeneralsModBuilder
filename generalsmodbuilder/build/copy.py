@@ -976,9 +976,12 @@ class BuildCopy:
     def __CopySTRtoCSF(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
         # The compiler cannot apply the text params, so they are applied to a temp file that
         # it reads in place of the source file.
-        tmpSource: str = f"{target}.tmp.str"
-        result: BuildCopyResult = self.__CopyToTextFileIfNeeded(source, tmpSource, params)
-        toolSource: str = tmpSource if result.success else source
+        transform = TextTransform(params)
+        toolSource: str = source
+
+        if transform.IsRequired():
+            toolSource = f"{target}.tmp.str"
+            BuildCopy.__WriteTextFile([source], toolSource, transform)
 
         iparams = CaseInsensitiveDict(params)
         exec: str = self.__GetToolExePath("gametextcompiler")
@@ -998,7 +1001,7 @@ class BuildCopy:
             success: bool = util.RunProcess(args)
         finally:
             if toolSource != source:
-                util.DeleteFile(tmpSource)
+                util.DeleteFile(toolSource)
 
         return BuildCopyResult(success=success, printType=BuildCopyPrintType.Make)
 
@@ -1279,11 +1282,13 @@ class BuildCopy:
 
 
     def __CopyToTextFile(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
-        result: BuildCopyResult = self.__CopyToTextFileIfNeeded(source, target, params)
-        if result.success:
-            return result
-        else:
-            return self.__CopyTo(source, target, params)
+        transform = TextTransform(params)
+
+        if transform.IsRequired():
+            return BuildCopy.__WriteTextFile([source], target, transform)
+
+        # No param changes the text, so the file is taken over as it is.
+        return self.__CopyTo(source, target, params)
 
 
     @staticmethod
@@ -1303,15 +1308,6 @@ class BuildCopy:
         transform.WriteLines(target, lines)
 
         return BuildCopyResult(success=True, printType=BuildCopyPrintType.Make)
-
-
-    def __CopyToTextFileIfNeeded(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
-        transform = TextTransform(params)
-
-        if transform.IsRequired():
-            return BuildCopy.__WriteTextFile([source], target, transform)
-
-        return BuildCopyResult(success=False, printType=BuildCopyPrintType.Make)
 
 
     def __ConcatToTextFile(self, sources: list[str], target: str, params: ParamsT) -> BuildCopyResult:

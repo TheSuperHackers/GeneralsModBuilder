@@ -187,3 +187,65 @@ def test_a_successful_game_text_merge_leaves_no_temp_files(tmp_path, StandInForP
     assert copy.Copy([first, second], target, {"deleteComments": ";"}).success
 
     assert ListDir(tmp_path / "Out") == ["generals.csf"]
+
+
+@pytest.mark.parametrize("name", ["Data/INI/Weapon.ini", "Window/Chat.wnd", "Data/generals.str"])
+def test_a_text_file_without_text_params_arrives_as_it_is(tmp_path, name):
+    text = "Weapon ; a comment" + CRLF + "  Value = 1" + CRLF + "End" + CRLF
+    source = WriteFile(tmp_path / "Src" / name, text)
+    target = str(tmp_path / "Out" / name)
+
+    result = BuildCopy(tools=ToolsT()).Copy([source], target)
+
+    assert result.success
+    assert ReadFile(target) == text
+
+
+@pytest.mark.parametrize("name", ["Data/INI/Weapon.ini", "Window/Chat.wnd", "Data/generals.str"])
+def test_a_text_file_with_text_params_arrives_transformed(tmp_path, name):
+    text = "Weapon ; a comment" + LF + "  Value   =  1" + LF + "End" + LF
+    source = WriteFile(tmp_path / "Src" / name, text)
+    target = str(tmp_path / "Out" / name)
+
+    result = BuildCopy(tools=ToolsT()).Copy(
+        [source], target, {"deleteComments": ";", "deleteWhitespace": 1, "forceEOL": CRLF})
+
+    assert result.success
+    assert ReadFile(target) == "Weapon" + CRLF + "Value = 1" + CRLF + "End" + CRLF
+
+
+def test_multi_source_text_files_are_appended_in_order(tmp_path):
+    first = WriteFile(tmp_path / "Src" / "10_First.ini", "Part = 1" + CRLF)
+    second = WriteFile(tmp_path / "Src" / "20_Second.ini", "Part = 2" + CRLF)
+    target = str(tmp_path / "Out" / "Joined.ini")
+
+    result = BuildCopy(tools=ToolsT()).Copy([first, second], target)
+
+    assert result.success
+    assert ReadFile(target) == "Part = 1" + CRLF + "Part = 2" + CRLF
+
+
+def test_an_appended_file_without_a_trailing_newline_does_not_merge_into_the_next(tmp_path):
+    first = WriteFile(tmp_path / "Src" / "10_First.ini", "Part = 1" + CRLF + "Last")
+    second = WriteFile(tmp_path / "Src" / "20_Second.ini", "Part = 2" + CRLF)
+    target = str(tmp_path / "Out" / "Joined.ini")
+
+    BuildCopy(tools=ToolsT()).Copy([first, second], target)
+
+    assert ReadFile(target) == "Part = 1" + CRLF + "Last" + CRLF + "Part = 2" + CRLF
+
+
+def test_a_marked_region_may_span_two_appended_files(tmp_path):
+    # The sample project builds an ini this way, opening the marker in one part and closing
+    # it in the next, which only works if the params apply to the appended result.
+    first = WriteFile(tmp_path / "Src" / "10_First.ini",
+                      "Keep = 1" + CRLF + ";begin-exclusion-marker" + CRLF + "Drop = 1" + CRLF)
+    second = WriteFile(tmp_path / "Src" / "20_Second.ini",
+                       "Drop = 2" + CRLF + ";end-exclusion-marker" + CRLF + "Keep = 2" + CRLF)
+    target = str(tmp_path / "Out" / "Joined.ini")
+
+    BuildCopy(tools=ToolsT()).Copy(
+        [first, second], target,
+        {"excludeMarkersList": [[";begin-exclusion-marker", ";end-exclusion-marker"]]})
+
+    assert ReadFile(target) == "Keep = 1" + CRLF + "Keep = 2" + CRLF
