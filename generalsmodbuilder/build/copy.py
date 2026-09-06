@@ -889,17 +889,34 @@ class BuildCopy:
 
 
     def __CopyToZIP(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
-        shutil.make_archive(base_name=util.GetFileDirAndName(target), format="zip", root_dir=source)
-        return BuildCopyResult(success=True, printType=BuildCopyPrintType.Make)
+        return BuildCopy.__MakeArchive(source, target, "zip")
 
 
     def __CopyToTAR(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
-        shutil.make_archive(base_name=util.GetFileDirAndName(target), format="tar", root_dir=source)
-        return BuildCopyResult(success=True, printType=BuildCopyPrintType.Make)
+        return BuildCopy.__MakeArchive(source, target, "tar")
 
 
     def __CopyToGZTAR(self, source: str, target: str, params: ParamsT) -> BuildCopyResult:
-        shutil.make_archive(base_name=util.GetFileDirAndName(target), format="gztar", root_dir=source)
+        return BuildCopy.__MakeArchive(source, target, "gztar")
+
+
+    @staticmethod
+    def __MakeArchive(source: str, target: str, format: str) -> BuildCopyResult:
+        """
+        Packs the source directory into the target archive file.
+        make_archive names the file it writes itself, by appending the suffix of its format
+        to the name it is given, and that suffix is not always the extension of the target
+        file: a gztar is written as .tar.gz, so a target called Mod.gz was written as
+        Mod.tar.gz and the file that the build had promised was never there. The archive is
+        therefore built beside the target and is then moved onto it.
+        """
+        archive: str = shutil.make_archive(base_name=target, format=format, root_dir=source)
+        util.Verify(os.path.isfile(archive),
+                    f"Archive '{archive}' of target '{target}' was not written")
+
+        if archive != target:
+            os.replace(src=archive, dst=target)
+
         return BuildCopyResult(success=True, printType=BuildCopyPrintType.Make)
 
 
