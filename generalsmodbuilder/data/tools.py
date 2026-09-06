@@ -8,7 +8,7 @@ import zipfile
 from enum import Enum, auto
 from dataclasses import dataclass
 from generalsmodbuilder import util
-from generalsmodbuilder.util import JsonContext, JsonFile
+from generalsmodbuilder.util import JsonNode, JsonFile
 from generalsmodbuilder.data.common import (
     FinalizeParsedData, ParamsT, ParsedData, VerifyFormatVersion, VerifyParamsType)
 from generalsmodbuilder.build.common import ParamsToArgs
@@ -328,64 +328,59 @@ def __ProcessAliases(thing: str | ParamsT, aliases: dict) -> str | ParamsT:
     return thing
 
 
-def __MakeToolFileFromDict(ctx: JsonContext, jFile: dict, rootDir: str, aliases: dict) -> ToolFile:
+def __MakeToolFileFromDict(node: JsonNode, rootDir: str, aliases: dict) -> ToolFile:
     toolFile = ToolFile()
-    ctx.VerifyKnownKeys(jFile, TOOL_FILE_KEYS)
+    node.VerifyKnownKeys(TOOL_FILE_KEYS)
 
-    toolFile.url = ctx.GetOptional(jFile, "url", str, toolFile.url)
-    toolFile.md5 = ctx.GetOptional(jFile, "md5", str, toolFile.md5)
-    toolFile.sha256 = ctx.GetOptional(jFile, "sha256", str, toolFile.sha256)
-    toolFile.size = ctx.GetOptional(jFile, "size", int, toolFile.size)
-    toolFile.runnable = ctx.GetOptional(jFile, "runnable", bool, toolFile.runnable)
-    toolFile.autoDeleteAfterInstall = ctx.GetOptional(jFile, "autoDeleteAfterInstall", bool, toolFile.autoDeleteAfterInstall)
-    toolFile.skipIfRunnableExists = ctx.GetOptional(jFile, "skipIfRunnableExists", bool, toolFile.skipIfRunnableExists)
+    toolFile.url = node.GetOptional("url", str, toolFile.url)
+    toolFile.md5 = node.GetOptional("md5", str, toolFile.md5)
+    toolFile.sha256 = node.GetOptional("sha256", str, toolFile.sha256)
+    toolFile.size = node.GetOptional("size", int, toolFile.size)
+    toolFile.runnable = node.GetOptional("runnable", bool, toolFile.runnable)
+    toolFile.autoDeleteAfterInstall = node.GetOptional("autoDeleteAfterInstall", bool, toolFile.autoDeleteAfterInstall)
+    toolFile.skipIfRunnableExists = node.GetOptional("skipIfRunnableExists", bool, toolFile.skipIfRunnableExists)
 
-    jTarget: str = ctx.GetMandatory(jFile, "target", str)
-    ctx.Verify(bool(jTarget), "must not be empty", key="target")
+    jTarget: str = node.GetMandatory("target", str)
+    node.Verify(bool(jTarget), "must not be empty", key="target")
 
     # Aliases are replaced before the path is joined to the root directory, so that an
     # alias that stands for an absolute path yields that path instead of being appended
     # to the root directory.
     toolFile.absTarget = __ProcessAliases(jTarget, aliases)
     toolFile.absTarget = util.JoinPathIfValid(None, rootDir, toolFile.absTarget)
-    toolFile.absExtractDir = __ProcessAliases(ctx.GetOptional(jFile, "extractDir", str, toolFile.absExtractDir), aliases)
+    toolFile.absExtractDir = __ProcessAliases(node.GetOptional("extractDir", str, toolFile.absExtractDir), aliases)
     toolFile.absExtractDir = util.JoinPathIfValid(toolFile.absExtractDir, rootDir, toolFile.absExtractDir)
 
-    jCallList: list = ctx.GetOptional(jFile, "callList", list, elementType=dict)
-    if jCallList is not None:
-        toolFile.callInstructions.clear()
-        jCall: dict
-        for index, jCall in enumerate(jCallList):
-            callCtx: JsonContext = ctx.Sub("callList").At(index)
-            callCtx.VerifyKnownKeys(jCall, TOOL_CALL_KEYS)
-            instruction = ToolCallInstruction()
-            jCallPath: str = callCtx.GetMandatory(jCall, "call", str)
-            callCtx.Verify(bool(jCallPath), "must not be empty", key="call")
-            instruction.absCall = __ProcessAliases(jCallPath, aliases)
-            instruction.absCall = util.JoinPathIfValid(instruction.absCall, rootDir, instruction.absCall)
-            instruction.callArgs = callCtx.GetOptional(jCall, "callArgs", dict, instruction.callArgs)
-            instruction.callArgs = __ProcessAliases(instruction.callArgs, aliases)
-            toolFile.callInstructions.append(instruction)
+    callNode: JsonNode
+    for callNode in node.Elements("callList", dict):
+        callNode.VerifyKnownKeys(TOOL_CALL_KEYS)
+        instruction = ToolCallInstruction()
+        jCallPath: str = callNode.GetMandatory("call", str)
+        callNode.Verify(bool(jCallPath), "must not be empty", key="call")
+        instruction.absCall = __ProcessAliases(jCallPath, aliases)
+        instruction.absCall = util.JoinPathIfValid(instruction.absCall, rootDir, instruction.absCall)
+        instruction.callArgs = callNode.GetOptional("callArgs", dict, instruction.callArgs)
+        instruction.callArgs = __ProcessAliases(instruction.callArgs, aliases)
+        toolFile.callInstructions.append(instruction)
 
     return toolFile
 
 
-def __MakeToolFromDict(ctx: JsonContext, jTool: dict, rootDir: str, jVersion: int, aliases: dict) -> Tool:
+def __MakeToolFromDict(node: JsonNode, rootDir: str, jVersion: int, aliases: dict) -> Tool:
     tool = Tool()
-    ctx.VerifyKnownKeys(jTool, TOOL_KEYS)
-    tool.name = ctx.GetMandatory(jTool, "name", str)
+    node.VerifyKnownKeys(TOOL_KEYS)
+    tool.name = node.GetMandatory("name", str)
     if jVersion <= 1:
         # Version 1 wrote the tool version as a number rather than as a string.
-        jToolVersion = ctx.GetOptional(jTool, "version", (int, float))
+        jToolVersion = node.GetOptional("version", (int, float))
         if jToolVersion != None:
             tool.versionStr = str(jToolVersion)
     else:
-        tool.versionStr = ctx.GetOptional(jTool, "version", str, tool.versionStr)
+        tool.versionStr = node.GetOptional("version", str, tool.versionStr)
 
-    jFiles: list = ctx.GetOptional(jTool, "files", list, default=[], elementType=dict)
-    jFile: dict
-    for index, jFile in enumerate(jFiles):
-        tool.files.append(__MakeToolFileFromDict(ctx.Sub("files").At(index), jFile, rootDir, aliases))
+    fileNode: JsonNode
+    for fileNode in node.Elements("files", dict):
+        tool.files.append(__MakeToolFileFromDict(fileNode, rootDir, aliases))
 
     return tool
 
@@ -395,12 +390,10 @@ def MakeToolsFromJsons(jsonFiles: list[JsonFile], rootDir: str=None) -> ToolsT:
     tool: Tool
 
     for jsonFile in jsonFiles:
-        root = util.JsonContext(jsonFile.path)
-        jTools: dict = root.GetOptional(jsonFile.data, "tools", dict)
-        if jTools:
-            ctx = root.Sub("tools")
-            ctx.VerifyKnownKeys(jTools, TOOLS_KEYS)
-            jVersion: int = VerifyFormatVersion(ctx, jTools, LATEST_TOOLS_VERSION)
+        root = util.JsonNode(jsonFile.path, jsonFile.data)
+        if node := root.SubOptional("tools"):
+            node.VerifyKnownKeys(TOOLS_KEYS)
+            jVersion: int = VerifyFormatVersion(node, LATEST_TOOLS_VERSION)
             jsonDir: str = util.GetAbsFileDir(jsonFile.path)
             # Without an override, every tools json roots its own tools in its own
             # directory. The root of one file must not carry over to the next one.
@@ -409,14 +402,12 @@ def MakeToolsFromJsons(jsonFiles: list[JsonFile], rootDir: str=None) -> ToolsT:
                 "{THIS_DIR}": jsonDir,
                 "{ROOT_DIR}": fileRootDir
             }
-            if jAliases := ctx.GetOptional(jTools, "aliases", dict, elementType=str):
+            if jAliases := node.GetOptional("aliases", dict, elementType=str):
                 aliases.update(jAliases)
-            jList: list = ctx.GetOptional(jTools, "list", list, default=[], elementType=dict)
-            jTool: dict
-            for index, jTool in enumerate(jList):
-                toolCtx: JsonContext = ctx.Sub("list").At(index, jTool.get("name", ""))
-                if toolCtx.GetOptional(jTool, "enabled", bool, True):
-                    tool = __MakeToolFromDict(toolCtx, jTool, fileRootDir, jVersion, aliases)
+            toolNode: JsonNode
+            for toolNode in node.Elements("list", dict, nameKey="name"):
+                if toolNode.GetOptional("enabled", bool, True):
+                    tool = __MakeToolFromDict(toolNode, fileRootDir, jVersion, aliases)
                     tools[tool.name] = tool
 
     for tool in tools.values():

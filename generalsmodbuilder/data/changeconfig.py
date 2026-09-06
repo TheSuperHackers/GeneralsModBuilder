@@ -2,7 +2,7 @@ import os.path
 from enum import Enum, auto
 from dataclasses import dataclass
 from generalsmodbuilder.data.common import FinalizeParsedData, ParsedData, VerifyFormatVersion
-from generalsmodbuilder.util import JsonContext, JsonFile
+from generalsmodbuilder.util import JsonNode, JsonFile
 from generalsmodbuilder import util
 
 
@@ -86,34 +86,33 @@ class ChangeConfig(ParsedData):
             record.VerifyValues()
 
 
-def __MakeSortFromStr(ctx: JsonContext, jStr: str) -> Sort:
+def __MakeSortFromStr(node: JsonNode, jStr: str) -> Sort:
     for sort in Sort:
         if jStr.lower() == sort.name.lower():
             return sort
 
     validNames: str = " or ".join(f"'{sort.name.lower()}'" for sort in Sort)
-    raise AssertionError(f"{ctx.Name('date')} is '{jStr}', but must be {validNames}")
+    raise AssertionError(f"{node.Name('date')} is '{jStr}', but must be {validNames}")
 
 
-def __MakeSortDefinitionsFromList(ctx: JsonContext, jSortList: list) -> list[SortDefinition]:
+def __MakeSortDefinitionsFromList(sortNodes: list[JsonNode]) -> list[SortDefinition]:
     definitions = list[SortDefinition]()
-    jSortLabel: dict
+    sortNode: JsonNode
 
-    for index, jSortLabel in enumerate(jSortList):
-        sortCtx: JsonContext = ctx.At(index)
-        sortCtx.VerifyKnownKeys(jSortLabel, CHANGELOG_SORT_KEYS)
+    for sortNode in sortNodes:
+        sortNode.VerifyKnownKeys(CHANGELOG_SORT_KEYS)
 
-        jDate: str = sortCtx.GetOptional(jSortLabel, "date", str)
-        jLabel: str = sortCtx.GetOptional(jSortLabel, "label", str)
+        jDate: str = sortNode.GetOptional("date", str)
+        jLabel: str = sortNode.GetOptional("label", str)
 
         # An entry that names neither sorts by nothing and used to be dropped in silence.
         # An entry that names both is ambiguous, because only the date would be used.
-        sortCtx.Verify(bool(jDate) != bool(jLabel), "must name exactly one of 'date' or 'label'")
+        sortNode.Verify(bool(jDate) != bool(jLabel), "must name exactly one of 'date' or 'label'")
 
         definition = SortDefinition()
         if jDate:
             definition.isDate = True
-            definition.sort = __MakeSortFromStr(sortCtx, jDate)
+            definition.sort = __MakeSortFromStr(sortNode, jDate)
         else:
             definition.label = jLabel
         definitions.append(definition)
@@ -125,20 +124,19 @@ def __MakeAbsFilesFromList(jFileList: list, jsonDir: str) -> list[str]:
     return [os.path.join(jsonDir, jFile) for jFile in jFileList]
 
 
-def __MakeChangeConfigRecordFromDict(ctx: JsonContext, jRecord: dict, jsonDir: str) -> ChangeConfigRecord:
+def __MakeChangeConfigRecordFromDict(node: JsonNode, jsonDir: str) -> ChangeConfigRecord:
     record = ChangeConfigRecord()
-    ctx.VerifyKnownKeys(jRecord, CHANGELOG_RECORD_KEYS)
+    node.VerifyKnownKeys(CHANGELOG_RECORD_KEYS)
 
     record.absSourceFiles = __MakeAbsFilesFromList(
-        ctx.GetMandatory(jRecord, "sourceList", list, elementType=str), jsonDir)
+        node.GetMandatory("sourceList", list, elementType=str), jsonDir)
     record.absTargetFiles = __MakeAbsFilesFromList(
-        ctx.GetMandatory(jRecord, "targetList", list, elementType=str), jsonDir)
+        node.GetMandatory("targetList", list, elementType=str), jsonDir)
 
-    jSortList: list = ctx.GetOptional(jRecord, "sortList", list, default=[], elementType=dict)
-    record.sortDefinitions = __MakeSortDefinitionsFromList(ctx.Sub("sortList"), jSortList)
+    record.sortDefinitions = __MakeSortDefinitionsFromList(node.Elements("sortList", dict))
 
-    record.includeLabels = ctx.GetOptional(jRecord, "includeLabelList", list, record.includeLabels, elementType=str)
-    record.excludeLabels = ctx.GetOptional(jRecord, "excludeLabelList", list, record.excludeLabels, elementType=str)
+    record.includeLabels = node.GetOptional("includeLabelList", list, record.includeLabels, elementType=str)
+    record.excludeLabels = node.GetOptional("excludeLabelList", list, record.excludeLabels, elementType=str)
 
     return record
 
@@ -148,19 +146,15 @@ def MakeChangeConfigFromJsons(jsonFiles: list[JsonFile]) -> ChangeConfig:
 
     for jsonFile in jsonFiles:
         jsonDir: str = util.GetAbsFileDir(jsonFile.path)
-        root = util.JsonContext(jsonFile.path)
-        jChangelog: dict = root.GetOptional(jsonFile.data, "changelog", dict)
+        root = util.JsonNode(jsonFile.path, jsonFile.data)
 
-        if jChangelog:
-            ctx = root.Sub("changelog")
-            ctx.VerifyKnownKeys(jChangelog, CHANGELOG_KEYS)
-            VerifyFormatVersion(ctx, jChangelog, LATEST_CHANGELOG_VERSION)
+        if node := root.SubOptional("changelog"):
+            node.VerifyKnownKeys(CHANGELOG_KEYS)
+            VerifyFormatVersion(node, LATEST_CHANGELOG_VERSION)
 
-            jRecords: list = ctx.GetOptional(jChangelog, "records", list, default=[], elementType=dict)
-            jRecord: dict
-            for index, jRecord in enumerate(jRecords):
-                config.records.append(
-                    __MakeChangeConfigRecordFromDict(ctx.Sub("records").At(index), jRecord, jsonDir))
+            recordNode: JsonNode
+            for recordNode in node.Elements("records", dict):
+                config.records.append(__MakeChangeConfigRecordFromDict(recordNode, jsonDir))
 
     FinalizeParsedData(config)
     return config

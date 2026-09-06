@@ -33,19 +33,16 @@ def AddBuildFilesFromJsons(jsonFiles: list[JsonFile], buildFiles: BuildFiles) ->
     """
     for jsonFile in jsonFiles:
         jsonDir: str = util.GetAbsFileDir(jsonFile.path)
-        root = util.JsonContext(jsonFile.path)
-        jBuild: dict = root.GetOptional(jsonFile.data, "build", dict)
+        root = util.JsonNode(jsonFile.path, jsonFile.data)
 
-        if jBuild:
-            ctx = root.Sub("build")
-            ctx.VerifyKnownKeys(jBuild, BUILD_KEYS)
-            VerifyFormatVersion(ctx, jBuild, LATEST_BUILD_VERSION)
+        if node := root.SubOptional("build"):
+            node.VerifyKnownKeys(BUILD_KEYS)
+            VerifyFormatVersion(node, LATEST_BUILD_VERSION)
 
-            jFiles: list = ctx.GetOptional(jBuild, "files", list, default=[], elementType=str)
-            jFile: str
-            for index, jFile in enumerate(jFiles):
-                ctx.Sub("files").At(index).Verify(bool(jFile), "must not be empty")
-                buildFiles.absFiles.append(os.path.join(jsonDir, jFile))
+            fileNode: util.JsonNode
+            for fileNode in node.Elements("files", str):
+                fileNode.Verify(bool(fileNode.data), "must not be empty")
+                buildFiles.absFiles.append(os.path.join(jsonDir, fileNode.data))
     return
 
 

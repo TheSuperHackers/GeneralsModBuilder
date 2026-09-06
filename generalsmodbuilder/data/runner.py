@@ -2,7 +2,7 @@ import os.path
 from dataclasses import dataclass
 from generalsmodbuilder.data.common import (
     FinalizeParsedData, ParamsT, ParsedData, VerifyFormatVersion, VerifyParamsType)
-from generalsmodbuilder.util import JsonContext, JsonFile
+from generalsmodbuilder.util import JsonNode, JsonFile
 from generalsmodbuilder import util
 
 
@@ -77,15 +77,14 @@ class Runner(ParsedData):
 
 def __AddRegKeyInstallDir(
         absGameInstallDirs: list[str],
-        ctx: JsonContext,
-        jRunner: dict,
+        node: JsonNode,
         key: str,
         relSubDir: str = "") -> None:
     """
     Adds the installation directory that a registry key names, when that key exists and
     holds a path. A registry value can also be a number, which is not a path.
     """
-    regKey: str = ctx.GetOptional(jRunner, key, str)
+    regKey: str = node.GetOptional(key, str)
     if not regKey:
         return
 
@@ -100,29 +99,27 @@ def MakeRunnerFromJsons(jsonFiles: list[JsonFile]) -> Runner:
 
     for jsonFile in jsonFiles:
         jsonDir: str = util.GetAbsFileDir(jsonFile.path)
-        root = util.JsonContext(jsonFile.path)
-        jRunner: dict = root.GetOptional(jsonFile.data, "runner", dict)
+        root = util.JsonNode(jsonFile.path, jsonFile.data)
 
-        if jRunner:
-            ctx = root.Sub("runner")
-            ctx.VerifyKnownKeys(jRunner, RUNNER_KEYS)
-            VerifyFormatVersion(ctx, jRunner, LATEST_RUNNER_VERSION)
+        if node := root.SubOptional("runner"):
+            node.VerifyKnownKeys(RUNNER_KEYS)
+            VerifyFormatVersion(node, LATEST_RUNNER_VERSION)
 
-            runner.relGameExeFile = ctx.GetOptional(jRunner, "gameExeFile", str, runner.relGameExeFile)
-            runner.gameExeArgs = ctx.GetOptional(jRunner, "gameExeArgs", dict, runner.gameExeArgs)
-            runner.relevantGameDataFileTypes = ctx.GetOptional(
-                jRunner, "relevantGameDataFileTypes", list, runner.relevantGameDataFileTypes, elementType=str)
-            runner.absRegularGameDataFiles = ctx.GetOptional(
-                jRunner, "regularGameDataFiles", list, runner.absRegularGameDataFiles, elementType=str)
-            runner.gameLanguageRegKey = ctx.GetOptional(jRunner, "gameLanguageRegKey", str, runner.gameLanguageRegKey)
+            runner.relGameExeFile = node.GetOptional("gameExeFile", str, runner.relGameExeFile)
+            runner.gameExeArgs = node.GetOptional("gameExeArgs", dict, runner.gameExeArgs)
+            runner.relevantGameDataFileTypes = node.GetOptional(
+                "relevantGameDataFileTypes", list, runner.relevantGameDataFileTypes, elementType=str)
+            runner.absRegularGameDataFiles = node.GetOptional(
+                "regularGameDataFiles", list, runner.absRegularGameDataFiles, elementType=str)
+            runner.gameLanguageRegKey = node.GetOptional("gameLanguageRegKey", str, runner.gameLanguageRegKey)
 
             # The candidates are searched in reverse below, so the last one added wins.
-            __AddRegKeyInstallDir(absGameInstallDirs, ctx, jRunner, "tuczhGameInstallRegKey",
+            __AddRegKeyInstallDir(absGameInstallDirs, node, "tuczhGameInstallRegKey",
                                   relSubDir="Command and Conquer Generals Zero Hour")
-            __AddRegKeyInstallDir(absGameInstallDirs, ctx, jRunner, "gameInstall2RegKey")
-            __AddRegKeyInstallDir(absGameInstallDirs, ctx, jRunner, "gameInstallRegKey")
+            __AddRegKeyInstallDir(absGameInstallDirs, node, "gameInstall2RegKey")
+            __AddRegKeyInstallDir(absGameInstallDirs, node, "gameInstallRegKey")
 
-            if gameInstallDir := ctx.GetOptional(jRunner, "gameInstallPath", str):
+            if gameInstallDir := node.GetOptional("gameInstallPath", str):
                 absGameInstallDirs.append(os.path.join(jsonDir, gameInstallDir))
 
     if runner.relGameExeFile:

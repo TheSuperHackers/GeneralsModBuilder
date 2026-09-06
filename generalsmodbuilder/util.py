@@ -204,16 +204,16 @@ class YamlFile:
         VerifyType(self.data, dict, "YamlFile.data")
 
 
-class JsonContext:
+class JsonNode:
     """
-    Names the place inside a json file that a value is read from, so that a failure
-    points at the file, the section and the key that the user wrote, instead of at the
-    python field that the value ends up in.
+    One place inside a json file: the path that names it and the json value that is there.
 
-    A context is built up while descending into the data, for example
+    A node is walked down into the data, for example
 
-        ctx = JsonContext(jsonFile.path).Sub("bundles").Sub("items").At(3, "GameFiles")
-        ctx.Sub("files").At(2).GetOptional(jFile, "target", str)
+        node = JsonNode(jsonFile.path, jsonFile.data).SubOptional("bundles")
+        for itemNode in node.Elements("items", dict, nameKey="name"):
+            for fileNode in itemNode.Elements("files", dict):
+                fileNode.GetOptional("target", str)
 
     which reports a bad value as
 
@@ -222,26 +222,19 @@ class JsonContext:
     """
     absPath: str
     path: str
+    data: Any
 
-    def __init__(self, absPath: str, path: str = ""):
+    def __init__(self, absPath: str, data: Any, path: str = ""):
         self.absPath = absPath
         self.path = path
+        self.data = data
 
-    def Sub(self, key: str) -> "JsonContext":
+    def __bool__(self) -> bool:
         """
-        Names a nested object or list, for example 'items' below 'bundles'.
+        Mirrors the truthiness of the json value here, so that a section that is absent
+        and a section that is empty are both skipped by the same test.
         """
-        return JsonContext(self.absPath, self.__Join(key))
-
-    def At(self, index: int, name: str = "") -> "JsonContext":
-        """
-        Names one element of a list. The optional name identifies the element the way
-        the user knows it, which is far more useful than its index alone.
-        """
-        path: str = f"{self.path}[{index}]"
-        if name:
-            path += f" '{name}'"
-        return JsonContext(self.absPath, path)
+        return bool(self.data)
 
     def Name(self, key: str = "") -> str:
         """
@@ -255,19 +248,18 @@ class JsonContext:
         """
         Verify(condition, f"{self.Name(key)} {message}")
 
-    def VerifyKnownKeys(self, jDict: dict, knownKeys: set) -> None:
+    def VerifyKnownKeys(self, knownKeys: set) -> None:
         """
         Fails on a key that the format does not define. Such a key is otherwise ignored
         in silence, so a misspelled one behaves as if it had never been written at all.
         """
-        for key in jDict:
+        for key in self.data:
             if key not in knownKeys:
                 raise AssertionError(f"{self.Name(key)} is not a known key. "
                                      f"Known keys here are {', '.join(sorted(knownKeys))}")
 
     def GetOptional(
             self,
-            jDict: dict,
             key: str,
             expectedType: type | tuple | types.UnionType,
             default: Any = None,
@@ -275,7 +267,7 @@ class JsonContext:
         """
         Reads a key that the format allows to be absent, and returns default when it is.
         """
-        value: Any = jDict.get(key)
+        value: Any = self.data.get(key)
         if value == None:
             return default
         self.__VerifyValue(value, expectedType, key, elementType)
@@ -283,18 +275,59 @@ class JsonContext:
 
     def GetMandatory(
             self,
-            jDict: dict,
             key: str,
             expectedType: type | tuple | types.UnionType,
             elementType: type | tuple | types.UnionType = None) -> Any:
         """
         Reads a key that the format requires, and fails when it is absent.
         """
-        value: Any = jDict.get(key)
+        value: Any = self.data.get(key)
         if value == None:
             raise AssertionError(f"{self.Name(key)} is required but is not set")
         self.__VerifyValue(value, expectedType, key, elementType)
         return value
+
+    def SubOptional(
+            self,
+            key: str,
+            expectedType: type | tuple | types.UnionType = dict,
+            elementType: type | tuple | types.UnionType = None) -> "JsonNode":
+        """
+        Descends to a key that the format allows to be absent, for example 'items' below
+        'bundles'. The node that comes back always names its place, so that a message can
+        be written against it either way, and is falsy when the key is absent or empty.
+        """
+        return JsonNode(self.absPath, self.GetOptional(key, expectedType, None, elementType), self.__Join(key))
+
+    def Elements(
+            self,
+            key: str = "",
+            elementType: type | tuple | types.UnionType = None,
+            nameKey: str = "") -> list["JsonNode"]:
+        """
+        The elements of a list, each as a node of its own. With a key, the list is read
+        from that key here and its elements are verified against elementType; without
+        one, it is the list that this node already is, whose elements were verified when
+        that node was made. A key that is absent simply has no elements, so a list that
+        the format allows to be absent needs no test of its own.
+        nameKey : str
+            Names the key of an element that identifies it the way the user knows it.
+        """
+        listNode: JsonNode = self.SubOptional(key, list, elementType) if key else self
+        if listNode.data == None:
+            return []
+        return [listNode.__At(index, element, nameKey) for index, element in enumerate(listNode.data)]
+
+    def __At(self, index: int, data: Any, nameKey: str) -> "JsonNode":
+        """
+        Names one element of a list. The name that nameKey points at identifies the
+        element the way the user knows it, which is far more useful than its index alone.
+        """
+        path: str = f"{self.path}[{index}]"
+        name: Any = data.get(nameKey) if nameKey and isinstance(data, dict) else None
+        if isinstance(name, str) and name:
+            path += f" '{name}'"
+        return JsonNode(self.absPath, data, path)
 
     def __Join(self, key: str) -> str:
         if not key:
