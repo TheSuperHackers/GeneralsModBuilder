@@ -155,3 +155,24 @@ def test_every_known_texture_format_is_recognized():
         assert HasCrunchTextureFormat({name: ""})
         assert HasCrunchTextureFormat({name.lower(): ""})
         assert HasCrunchTextureFormat({name.upper(): ""})
+
+
+def test_a_path_with_a_space_is_merged_as_it_is():
+    # Every command reaches the tool as one argument of its own, so a space is no problem.
+    args = MergeArgs(["My Mod/A.str", "My Mod/B.str"], "My Mod/Merged.csf")
+    assert args[1] == "LOAD_STR(FILE_ID:0,FILE_PATH:My Mod/A.str)"
+    assert args[-1] == "SAVE_CSF(FILE_ID:0,FILE_PATH:My Mod/Merged.csf)"
+
+
+@pytest.mark.parametrize("path", ["Mod,v2/A.str", "Mod(old)/A.str"])
+def test_a_source_path_the_compiler_cannot_read_is_reported(path):
+    # A comma ends a value and a parenthesis ends a command, and neither can be escaped.
+    with pytest.raises(AssertionError) as error:
+        MergeArgs([path, "B.str"], "Merged.csf")
+    assert path in str(error.value)
+
+
+def test_a_target_path_the_compiler_cannot_read_is_reported():
+    with pytest.raises(AssertionError) as error:
+        MergeArgs(["A.str", "B.str"], "Mod,v2/Merged.csf")
+    assert "Mod,v2/Merged.csf" in str(error.value)
