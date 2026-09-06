@@ -136,7 +136,6 @@ class BuildCopyResult:
     printType: BuildCopyPrintType = field(default=BuildCopyPrintType.Nothing)
 
 
-BuildCopyResultFunctionT = Callable[[str, str], None]
 BuildCopyFunctionT = Callable[[str, str, ParamsT], BuildCopyResult]
 BuildMultiCopyFunctionT = Callable[[list[str], str, ParamsT], BuildCopyResult]
 
@@ -395,11 +394,16 @@ class TextTransform:
         return "'" + "', '".join(sources) + "'"
 
 
+@dataclass
 class BuildJob:
-    result: BuildCopyResult
-    absSources: list[str]
-    absTarget: str
-    params: ParamsT
+    """
+    One file to build, and the result of building it, as it travels to a worker process
+    and back.
+    """
+    absSources: list[str] = field(default=None)
+    absTarget: str = field(default=None)
+    params: ParamsT = field(default=None)
+    result: BuildCopyResult = field(default=None)
 
 
 def ResizeImageWithParams(img: PILImage, params: ParamsT) -> PILImage:
@@ -677,11 +681,10 @@ class BuildCopy:
 
         for file in thing.files:
             if file.RequiresRebuild():
-                buildJob = BuildJob()
-                buildJob.result = BuildCopyResult()
-                buildJob.absSources = file.AbsSources()
-                buildJob.absTarget = file.AbsTarget(thing.absParentDir)
-                buildJob.params = file.params
+                buildJob = BuildJob(
+                    absSources=file.AbsSources(),
+                    absTarget=file.AbsTarget(thing.absParentDir),
+                    params=file.params)
                 future = self.processPool.submit(CopyWithProcess, self.tools, options, buildJob)
                 futures.append(future)
 
@@ -735,10 +738,15 @@ class BuildCopy:
 
         util.MakeDirsForFile(target)
 
-        if self.options & BuildCopyOption.EnableBackup:
-            BuildCopy.__CreateBackup(target)
+        # Creating a backup renames the target out of the way, which leaves nothing to
+        # delete. Without a backup, or when one already exists, the target is deleted.
+        backedUp: bool = False
 
-        util.DeleteFileOrDir(target)
+        if self.options & BuildCopyOption.EnableBackup:
+            backedUp = BuildCopy.__CreateBackup(target)
+
+        if not backedUp:
+            util.DeleteFileOrDir(target)
 
         if len(sources) > 1:
             multiCopyFunction: BuildMultiCopyFunctionT = self.__GetMultiCopyFunction(sources, target, targetType)
@@ -1140,9 +1148,7 @@ class BuildCopy:
 
     @staticmethod
     def __CopyToImage(source: str, target: str, params: ParamsT) -> BuildCopyResult:
-        success: bool = False
-
-        img: PILImage = None
+        img: PILImage
         fileType: BuildFileType = GetFileType(source)
 
         if fileType == BuildFileType.psd:
@@ -1152,17 +1158,15 @@ class BuildCopy:
         else:
             img = PIL.Image.open(fp=source)
 
-        if img != None:
-            img = ResizeImageWithParams(img, params)
-            img.save(target, compression=None)
-            img.close()
-            success = True
+        img = ResizeImageWithParams(img, params)
+        img.save(target, compression=None)
+        img.close()
 
-        return BuildCopyResult(success=success, printType=BuildCopyPrintType.Make)
+        return BuildCopyResult(success=True, printType=BuildCopyPrintType.Make)
 
 
     @staticmethod
-    def __BuildImageFromPSD(source: str) -> PILImage | None:
+    def __BuildImageFromPSD(source: str) -> PILImage:
         psd: PSDImage = PSDImage.open(fp=source)
 
         util.Verify(psd.color_mode == PSDColorMode.RGB, f"PSD image '{source}' has unsupported color mode '{psd.color_mode}'.")
@@ -1174,29 +1178,27 @@ class BuildCopy:
             img: PILImage = psd.composite()
             return img
 
-        elif psd.channels > 3:
-            # Does composite the image and preserves background alpha.
-            # If the psd was saved with "Maximize Compatibility", then the precomputed composite is read from it.
-            img: PILImage = psd.composite(color=0.0, alpha=1.0)
-            r: PILImage = img.getchannel(0)
-            g: PILImage = img.getchannel(1)
-            b: PILImage = img.getchannel(2)
+        # More than three channels, which the verify above has made certain of.
+        # Does composite the image and preserves background alpha.
+        # If the psd was saved with "Maximize Compatibility", then the precomputed composite is read from it.
+        img: PILImage = psd.composite(color=0.0, alpha=1.0)
+        r: PILImage = img.getchannel(0)
+        g: PILImage = img.getchannel(1)
+        b: PILImage = img.getchannel(2)
 
-            # Composite alpha from each alpha channel.
-            white: PILImage = PIL.Image.new("L", psd.size, 255)
-            black: PILImage = PIL.Image.new("L", psd.size, 0)
-            a: PILImage = white
-            for channel in range(3, psd.channels):
-                an: PILImage = psd.topil(channel=channel)
-                a = PIL.Image.composite(an, black, a)
+        # Composite alpha from each alpha channel.
+        white: PILImage = PIL.Image.new("L", psd.size, 255)
+        black: PILImage = PIL.Image.new("L", psd.size, 0)
+        a: PILImage = white
+        for channel in range(3, psd.channels):
+            an: PILImage = psd.topil(channel=channel)
+            a = PIL.Image.composite(an, black, a)
 
-            return PIL.Image.merge("RGBA", (r, g, b, a))
-
-        return None
+        return PIL.Image.merge("RGBA", (r, g, b, a))
 
 
     @staticmethod
-    def __BuildImageFromTIFF(source: str) -> PILImage | None:
+    def __BuildImageFromTIFF(source: str) -> PILImage:
         tif: PIL.TiffImagePlugin.TiffImageFile = PIL.Image.open(fp=source)
 
         util.Verify(tif.mode == "RGB" or tif.mode == "RGBA" or tif.mode == "RGBX", f"TIFF image '{source}' has unsupported color mode '{tif.mode}'.")
@@ -1211,14 +1213,12 @@ class BuildCopy:
             tif.close()
             return img
 
-        if tif.mode == "RGBA" or tif.mode == "RGBX":
-            # NOTE: No composite. Does not support more than one alpha channel and no transparent background.
-            r, g, b, a = tif.split()
-            img: PILImage = PIL.Image.merge("RGBA", (r, g, b, a))
-            tif.close()
-            return img
-
-        return None
+        # RGBA or RGBX, which the verify above has made certain of.
+        # NOTE: No composite. Does not support more than one alpha channel and no transparent background.
+        r, g, b, a = tif.split()
+        img: PILImage = PIL.Image.merge("RGBA", (r, g, b, a))
+        tif.close()
+        return img
 
 
     @RequiresTool("crunch")
@@ -1235,8 +1235,7 @@ class BuildCopy:
             # Therefore, PSD, TIFF and scaled texture is converted to TGA first, and then passed to crunch tool afterwards.
             tmpSource = target + ".tga"
             tmpSourceType = BuildFileType.tga
-            result: BuildCopyResult = self.__CopyToTGA(source, tmpSource, params)
-            assert result.success == True
+            self.__CopyToTGA(source, tmpSource, params)
 
         textureFormat: str = ""
 

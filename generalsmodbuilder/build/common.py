@@ -18,7 +18,7 @@ def ParamsToArgs(params: ParamsT, includeRegex: str = None, excludeRegex: str = 
                 continue
 
         if excludeRegex:
-            reKey: Match = search(includeRegex, key)
+            reKey: Match = search(excludeRegex, key)
             if reKey != None:
                 continue
 
