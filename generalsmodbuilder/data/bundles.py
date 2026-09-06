@@ -5,7 +5,7 @@ from glob import glob
 from dataclasses import dataclass
 from enum import Enum, auto
 from generalsmodbuilder.data.common import (
-    FinalizeParsedData, ParamsT, ParsedData, VerifyFormatVersion, VerifyParamsType)
+    FinalizeParsedData, ParamsT, ParsedData, VerifyBuildFileParams, VerifyFormatVersion)
 from generalsmodbuilder.util import JsonNode, JsonFile
 from generalsmodbuilder import util
 
@@ -216,7 +216,7 @@ class BundleFile(ParsedData):
         return absSourceFile.removeprefix(self.absSourceParent).removeprefix("\\").removeprefix("/")
 
     def VerifyTypes(self) -> None:
-        VerifyParamsType(self.params, "bundles.items.files.params")
+        VerifyBuildFileParams(self.params, "bundles.items.files.params")
 
     def VerifyValues(self) -> None:
         util.Verify(util.IsValidPathName(self.relTargetFile), f"bundles.items.files.target '{self.relTargetFile}' is not a valid file name")

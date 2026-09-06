@@ -64,3 +64,79 @@ def test_supported_target_types():
     assert SupportsMultiSource(BuildFileType.csf, BuildFileType.str)
     assert SupportsMultiSource(BuildFileType.str, BuildFileType.csf)
     assert SupportsMultiSource(BuildFileType.csf, BuildFileType.csf)
+
+
+def MakeParamsJson(params: dict) -> dict:
+    return MakeItemJson({"sourceParent": "Src", "source": "Weapon.ini", "params": params})
+
+
+def MakeParamsBundles(MakeJsonFile, MakeFile, params: dict):
+    MakeFile("Src/Weapon.ini")
+    return MakeBundlesFromJsons([MakeJsonFile(MakeParamsJson(params))])
+
+
+def ExpectParamError(MakeJsonFile, MakeFile, params: dict, expected: str):
+    with pytest.raises(AssertionError) as error:
+        MakeParamsBundles(MakeJsonFile, MakeFile, params)
+    assert "bundles.items.files.params" in str(error.value)
+    assert expected in str(error.value)
+
+
+def test_delete_whitespace_must_be_a_number(MakeJsonFile, MakeFile):
+    ExpectParamError(MakeJsonFile, MakeFile, {"deleteWhitespace": 1.0}, "should be a number")
+
+
+def test_delete_whitespace_must_not_be_a_switch(MakeJsonFile, MakeFile):
+    # bool is an int in python, but a count has to be written as a number.
+    ExpectParamError(MakeJsonFile, MakeFile, {"deleteWhitespace": True}, "should be a number")
+
+
+def test_exclude_markers_list_must_be_a_list(MakeJsonFile, MakeFile):
+    ExpectParamError(MakeJsonFile, MakeFile, {"excludeMarkersList": ";begin"}, "[begin, end] pairs")
+
+
+def test_exclude_markers_need_a_begin_and_an_end(MakeJsonFile, MakeFile):
+    ExpectParamError(MakeJsonFile, MakeFile, {"excludeMarkersList": [[";begin"]]}, "[begin, end] pairs")
+
+
+def test_exclude_markers_must_not_be_empty_strings(MakeJsonFile, MakeFile):
+    ExpectParamError(MakeJsonFile, MakeFile, {"excludeMarkersList": [["", ""]]}, "[begin, end] pairs")
+
+
+def test_w3d_flag_must_be_a_bool(MakeJsonFile, MakeFile):
+    ExpectParamError(MakeJsonFile, MakeFile, {"w3dExportMesh": "true"}, "true or false")
+
+
+def test_rescale_must_be_a_number(MakeJsonFile, MakeFile):
+    ExpectParamError(MakeJsonFile, MakeFile, {"rescale": "half"}, "one or two numbers")
+
+
+def test_resize_takes_at_most_two_numbers(MakeJsonFile, MakeFile):
+    ExpectParamError(MakeJsonFile, MakeFile, {"resize": [512, 512, 512]}, "one or two numbers")
+
+
+def test_force_eol_must_be_a_string(MakeJsonFile, MakeFile):
+    ExpectParamError(MakeJsonFile, MakeFile, {"forceEOL": 1}, "should be a string")
+
+
+def test_params_of_the_real_mod_projects_are_accepted(MakeJsonFile, MakeFile):
+    # Copied from the patch and the sample project, so that the known param types can never
+    # tighten past the data that is actually built with them.
+    for params in [
+        {"forceEOL": chr(13) + chr(10), "deleteComments": ";", "deleteWhitespace": 1,
+         "sourceEncoding": "ascii", "targetEncoding": "ascii",
+         "excludeMarkersList": [[";patch104p-optional-begin", ";patch104p-optional-end"]]},
+        {"language": "Arabic", "excludeMarkersList": [["//core-begin", "//core-end"]]},
+        {"swapAndSetLanguage": "English"},
+        {"w3dExportHierarchy": True, "w3dExportAnimation": False, "w3dExportMesh": True},
+        {"-quality": 255, "-mipmode": "Generate", "-DXT1": ""},
+        {"rescale": 0.5, "resampling": "BICUBIC", "-quality": 255},
+        {"resize": [1024, 1024]},
+        {"excludeMarkersList": []},
+    ]:
+        assert MakeParamsBundles(MakeJsonFile, MakeFile, params) != None
+
+
+def test_a_param_the_builder_does_not_know_is_left_alone(MakeJsonFile, MakeFile):
+    # Build tool arguments are passed on as they are written and must not be verified here.
+    assert MakeParamsBundles(MakeJsonFile, MakeFile, {"-someNewCrunchArg": [1, "two"]}) != None
