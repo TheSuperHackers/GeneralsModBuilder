@@ -578,6 +578,24 @@ def MakeW3DExportMode(source: str, exportHierarchy: bool, exportAnimation: bool,
 GameTextPathReservedChars: str = ",)"
 
 
+def RequiresGameTextMerge(sources: list[str], targetT: BuildFileType) -> bool:
+    """
+    Tells whether these source files build the target game text file with the compiler.
+    A csf target is always written by it. A str target is written by it only to read a csf
+    source, because str files are text and are otherwise appended without any tool.
+    """
+    if targetT == BuildFileType.csf:
+        return True
+
+    if targetT == BuildFileType.str:
+        source: str
+        for source in sources:
+            if GetFileType(source) == BuildFileType.csf:
+                return True
+
+    return False
+
+
 def VerifyGameTextMergePath(path: str) -> None:
     """
     Fails a file path that a game text merge command line cannot carry.
@@ -586,6 +604,21 @@ def VerifyGameTextMergePath(path: str) -> None:
         util.Verify(character not in path,
                     f"Path '{path}' contains a '{character}', which the game text compiler cannot "
                     f"read in a merge, because it is part of its command syntax and cannot be escaped")
+
+
+def VerifyGameTextMergePaths(sources: list[str], target: str, targetT: BuildFileType) -> None:
+    """
+    Fails the file paths of a game text merge that its command line cannot carry. Files that
+    are combined without the compiler are not checked, because their paths never become part
+    of a command.
+    """
+    if not RequiresGameTextMerge(sources, targetT):
+        return
+
+    path: str
+    for path in sources:
+        VerifyGameTextMergePath(path)
+    VerifyGameTextMergePath(target)
 
 
 def MakeGameTextMergeArgs(
@@ -599,10 +632,6 @@ def MakeGameTextMergeArgs(
     Each source file is loaded into its own compiler slot and is merged over the first slot,
     so a label that is defined again in a later source file overwrites the earlier one.
     """
-    for path in sources:
-        VerifyGameTextMergePath(path)
-    VerifyGameTextMergePath(target)
-
     iparams = CaseInsensitiveDict(params)
     args: list[str] = [exec]
 
@@ -956,18 +985,11 @@ class BuildCopy:
         Symlinks are never taken here, because a merged file has no single source to link to.
 
         Whether the source files are of a type that can build this target at all is decided
-        by SupportsMultiSource, which the Pre Build step applies to every bundle file.
+        by SupportsMultiSource, and whether the compiler can read their paths is decided by
+        VerifyGameTextMergePaths. The Pre Build step applies both to every bundle file.
         """
-        source: str
-
-        if targetT == BuildFileType.csf:
-            return self.__MergeToCSF
-
-        if targetT == BuildFileType.str:
-            # STR sources merge as text. A CSF source requires the tool to become text first.
-            for source in sources:
-                if GetFileType(source) == BuildFileType.csf:
-                    return self.__MergeToSTR
+        if RequiresGameTextMerge(sources, targetT):
+            return self.__MergeToCSF if targetT == BuildFileType.csf else self.__MergeToSTR
 
         if (targetT == BuildFileType.ini or
             targetT == BuildFileType.wnd or

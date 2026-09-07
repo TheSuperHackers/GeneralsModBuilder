@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from enum import Enum, auto
 from glob import glob
 from generalsmodbuilder.build.common import ParamsToArgs
-from generalsmodbuilder.build.copy import BuildCopy, BuildCopyOption, BuildFileType, GetFileType, SupportsMultiSource
+from generalsmodbuilder.build.copy import BuildCopy, BuildCopyOption, BuildFileType, GetFileType, SupportsMultiSource, VerifyGameTextMergePaths
 from generalsmodbuilder.build.filehashregistry import FileHash, FileHashRegistry
 from generalsmodbuilder.build.thing import BuildFile, BuildFileStatus, BuildThing, BuildFilesT, BuildThingsT, IsStatusRelevantForBuild
 from generalsmodbuilder.build.setup import BuildSetup, BuildStep
@@ -467,6 +467,7 @@ class BuildEngine:
             for itemFile in item.files:
                 if itemFile.HasMultiSourceFile():
                     BuildEngine.__VerifyMultiSourceIsSupported(item, itemFile)
+                    BuildEngine.__VerifyMultiSourceGameTextPaths(itemFile, newThing.absParentDir)
 
                 buildFile = BuildFile()
                 buildFile.absSources = list(itemFile.absSourceFiles)
@@ -481,8 +482,7 @@ class BuildEngine:
     @staticmethod
     def __VerifyMultiSourceIsSupported(item: BundleItem, itemFile: BundleFile) -> None:
         """
-        Fails a bad multi source configuration in the Pre Build step,
-        so that it does not fail in the middle of a long running Build step.
+        Fails a bad multi source configuration.
         """
         targetType: BuildFileType = GetFileType(itemFile.relTargetFile)
         absSourceFile: str
@@ -492,6 +492,15 @@ class BuildEngine:
             util.Verify(SupportsMultiSource(sourceType, targetType),
                         f"BundleItem '{item.name}' cannot build target file '{itemFile.relTargetFile}' of type '{targetType.name}' "
                         f"from multiple source files, because source file '{absSourceFile}' of type '{sourceType.name}' is not supported for it.")
+
+
+    @staticmethod
+    def __VerifyMultiSourceGameTextPaths(itemFile: BundleFile, absParentDir: str) -> None:
+        """
+        Fails a game text merge whose file paths the compiler cannot read.
+        """
+        absTarget: str = os.path.normpath(os.path.join(absParentDir, itemFile.relTargetFile))
+        VerifyGameTextMergePaths(itemFile.absSourceFiles, absTarget, GetFileType(itemFile.relTargetFile))
 
 
     @staticmethod

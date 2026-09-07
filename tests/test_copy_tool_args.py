@@ -164,18 +164,42 @@ def test_a_path_with_a_space_is_merged_as_it_is():
     assert args[-1] == "SAVE_CSF(FILE_ID:0,FILE_PATH:My Mod/Merged.csf)"
 
 
+# The paths of a merge are verified by the Pre Build step and no longer by the arguments,
+# so that a path the compiler cannot read fails before a long running build starts.
+def VerifyMergePaths(sources: list, target: str) -> None:
+    targetT = BuildFileType.csf if target.endswith(".csf") else BuildFileType.str
+    VerifyGameTextMergePaths(sources, target, targetT)
+
+
 @pytest.mark.parametrize("path", ["Mod,v2/A.str", "Mod(old)/A.str"])
 def test_a_source_path_the_compiler_cannot_read_is_reported(path):
     # A comma ends a value and a parenthesis ends a command, and neither can be escaped.
     with pytest.raises(AssertionError) as error:
-        MergeArgs([path, "B.str"], "Merged.csf")
+        VerifyMergePaths([path, "B.str"], "Merged.csf")
     assert path in str(error.value)
 
 
 def test_a_target_path_the_compiler_cannot_read_is_reported():
     with pytest.raises(AssertionError) as error:
-        MergeArgs(["A.str", "B.str"], "Mod,v2/Merged.csf")
+        VerifyMergePaths(["A.str", "B.str"], "Mod,v2/Merged.csf")
     assert "Mod,v2/Merged.csf" in str(error.value)
+
+
+def test_a_path_the_compiler_can_read_is_accepted():
+    VerifyMergePaths(["My Mod/A.str", "My Mod/B.csf"], "My Mod/Merged.str")
+
+
+def test_text_files_that_are_appended_may_carry_any_path():
+    # str sources build a str target as text, without the compiler, so their paths never
+    # become part of a command and the reserved characters mean nothing to them.
+    assert not RequiresGameTextMerge(["Mod,v2/A.str", "Mod,v2/B.str"], BuildFileType.str)
+    VerifyMergePaths(["Mod,v2/A.str", "Mod,v2/B.str"], "Mod,v2/Appended.str")
+
+
+def test_a_merge_is_required_by_a_csf_file_on_either_side():
+    assert RequiresGameTextMerge(["A.str", "B.str"], BuildFileType.csf)
+    assert RequiresGameTextMerge(["A.str", "B.csf"], BuildFileType.str)
+    assert not RequiresGameTextMerge(["A.ini", "B.ini"], BuildFileType.ini)
 
 
 def test_params_to_args_can_exclude_by_name():
