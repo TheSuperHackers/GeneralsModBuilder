@@ -956,9 +956,7 @@ class BuildCopy:
         Symlinks are never taken here, because a merged file has no single source to link to.
 
         Whether the source files are of a type that can build this target at all is decided
-        by SupportsMultiSource, which the Pre Build step applies to every bundle file, so
-        that a bad configuration fails before the long running Build step and with the name
-        of the bundle item in the message. It is not asked again here.
+        by SupportsMultiSource, which the Pre Build step applies to every bundle file.
         """
         source: str
 
@@ -1263,7 +1261,11 @@ class BuildCopy:
     @staticmethod
     def __HasResizeParams(params: ParamsT) -> bool:
         iparams = CaseInsensitiveDict(params)
-        return (iparams.get("resize") != None) or (iparams.get("rescale") != None)
+        if iparams.get("resize") != None:
+            return True
+        if iparams.get("rescale") != None:
+            return True
+        return False
 
 
     @staticmethod
@@ -1274,11 +1276,12 @@ class BuildCopy:
         param that says nothing about textures must not compress an already compressed dds
         file a second time, with a texture format that nobody chose.
         """
-        if BuildCopy.__HasResizeParams(params):
-            return True
-
         iparams = CaseInsensitiveDict(params)
         if iparams.get("resampling") != None:
+            return True
+        if iparams.get("resize") != None:
+            return True
+        if iparams.get("rescale") != None:
             return True
 
         # All command line arguments of crunch begin with a dash, which is also how
