@@ -117,17 +117,17 @@ def __IsMarkerList(value: Any) -> bool:
 
 
 __TEXT_PARAM_TYPES: dict[str, ParamValueType] = {
-    "forceeol": ParamValueType("a string, for example a carriage return and a line feed", __IsString),
-    "deletecomments": ParamValueType("a string, the token that begins a comment", __IsString),
-    "deletewhitespace": ParamValueType("a number, where any number above 0 deletes whitespace", __IsCount),
-    "sourceencoding": ParamValueType("a string, the name of a python codec", __IsString),
-    "targetencoding": ParamValueType("a string, the name of a python codec", __IsString),
-    "excludemarkerslist": ParamValueType("a list of [begin, end] pairs of non empty strings", __IsMarkerList),
+    "forceEOL": ParamValueType("a string, for example a carriage return and a line feed", __IsString),
+    "deleteComments": ParamValueType("a string, the token that begins a comment", __IsString),
+    "deleteWhitespace": ParamValueType("a number, where any number above 0 deletes whitespace", __IsCount),
+    "sourceEncoding": ParamValueType("a string, the name of a python codec", __IsString),
+    "targetEncoding": ParamValueType("a string, the name of a python codec", __IsString),
+    "excludeMarkersList": ParamValueType("a list of [begin, end] pairs of non empty strings", __IsMarkerList),
 }
 
 __GAME_TEXT_PARAM_TYPES: dict[str, ParamValueType] = {
     "language": ParamValueType("a string, the name of a game language", __IsString),
-    "swapandsetlanguage": ParamValueType("a string, the name of a game language", __IsString),
+    "swapAndSetLanguage": ParamValueType("a string, the name of a game language", __IsString),
 }
 
 __IMAGE_PARAM_TYPES: dict[str, ParamValueType] = {
@@ -137,26 +137,28 @@ __IMAGE_PARAM_TYPES: dict[str, ParamValueType] = {
 }
 
 __W3D_PARAM_TYPES: dict[str, ParamValueType] = {
-    name.lower(): ParamValueType("true or false", __IsBool) for name in (
-        "w3dExportHierarchy",
-        "w3dExportAnimation",
-        "w3dExportMesh",
-        "w3dUseExistingSkeleton",
-        "w3dCompressTimeCoded",
-        "w3dForceVertexMaterials",
-        "w3dCreateIndividualFiles",
-        "w3dCreateTextureXmls",
-    )
+    "w3dExportHierarchy": ParamValueType("true or false", __IsBool),
+    "w3dExportAnimation": ParamValueType("true or false", __IsBool),
+    "w3dExportMesh": ParamValueType("true or false", __IsBool),
+    "w3dUseExistingSkeleton": ParamValueType("true or false", __IsBool),
+    "w3dCompressTimeCoded": ParamValueType("true or false", __IsBool),
+    "w3dForceVertexMaterials": ParamValueType("true or false", __IsBool),
+    "w3dCreateIndividualFiles": ParamValueType("true or false", __IsBool),
+    "w3dCreateTextureXmls": ParamValueType("true or false", __IsBool),
 }
 
 # The params that the build step reads, by their lower case name, because a bundle file may
-# spell a param name in any case. Every other param is an argument of a build tool and is
+# spell a param name in any case. The names above are lowered here, so that a table can
+# spell a param the way it is meant to be read and a param cannot lose its verification by
+# being declared in the wrong case. Every other param is an argument of a build tool and is
 # passed on as it is written.
 KNOWN_BUILD_FILE_PARAM_TYPES: dict[str, ParamValueType] = {
-    **__TEXT_PARAM_TYPES,
-    **__GAME_TEXT_PARAM_TYPES,
-    **__IMAGE_PARAM_TYPES,
-    **__W3D_PARAM_TYPES,
+    name.lower(): paramType for name, paramType in {
+        **__TEXT_PARAM_TYPES,
+        **__GAME_TEXT_PARAM_TYPES,
+        **__IMAGE_PARAM_TYPES,
+        **__W3D_PARAM_TYPES,
+    }.items()
 }
 
 

@@ -7,6 +7,7 @@ import pytest
 
 from generalsmodbuilder.build.copy import BuildFileType, SupportsMultiSource
 from generalsmodbuilder.data.bundles import MakeBundlesFromJsons
+from generalsmodbuilder.data.common import KNOWN_BUILD_FILE_PARAM_TYPES
 
 
 def MakeItemJson(jFile: dict) -> dict:
@@ -135,6 +136,17 @@ def test_params_of_the_real_mod_projects_are_accepted(MakeJsonFile, MakeFile):
         {"excludeMarkersList": []},
     ]:
         assert MakeParamsBundles(MakeJsonFile, MakeFile, params) != None
+
+
+def test_a_known_param_is_matched_however_its_table_spells_it():
+    # The tables spell a param the way it is meant to be read and are lowered when they are
+    # merged, so that a param declared in camel case cannot lose its verification in silence.
+    assert all(name == name.lower() for name in KNOWN_BUILD_FILE_PARAM_TYPES)
+    assert "w3dcreatetexturexmls" in KNOWN_BUILD_FILE_PARAM_TYPES
+
+
+def test_a_camel_case_param_declaration_is_still_verified(MakeJsonFile, MakeFile):
+    ExpectParamError(MakeJsonFile, MakeFile, {"W3DCreateTextureXmls": 1}, "true or false")
 
 
 def test_a_param_the_builder_does_not_know_is_left_alone(MakeJsonFile, MakeFile):
