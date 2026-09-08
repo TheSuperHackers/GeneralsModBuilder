@@ -4,7 +4,7 @@ from generalsmodbuilder.data.buildfiles import MakeBuildFilesFromJsons
 from generalsmodbuilder.data.bundles import MakeBundlesFromJsons
 from generalsmodbuilder.data.changeconfig import MakeChangeConfigFromJsons
 from generalsmodbuilder.data.folders import MakeFoldersFromJsons
-from generalsmodbuilder.data.runner import MakeRunnerFromJsons
+from generalsmodbuilder.data.runner import MakeJsonRunnerFromJsons
 from generalsmodbuilder.data.tools import MakeToolsFromJsons
 
 
@@ -17,7 +17,7 @@ SECTIONS = {
     "folders": ({"folders": {"releaseDir": "R", "buildDir": "B", "releasDir": "R"}},
                 "folders.releasDir", MakeFoldersFromJsons),
     "runner": ({"runner": {"gameExeFile": "generals.exe", "gameExeFil": "x"}},
-               "runner.gameExeFil", MakeRunnerFromJsons),
+               "runner.gameExeFil", MakeJsonRunnerFromJsons),
     "build": ({"build": {"files": [], "file": []}},
               "build.file", MakeBuildFilesFromJsons),
     "changelog": ({"changelog": {"records": [], "record": []}},
