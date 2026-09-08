@@ -9,7 +9,13 @@ optional and that leaving it out merges the language the loaded files already ca
 import pytest
 
 from generalsmodbuilder.build.copy import (
-    BuildFileType, HasCrunchTextureFormat, MakeCrunchArgs, MakeGameTextMergeArgs, MakeW3DExportMode)
+    BuildFileType,
+    HasCrunchTextureFormat,
+    MakeCrunchArgs,
+    MakeGameTextMergeArgs,
+    MakeW3DExportMode,
+    RequiresGameTextMerge,
+    VerifyGameTextMergePaths)
 
 
 EXE = "gametextcompiler.exe"
