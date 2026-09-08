@@ -190,6 +190,68 @@ multiple source files into it.
 A file that declares none of `md5`, `sha256` and `size` is only checked for existence,
 so an interrupted or substituted download is accepted as installed.
 
+### Custom Game Launch Settings
+
+The `runner` section of a configuration file is a project setting that the mod repository
+commits, and it locates the game through the registry keys of a normal installation. A user
+whose game sits elsewhere sets it for their own machine instead, from the command line or
+from the gui, without editing a project file.
+
+| Option                | Description                                                                               |
+|-----------------------|---------------------------------------------------------------------------------------------|
+| `--game-install-path` | Game installation directory. A relative path resolves against the working directory       |
+| `--game-exe-file`     | Game executable, relative to the game installation directory                              |
+| `--game-exe-args`     | Game executable arguments as one string, for example `--game-exe-args="-win -quickstart"` |
+
+Write `--game-exe-args` with an `=` and not a space. A value that is a single argument
+beginning with a dash, such as `-win`, is read as an option of the Mod Builder otherwise. A
+path that holds a space is quoted inside the string:
+
+```
+--game-exe-args="-mod \"C:\My Mod\x.big\""
+```
+
+Where a setting is taken from, highest first:
+
+1. the command line options above,
+2. the settings the gui saved for this user,
+3. the `runner` section of the configuration files, where a later file wins over an earlier one.
+
+An installation directory set this way is the only one that is searched. The registry keys
+and `runner.gameInstallPath` are not consulted, and a directory that does not hold the game
+executable fails naming that directory, so a path that is set is never passed over in
+silence. It is used by Install, Uninstall and Run alike, because all three work on the game
+installation.
+
+Arguments set this way replace `runner.gameExeArgs` entirely rather than adding to it, so an
+argument that the configuration asks for can be dropped. `--game-exe-args=""` launches the
+game with no arguments at all.
+
+### Saved User Settings
+
+The gui remembers its game launch settings in `UserSettings.json`, in the user configuration
+directory, which on Windows is `%LOCALAPPDATA%\TheSuperHackers\GeneralsModBuilder`. Nothing is
+written next to the project. An empty field is no setting, so the `runner` section is used for
+that field.
+
+| Setting                    | Mandatory | Default | Description                                                    |
+|----------------------------|-----------|---------|------------------------------------------------------------------|
+| userRunner.version         | no        | 1       | json Format version                                            |
+| userRunner.gameInstallPath | no        |         | Game installation directory                                    |
+| userRunner.gameExeFile     | no        |         | Game executable, relative to the game installation directory   |
+| userRunner.gameExeArgs     | no        |         | Game executable arguments as one string, not as a params table |
+
+```json
+{
+    "userRunner": {
+        "version": 1,
+        "gameInstallPath": "D:\MyGame",
+        "gameExeFile": "generals.exe",
+        "gameExeArgs": "-win -quickstart"
+    }
+}
+```
+
 ### Unique Names
 
 Names that end up as a file or a directory must be unique, so that one build step cannot

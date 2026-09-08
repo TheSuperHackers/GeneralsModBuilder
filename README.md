@@ -32,6 +32,20 @@ generalsmodbuilder --build --install --config-list MyMod.json
 
 The virtual environment is created inside the Mod Builder folder. Set the `UV_PROJECT_ENVIRONMENT` environment variable to put it somewhere else.
 
+## Run the game from somewhere else
+
+The game is located through its registry keys. When it sits somewhere those do not name, a
+portable copy for example, name the directory on the command line rather than editing the
+project configuration:
+
+```
+Scripts\BuildInstallRun.bat --game-install-path "D:\Games\Zero Hour"
+```
+
+`--game-exe-file` and `--game-exe-args` set the executable and its arguments the same way, and
+the gui has a field for each of the three and remembers them. See
+[Custom Game Launch Settings](SETTINGS.md#custom-game-launch-settings).
+
 ## Setup Mod files and configurations
 
 In the [GeneralsModBuilderSample/Project](https://github.com/TheSuperHackers/GeneralsModBuilderSample/tree/main/Project), all game data source files are placed in the [GameFilesEdited](https://github.com/TheSuperHackers/GeneralsModBuilderSample/tree/main/Project/GameFilesEdited) folder and is referenced in the [ModBundleItems.json](https://github.com/TheSuperHackers/GeneralsModBuilderSample/tree/main/Project/ModBundleItems.json). The bundles configuration allows to define bundles aka .big archives and miscellaneous files. The [ModBundlePacks.json](https://github.com/TheSuperHackers/GeneralsModBuilderSample/tree/main/Project/ModBundlePacks.json) references the bundle items and packs them together as one entity. This allows to pack a project into different configurations, for example as **My_Textures_Pack_2k** and **My_Textures_Pack_4k**.
