@@ -25,12 +25,10 @@ class BuildFileType(Enum):
     The file types that the builder knows, followed by two markers that are not file types
     at all and must never be treated as a file extension.
 
-    Any is an extension that the builder has no conversion rule for. A file of such a type
+    'Any' is an extension that the builder has no conversion rule for. A file of such a type
     is copied as it is, because there is nothing to convert it into.
 
-    Auto is not a type but a request to work the type out from the file path. It is only
-    ever given to BuildCopy.Copy, which replaces it with the result of GetFileType, so no
-    other function ever sees it.
+    'Auto' is not a type but a request to work the type out from the file path.
     """
     # File types ...
     big = enum.auto()
@@ -60,9 +58,7 @@ BuildFileTypeMarkers: set[BuildFileType] = {BuildFileType.Any, BuildFileType.Aut
 def __BuildFileTypeStringMap() -> dict[str, BuildFileType]:
     """
     Maps a lower case file extension to the file type that it names.
-    The markers are left out, because they are not file types and name no extension, so
-    that a file called Foo.any is an unknown extension like any other and never resolves
-    to a marker by the name of it.
+    The markers are left out, because they are not file types and name no extension.
     """
     d = dict()
     for type in BuildFileType:
@@ -75,8 +71,8 @@ FileTypeStringDict: dict[str, BuildFileType] = __BuildFileTypeStringMap()
 
 def GetFileType(filePath: str) -> BuildFileType:
     """
-    Tells the file type of a file path, or Any when the builder knows no conversion for its
-    extension. Never returns Auto, which is a request for this function and not a type.
+    Tells the file type of a file path, or 'Any' when the builder knows no conversion for its
+    extension. Never returns 'Auto', which is a request for this function and not a type.
     """
     ext: str = util.GetFileExt(filePath).lower()
     type: BuildFileType = FileTypeStringDict.get(ext)
@@ -518,8 +514,7 @@ def MakeCrunchArgs(
     """
     Builds the command line that compresses the source image into the target dds file.
     textureFormat : str
-        The texture format to write when the params name none of their own. Is empty when
-        they do, because crunch is then told the format twice.
+        The texture format to write when the params name none of their own.
     """
     args: list[str] = [exec,
         "-file", source,
@@ -702,10 +697,6 @@ class BuildCopy:
 
 
     def CopyThingMultiProcess(self, thing: BuildThing) -> None:
-        # The options travel to the worker as they are. A worker copies files and prints
-        # nothing of its own, this process prints the results it collects below, and the
-        # options also tell a build tool how loud to be, which must not depend on whether
-        # the build was given a process pool.
         futures = list[Future]()
         future: Future
         buildJob: BuildJob
@@ -732,8 +723,7 @@ class BuildCopy:
 
     def UncopyThing(self, thing: BuildThing, respectBuildFileStatus=True) -> None:
         """
-        Removes the files of the thing that a build has written. A file that is not there
-        is not an error, because being gone is the state that this asks for.
+        Removes the files of the thing that a build has written.
         """
         file: BuildFile
 
@@ -752,9 +742,6 @@ class BuildCopy:
             targetType = BuildFileType.Auto) -> BuildCopyResult:
         """
         Builds the target file from the source file(s).
-        sourceType, targetType : BuildFileType
-            Auto works the type out from the file path, which is what a build does. Another
-            type builds the files as that type instead, whatever their extensions say.
         """
 
         source: str
@@ -807,8 +794,7 @@ class BuildCopy:
     def Uncopy(self, file: str) -> bool:
         """
         Removes a file that a build has written and puts back the file that it replaced.
-        Tells whether there was anything to remove. Nothing to remove is not a failure: a
-        target that is already gone is the state that this asks for.
+        Returns whether there was anything to remove. Nothing to remove is not a failure.
         """
         removed: bool = util.DeleteFileOrDir(file)
 
@@ -854,8 +840,7 @@ class BuildCopy:
     @staticmethod
     def __VerifyCopied(result: BuildCopyResult, sources: list[str], target: str) -> None:
         """
-        A copy that does not do its work reports it by raising, so this only holds the last
-        word of the contract, for a copy function that answers a failure instead.
+        A copy that does not do its work reports it by raising.
         """
         util.Verify(result.success,
                     f"Unable to copy source(s) '{BuildCopy.__JoinSources(sources)}' to target '{target}'.")
@@ -1152,8 +1137,7 @@ class BuildCopy:
         therefore built beside the target and is then moved onto it.
         """
         archive: str = shutil.make_archive(base_name=target, format=format, root_dir=source)
-        util.Verify(os.path.isfile(archive),
-                    f"Archive '{archive}' of target '{target}' was not written")
+        util.Verify(os.path.isfile(archive), f"Archive '{archive}' of target '{target}' was not written")
 
         if archive != target:
             os.replace(src=archive, dst=target)
@@ -1201,7 +1185,6 @@ class BuildCopy:
             img: PILImage = psd.composite()
             return img
 
-        # More than three channels, which the verify above has made certain of.
         # Does composite the image and preserves background alpha.
         # If the psd was saved with "Maximize Compatibility", then the precomputed composite is read from it.
         img: PILImage = psd.composite(color=0.0, alpha=1.0)
@@ -1236,7 +1219,6 @@ class BuildCopy:
             tif.close()
             return img
 
-        # RGBA or RGBX, which the verify above has made certain of.
         # NOTE: No composite. Does not support more than one alpha channel and no transparent background.
         r, g, b, a = tif.split()
         img: PILImage = PIL.Image.merge("RGBA", (r, g, b, a))
