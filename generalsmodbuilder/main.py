@@ -5,6 +5,7 @@ from argparse import ArgumentParser
 from generalsmodbuilder.__version__ import VERSIONSTR
 from generalsmodbuilder.build.engine import BuildEngine
 from generalsmodbuilder.buildfunctions import RunWithConfig, BuildFileHashRegistry
+from generalsmodbuilder.data.runner import UserRunner, SplitGameExeArgs
 from generalsmodbuilder.gui.gui import Gui
 from generalsmodbuilder import util
 
@@ -13,9 +14,20 @@ def GetDefaultToolsRootDir() -> str:
     return os.path.join(platformdirs.user_cache_dir("GeneralsModBuilder", "TheSuperHackers"), "tools")
 
 
-def Main(args=None):
-    print(f"Generals Mod Builder v{VERSIONSTR} by The Super Hackers")
+def MakeUserRunnerFromArgs(args) -> UserRunner:
+    userRunner = UserRunner()
 
+    if args.game_install_path:
+        userRunner.absGameInstallDir = os.path.abspath(args.game_install_path)
+    if args.game_exe_file:
+        userRunner.relGameExeFile = args.game_exe_file
+    if args.game_exe_args != None:
+        userRunner.gameExeArgs = SplitGameExeArgs(args.game_exe_args)
+
+    return userRunner
+
+
+def MakeArgumentParser() -> ArgumentParser:
     parser = ArgumentParser()
     parser.add_argument('-c', '--config', type=str, action="append", help='Path to a configuration file (json). Multiples can be specified.')
     parser.add_argument('-l', '--config-list', type=str, nargs="*", help='Paths to any amount of configuration files (json).')
@@ -40,7 +52,17 @@ def Main(args=None):
     parser.add_argument('--load-default-runner', action='store_true', help='Loads the built-in runner json configuration. Is loaded before custom configurations from --config and --config-list.')
     parser.add_argument('--load-default-tools', action='store_true', help='Loads the built-in tools json configuration. Is loaded before custom configurations from --config and --config-list.')
     parser.add_argument('--make-change-log', action='store_true', help='Generates change log(s) according to the given change log json setup')
+    parser.add_argument('--game-install-path', type=str, help='Custom game installation directory. Overrides the runner configuration.')
+    parser.add_argument('--game-exe-file', type=str, help='Custom game executable, relative to the game installation directory. Overrides the runner configuration.')
+    parser.add_argument('--game-exe-args', type=str, help='Custom game executable arguments as one string, for example --game-exe-args="-win -quickstart". Replaces the arguments of the runner configuration.')
 
+    return parser
+
+
+def Main(args=None):
+    print(f"Generals Mod Builder v{VERSIONSTR} by The Super Hackers")
+
+    parser: ArgumentParser = MakeArgumentParser()
     args, unknownargs = parser.parse_known_args(args=args)
 
     if args.file_hash_registry_input and args.file_hash_registry_output:
@@ -108,6 +130,7 @@ def Main(args=None):
     verboseLogging = bool(args.verbose_logging)
     multiProcessing = bool(args.multi_processing)
     toolsRootDir = args.tools_root_dir
+    userRunner: UserRunner = MakeUserRunnerFromArgs(args)
 
     if toolsRootDir:
         toolsRootDir = os.path.normpath(toolsRootDir)
@@ -133,7 +156,8 @@ def Main(args=None):
             printConfig=printConfig,
             verboseLogging=verboseLogging,
             multiProcessing=multiProcessing,
-            toolsRootDir=toolsRootDir)
+            toolsRootDir=toolsRootDir,
+            userRunner=userRunner)
     else:
         def RunWithConfigWrapper():
             RunWithConfig(
@@ -150,7 +174,8 @@ def Main(args=None):
                 printConfig=printConfig,
                 verboseLogging=verboseLogging,
                 multiProcessing=multiProcessing,
-                toolsRootDir=toolsRootDir)
+                toolsRootDir=toolsRootDir,
+                userRunner=userRunner)
         if debug:
             RunWithConfigWrapper()
         else:

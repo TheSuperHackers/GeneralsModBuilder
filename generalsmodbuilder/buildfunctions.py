@@ -9,7 +9,7 @@ from generalsmodbuilder.data.buildfiles import BuildFiles, MakeBuildFilesFromJso
 from generalsmodbuilder.data.bundles import Bundles, BundlePack, MakeBundlesFromJsons
 from generalsmodbuilder.data.changeconfig import ChangeConfig, MakeChangeConfigFromJsons
 from generalsmodbuilder.data.folders import Folders, MakeFoldersFromJsons
-from generalsmodbuilder.data.runner import Runner, MakeJsonRunnerFromJsons, MakeRunner
+from generalsmodbuilder.data.runner import Runner, UserRunner, MakeJsonRunnerFromJsons, MakeRunner
 from generalsmodbuilder.data.tools import ToolsT, MakeToolsFromJsons, InstallTools
 from generalsmodbuilder.util import JsonFile
 from generalsmodbuilder import util
@@ -94,6 +94,7 @@ def RunWithConfig(
         verboseLogging: bool=False,
         multiProcessing: bool=False,
         toolsRootDir: str=None,
+        userRunner: UserRunner=None,
         engine: BuildEngine=None) -> None:
 
     timer = util.Timer()
@@ -113,7 +114,7 @@ def RunWithConfig(
 
     if buildStep != BuildStep.Zero:
         folders: Folders = MakeFoldersFromJsons(jsonFiles)
-        runner: Runner = MakeRunner(MakeJsonRunnerFromJsons(jsonFiles)) if (install or uninstall or run) else Runner()
+        runner: Runner = MakeRunner(MakeJsonRunnerFromJsons(jsonFiles), userRunner) if (install or uninstall or run) else Runner()
         bundles: Bundles = MakeBundlesFromJsons(jsonFiles)
         tools: ToolsT = MakeToolsFromJsons(jsonFiles, rootDir=toolsRootDir)
 

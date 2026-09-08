@@ -1,4 +1,5 @@
 import os.path
+import shlex
 from dataclasses import dataclass
 from generalsmodbuilder.build.common import ParamsToArgs
 from generalsmodbuilder.data.common import (
@@ -126,6 +127,22 @@ class Runner(ParsedData):
             searched = "\n  nothing, because none of those keys named a directory"
         return (f"runner game installation directory containing '{self.relGameExeFile}' was not found. "
                 f"Searched:{searched}")
+
+
+def SplitGameExeArgs(text: str) -> list[str]:
+    """
+    Splits a command line that a user wrote into the arguments the game is launched with.
+    Posix mode is not used because it eats the backslashes of an unquoted windows path.
+    """
+    args = list[str]()
+
+    for arg in shlex.split(text, posix=False):
+        if len(arg) >= 2 and arg.startswith('"') and arg.endswith('"'):
+            arg = arg[1:-1]
+        if arg:
+            args.append(arg)
+
+    return args
 
 
 def __AddRegKeyInstallDir(

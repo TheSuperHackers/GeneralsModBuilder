@@ -11,6 +11,7 @@ from generalsmodbuilder.__version__ import VERSIONSTR
 from generalsmodbuilder.build.engine import BuildEngine
 from generalsmodbuilder.buildfunctions import CreateJsonFileList, RunWithConfig
 from generalsmodbuilder.data.bundles import BundlePack, Bundles, AddBundlePacksFromJsons
+from generalsmodbuilder.data.runner import UserRunner
 from generalsmodbuilder.util import JsonFile
 
 
@@ -25,6 +26,7 @@ class Gui:
     buildAndInstallList: list[str]
     debug: bool
     toolsRootDir: str
+    userRunner: UserRunner
 
     makeChangeLog: BooleanVar
     clean: BooleanVar
@@ -62,6 +64,7 @@ class Gui:
         self.buildAndInstallList = None
         self.debug = False
         self.toolsRootDir = None
+        self.userRunner = None
         self._ClearMainWindowElements()
 
 
@@ -80,13 +83,15 @@ class Gui:
             printConfig: bool = False,
             verboseLogging: bool = False,
             multiProcessing: bool = False,
-            toolsRootDir: str = None):
+            toolsRootDir: str = None,
+            userRunner: UserRunner = None):
 
         self.configPaths = configPaths
         self.buildAndInstallList = installList
         self.buildAndInstallList.extend(buildList)
         self.debug = debug
         self.toolsRootDir = toolsRootDir
+        self.userRunner = userRunner
 
         mainWindow: Tk = Gui._CreateMainWindow()
 
@@ -338,6 +343,7 @@ class Gui:
             verboseLogging=self.verboseLogging.get(),
             multiProcessing=self.multiProcessing.get(),
             toolsRootDir=self.toolsRootDir,
+            userRunner=self.userRunner,
             engine=self.buildEngine)
 
         self._DoWork(function)
@@ -364,6 +370,7 @@ class Gui:
             verboseLogging=self.verboseLogging.get(),
             multiProcessing=self.multiProcessing.get(),
             toolsRootDir=self.toolsRootDir,
+            userRunner=self.userRunner,
             engine=self.buildEngine)
 
         self._DoWork(function)
@@ -379,6 +386,7 @@ class Gui:
             verboseLogging=self.verboseLogging.get(),
             multiProcessing=self.multiProcessing.get(),
             toolsRootDir=self.toolsRootDir,
+            userRunner=self.userRunner,
             engine=self.buildEngine)
 
         self._DoWork(function)
@@ -394,6 +402,7 @@ class Gui:
             verboseLogging=self.verboseLogging.get(),
             multiProcessing=self.multiProcessing.get(),
             toolsRootDir=self.toolsRootDir,
+            userRunner=self.userRunner,
             engine=self.buildEngine)
 
         self._DoWork(function)
@@ -409,6 +418,7 @@ class Gui:
             verboseLogging=self.verboseLogging.get(),
             multiProcessing=self.multiProcessing.get(),
             toolsRootDir=self.toolsRootDir,
+            userRunner=self.userRunner,
             engine=self.buildEngine)
 
         self._DoWork(function)
@@ -424,6 +434,7 @@ class Gui:
             verboseLogging=self.verboseLogging.get(),
             multiProcessing=self.multiProcessing.get(),
             toolsRootDir=self.toolsRootDir,
+            userRunner=self.userRunner,
             engine=self.buildEngine)
 
         self._DoWork(function)
@@ -439,6 +450,7 @@ class Gui:
             verboseLogging=self.verboseLogging.get(),
             multiProcessing=self.multiProcessing.get(),
             toolsRootDir=self.toolsRootDir,
+            userRunner=self.userRunner,
             engine=self.buildEngine)
 
         self._DoWork(function)
