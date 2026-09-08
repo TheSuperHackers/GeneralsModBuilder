@@ -4,6 +4,7 @@ import time
 import threading
 import traceback
 from tkinter import *
+from tkinter import filedialog
 from tkinter.ttk import *
 from typing import Callable
 from generalsmodbuilder import util
@@ -11,7 +12,9 @@ from generalsmodbuilder.__version__ import VERSIONSTR
 from generalsmodbuilder.build.engine import BuildEngine
 from generalsmodbuilder.buildfunctions import CreateJsonFileList, RunWithConfig
 from generalsmodbuilder.data.bundles import BundlePack, Bundles, AddBundlePacksFromJsons
-from generalsmodbuilder.data.runner import UserRunner
+from generalsmodbuilder.data.runner import UserRunner, JoinGameExeArgs, SplitGameExeArgs
+from generalsmodbuilder.usersettings import (
+    GetUserSettingsFile, LoadUserRunner, MergeUserRunners, SaveUserRunner)
 from generalsmodbuilder.util import JsonFile
 
 
@@ -26,7 +29,6 @@ class Gui:
     buildAndInstallList: list[str]
     debug: bool
     toolsRootDir: str
-    userRunner: UserRunner
 
     makeChangeLog: BooleanVar
     clean: BooleanVar
@@ -35,6 +37,10 @@ class Gui:
     install: BooleanVar
     uninstall: BooleanVar
     run: BooleanVar
+
+    gameInstallPath: StringVar
+    gameExeFile: StringVar
+    gameExeArgs: StringVar
 
     printConfig: BooleanVar
     clearConsole: BooleanVar
@@ -64,7 +70,6 @@ class Gui:
         self.buildAndInstallList = None
         self.debug = False
         self.toolsRootDir = None
-        self.userRunner = None
         self._ClearMainWindowElements()
 
 
@@ -91,7 +96,6 @@ class Gui:
         self.buildAndInstallList.extend(buildList)
         self.debug = debug
         self.toolsRootDir = toolsRootDir
-        self.userRunner = userRunner
 
         mainWindow: Tk = Gui._CreateMainWindow()
 
@@ -107,11 +111,20 @@ class Gui:
         self.verboseLogging = BooleanVar(mainWindow, value=verboseLogging)
         self.multiProcessing = BooleanVar(mainWindow, value=multiProcessing)
 
+        settings: UserRunner = MergeUserRunners(
+            userRunner if userRunner != None else UserRunner(), LoadUserRunner(GetUserSettingsFile()))
+        self.gameInstallPath = StringVar(mainWindow, value=settings.absGameInstallDir)
+        self.gameExeFile = StringVar(mainWindow, value=settings.relGameExeFile)
+        self.gameExeArgs = StringVar(
+            mainWindow, value=JoinGameExeArgs(settings.gameExeArgs) if settings.gameExeArgs != None else "")
+
         self._CreateMainWindowElements(mainWindow)
         self._SetAbortElementsState("disabled")
         self._StartWorkThread(self._PopulateBundlePackList)
 
         mainWindow.mainloop()
+
+        self._SaveUserSettings()
 
         with self.mainWindowLock:
             self._ClearMainWindowElements()
@@ -136,7 +149,7 @@ class Gui:
     def _CreateMainWindow() -> Tk:
         window = Tk()
         window.title(f"Generals Mod Builder v{VERSIONSTR} by The Super Hackers")
-        window.geometry('660x270')
+        window.geometry('700x430')
         window.resizable(0, 0)
         iconFile: str =  Gui._MakeIconFilePath("icon.png")
         Gui._AddIconToWindow(window, iconFile)
@@ -254,6 +267,68 @@ class Gui:
         self.bundlePackRefreshButton = Button(bundlePackFrame, width=buttonWidth, text="Refresh", command=lambda:self._StartWorkThread(self._PopulateBundlePackList))
         self.bundlePackRefreshButton.pack(anchor=W)
 
+        # Game Launch Settings Frame
+
+        frame1111 = Frame(mainFrame)
+        frame1111.grid(row=1, column=0, columnspan=4)
+
+        gameLabel = Label(frame1111, text = "Game launch settings")
+        gameLabel.pack(anchor=CENTER)
+        gameFrame = Frame(frame1111, padding=10, relief='solid')
+        gameFrame.pack(padx=5, pady=5)
+
+        Gui._AddGameSettingRow(gameFrame, 0, "Game install path", self.gameInstallPath, self._BrowseGameInstallPath)
+        Gui._AddGameSettingRow(gameFrame, 1, "Game exe file", self.gameExeFile)
+        Gui._AddGameSettingRow(gameFrame, 2, "Game exe args", self.gameExeArgs)
+
+
+    @staticmethod
+    def _AddGameSettingRow(frame: Frame, row: int, text: str, var: StringVar, browse: Callable = None) -> None:
+        Label(frame, text=text, width=17).grid(row=row, column=0, sticky=W, pady=2)
+        Entry(frame, textvariable=var, width=70).grid(row=row, column=1, sticky=W, pady=2)
+        if browse != None:
+            Button(frame, text="Browse...", width=10, command=browse).grid(row=row, column=2, padx=5)
+
+
+    def _BrowseGameInstallPath(self) -> None:
+        directory: str = filedialog.askdirectory(initialdir=self.gameInstallPath.get())
+        if directory:
+            self.gameInstallPath.set(os.path.normpath(directory))
+
+
+    def _MakeUserRunner(self) -> UserRunner:
+        gameInstallPath: str = self.gameInstallPath.get().strip()
+        gameExeFile: str = self.gameExeFile.get().strip()
+        gameExeArgs: str = self.gameExeArgs.get().strip()
+
+        if gameInstallPath:
+            gameInstallPath = os.path.abspath(gameInstallPath)
+
+        if gameExeArgs:
+            gameExeArgs = SplitGameExeArgs(gameExeArgs)
+        else:
+            gameExeArgs = None
+
+        userRunner = UserRunner(
+            absGameInstallDir=gameInstallPath,
+            relGameExeFile=gameExeFile,
+            gameExeArgs=gameExeArgs)
+
+        return userRunner
+
+
+    def _SaveUserSettings(self) -> None:
+        if self.gameInstallPath == None:
+            return
+        try:
+            SaveUserRunner(
+                GetUserSettingsFile(),
+                self.gameInstallPath.get().strip(),
+                self.gameExeFile.get().strip(),
+                self.gameExeArgs.get().strip())
+        except Exception as error:
+            print(f"User settings are not saved: {error}")
+
 
     def _ClearMainWindowElements(self) -> None:
         self.makeChangeLog = None
@@ -263,6 +338,9 @@ class Gui:
         self.install = None
         self.uninstall = None
         self.run = None
+        self.gameInstallPath = None
+        self.gameExeFile = None
+        self.gameExeArgs = None
         self.printConfig = None
         self.clearConsole = None
         self.verboseLogging = None
@@ -343,7 +421,7 @@ class Gui:
             verboseLogging=self.verboseLogging.get(),
             multiProcessing=self.multiProcessing.get(),
             toolsRootDir=self.toolsRootDir,
-            userRunner=self.userRunner,
+            userRunner=self._MakeUserRunner(),
             engine=self.buildEngine)
 
         self._DoWork(function)
@@ -370,7 +448,7 @@ class Gui:
             verboseLogging=self.verboseLogging.get(),
             multiProcessing=self.multiProcessing.get(),
             toolsRootDir=self.toolsRootDir,
-            userRunner=self.userRunner,
+            userRunner=self._MakeUserRunner(),
             engine=self.buildEngine)
 
         self._DoWork(function)
@@ -386,7 +464,7 @@ class Gui:
             verboseLogging=self.verboseLogging.get(),
             multiProcessing=self.multiProcessing.get(),
             toolsRootDir=self.toolsRootDir,
-            userRunner=self.userRunner,
+            userRunner=self._MakeUserRunner(),
             engine=self.buildEngine)
 
         self._DoWork(function)
@@ -402,7 +480,7 @@ class Gui:
             verboseLogging=self.verboseLogging.get(),
             multiProcessing=self.multiProcessing.get(),
             toolsRootDir=self.toolsRootDir,
-            userRunner=self.userRunner,
+            userRunner=self._MakeUserRunner(),
             engine=self.buildEngine)
 
         self._DoWork(function)
@@ -418,7 +496,7 @@ class Gui:
             verboseLogging=self.verboseLogging.get(),
             multiProcessing=self.multiProcessing.get(),
             toolsRootDir=self.toolsRootDir,
-            userRunner=self.userRunner,
+            userRunner=self._MakeUserRunner(),
             engine=self.buildEngine)
 
         self._DoWork(function)
@@ -434,7 +512,7 @@ class Gui:
             verboseLogging=self.verboseLogging.get(),
             multiProcessing=self.multiProcessing.get(),
             toolsRootDir=self.toolsRootDir,
-            userRunner=self.userRunner,
+            userRunner=self._MakeUserRunner(),
             engine=self.buildEngine)
 
         self._DoWork(function)
@@ -450,7 +528,7 @@ class Gui:
             verboseLogging=self.verboseLogging.get(),
             multiProcessing=self.multiProcessing.get(),
             toolsRootDir=self.toolsRootDir,
-            userRunner=self.userRunner,
+            userRunner=self._MakeUserRunner(),
             engine=self.buildEngine)
 
         self._DoWork(function)
@@ -475,6 +553,8 @@ class Gui:
         with self.buildEngineLock:
             self.buildEngine = BuildEngine()
             self.buildAndInstallList = Gui._GetBundlePackNamesFromList(self.bundlePackList)
+
+        self._SaveUserSettings()
 
         if self.clearConsole.get():
             Gui._ClearConsole()

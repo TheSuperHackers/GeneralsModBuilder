@@ -153,6 +153,13 @@ def SplitGameExeArgs(text: str) -> list[str]:
     return args
 
 
+def JoinGameExeArgs(args: list[str]) -> str:
+    """
+    Writes an argument list back as the command line a user would type for it.
+    """
+    return " ".join(f'"{arg}"' if " " in arg else arg for arg in args)
+
+
 def __AddRegKeyInstallDir(
         absGameInstallDirs: list[str],
         node: JsonNode,

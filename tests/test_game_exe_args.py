@@ -1,6 +1,6 @@
 import pytest
 
-from generalsmodbuilder.data.runner import SplitGameExeArgs
+from generalsmodbuilder.data.runner import JoinGameExeArgs, SplitGameExeArgs
 
 
 @pytest.mark.parametrize("text, expected", [
@@ -23,3 +23,13 @@ def test_an_unquoted_windows_path_keeps_its_backslashes():
 def test_a_quoted_path_with_a_space_is_one_argument_without_its_quotes():
     assert SplitGameExeArgs(r'-mod "C:\My Mod\x.big" -xres 1024') == [
         "-mod", r"C:\My Mod\x.big", "-xres", "1024"]
+
+
+@pytest.mark.parametrize("text", [
+    "-win -quickstart",
+    r"-mod C:\Games\x.big",
+    r'-mod "C:\My Mod\x.big" -xres 1024',
+    "",
+])
+def test_a_command_line_survives_a_split_and_a_join(text):
+    assert JoinGameExeArgs(SplitGameExeArgs(text)) == text
