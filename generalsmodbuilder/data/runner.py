@@ -1,5 +1,6 @@
 import os.path
 from dataclasses import dataclass
+from generalsmodbuilder.build.common import ParamsToArgs
 from generalsmodbuilder.data.common import (
     FinalizeParsedData, ParamsT, ParsedData, VerifyFormatVersion, VerifyParamsType)
 from generalsmodbuilder.util import JsonNode, JsonFile
@@ -23,13 +24,62 @@ RUNNER_KEYS = {
 
 
 @dataclass(init=False)
+class JsonRunner(ParsedData):
+    """
+    What the configuration files say about running the game. The installation directory is
+    one of the candidates and the game data files are relative to it.
+    """
+    absGameInstallDirCandidates: list[str]
+    relGameExeFile: str
+    gameExeArgs: ParamsT
+    relevantGameDataFileTypes: list[str]
+    relRegularGameDataFiles: list[str]
+    gameLanguageRegKey: str
+
+    def __init__(self):
+        self.absGameInstallDirCandidates = list[str]()
+        self.relGameExeFile = ""
+        self.gameExeArgs = ParamsT()
+        self.relevantGameDataFileTypes = list[str]()
+        self.relRegularGameDataFiles = list[str]()
+        self.gameLanguageRegKey = ""
+
+    def VerifyTypes(self) -> None:
+        VerifyParamsType(self.gameExeArgs, "runner.gameExeArgs")
+
+
+@dataclass
+class UserRunner(ParsedData):
+    """
+    Game launch settings that one user set for their own machine.
+    """
+    absGameInstallDir: str = ""
+    relGameExeFile: str = ""
+    gameExeArgs: list[str] = None
+
+    def VerifyTypes(self) -> None:
+        util.VerifyType(self.absGameInstallDir, str, "userRunner.gameInstallPath")
+        util.VerifyType(self.relGameExeFile, str, "userRunner.gameExeFile")
+        if self.gameExeArgs != None:
+            util.VerifyType(self.gameExeArgs, list, "userRunner.gameExeArgs")
+            for i, arg in enumerate(self.gameExeArgs):
+                util.VerifyType(arg, str, f"userRunner.gameExeArgs[{i}]")
+
+    def Normalize(self) -> None:
+        if self.absGameInstallDir:
+            self.absGameInstallDir = os.path.normpath(self.absGameInstallDir)
+        if self.relGameExeFile:
+            self.relGameExeFile = os.path.normpath(self.relGameExeFile)
+
+
+@dataclass(init=False)
 class Runner(ParsedData):
     absGameInstallDir: str
     # Every directory that was considered for absGameInstallDir, so that a failure can
     # tell the user where the game was looked for.
     absGameInstallDirCandidates: list[str]
     relGameExeFile: str
-    gameExeArgs: ParamsT
+    gameExeArgs: list[str]
     relevantGameDataFileTypes: list[str]
     # This list says which game data files are allowed to be present, not which ones are required.
     absRegularGameDataFiles: list[str]
@@ -39,16 +89,13 @@ class Runner(ParsedData):
         self.absGameInstallDir = ""
         self.absGameInstallDirCandidates = list[str]()
         self.relGameExeFile = ""
-        self.gameExeArgs = ParamsT()
+        self.gameExeArgs = list[str]()
         self.relevantGameDataFileTypes = list[str]()
         self.absRegularGameDataFiles = list[str]()
         self.gameLanguageRegKey = ""
 
     def AbsGameExeFile(self) -> str:
         return os.path.join(self.absGameInstallDir, self.relGameExeFile)
-
-    def VerifyTypes(self) -> None:
-        VerifyParamsType(self.gameExeArgs, "runner.gameExeArgs")
 
     def Normalize(self) -> None:
         if self.absGameInstallDir:
@@ -64,8 +111,8 @@ class Runner(ParsedData):
 
     def VerifyValues(self) -> None:
         util.Verify(bool(self.relGameExeFile),
-                    "runner.gameExeFile is not set by any configuration file, but is required to "
-                    "locate the game installation directory")
+                    "runner.gameExeFile is not set by any configuration file or user setting, but "
+                    "is required to locate the game installation directory")
         if not self.absGameInstallDir:
             raise AssertionError(self.__MakeInstallDirNotFoundMessage())
         util.Verify(os.path.isdir(self.absGameInstallDir),
@@ -78,8 +125,7 @@ class Runner(ParsedData):
         if not searched:
             searched = "\n  nothing, because none of those keys named a directory"
         return (f"runner game installation directory containing '{self.relGameExeFile}' was not found. "
-                f"It is taken from runner.gameInstallPath, runner.gameInstallRegKey, "
-                f"runner.gameInstall2RegKey or runner.tuczhGameInstallRegKey. Searched:{searched}")
+                f"Searched:{searched}")
 
 
 def __AddRegKeyInstallDir(
@@ -100,9 +146,9 @@ def __AddRegKeyInstallDir(
         absGameInstallDirs.append(os.path.join(keyValue, relSubDir) if relSubDir else keyValue)
 
 
-def MakeRunnerFromJsons(jsonFiles: list[JsonFile]) -> Runner:
-    runner = Runner()
-    absGameInstallDirs: list[str] = runner.absGameInstallDirCandidates
+def MakeJsonRunnerFromJsons(jsonFiles: list[JsonFile]) -> JsonRunner:
+    jsonRunner = JsonRunner()
+    absGameInstallDirs: list[str] = jsonRunner.absGameInstallDirCandidates
 
     for jsonFile in jsonFiles:
         jsonDir: str = util.GetAbsFileDir(jsonFile.path)
@@ -112,13 +158,13 @@ def MakeRunnerFromJsons(jsonFiles: list[JsonFile]) -> Runner:
             node.VerifyKnownKeys(RUNNER_KEYS)
             VerifyFormatVersion(node, LATEST_RUNNER_VERSION)
 
-            runner.relGameExeFile = node.GetOptional("gameExeFile", str, runner.relGameExeFile)
-            runner.gameExeArgs = node.GetOptional("gameExeArgs", dict, runner.gameExeArgs)
-            runner.relevantGameDataFileTypes = node.GetOptional(
-                "relevantGameDataFileTypes", list, runner.relevantGameDataFileTypes, elementType=str)
-            runner.absRegularGameDataFiles = node.GetOptional(
-                "regularGameDataFiles", list, runner.absRegularGameDataFiles, elementType=str)
-            runner.gameLanguageRegKey = node.GetOptional("gameLanguageRegKey", str, runner.gameLanguageRegKey)
+            jsonRunner.relGameExeFile = node.GetOptional("gameExeFile", str, jsonRunner.relGameExeFile)
+            jsonRunner.gameExeArgs = node.GetOptional("gameExeArgs", dict, jsonRunner.gameExeArgs)
+            jsonRunner.relevantGameDataFileTypes = node.GetOptional(
+                "relevantGameDataFileTypes", list, jsonRunner.relevantGameDataFileTypes, elementType=str)
+            jsonRunner.relRegularGameDataFiles = node.GetOptional(
+                "regularGameDataFiles", list, jsonRunner.relRegularGameDataFiles, elementType=str)
+            jsonRunner.gameLanguageRegKey = node.GetOptional("gameLanguageRegKey", str, jsonRunner.gameLanguageRegKey)
 
             # The candidates are searched in reverse below, so the last one added wins.
             __AddRegKeyInstallDir(absGameInstallDirs, node, "tuczhGameInstallRegKey",
@@ -129,8 +175,40 @@ def MakeRunnerFromJsons(jsonFiles: list[JsonFile]) -> Runner:
             if gameInstallDir := node.GetOptional("gameInstallPath", str):
                 absGameInstallDirs.append(os.path.join(jsonDir, gameInstallDir))
 
+    FinalizeParsedData(jsonRunner)
+    return jsonRunner
+
+
+def MakeRunner(jsonRunner: JsonRunner, userRunner: UserRunner = None) -> Runner:
+    if userRunner == None:
+        userRunner = UserRunner()
+
+    FinalizeParsedData(userRunner)
+
+    runner = Runner()
+
+    if userRunner.relGameExeFile:
+        runner.relGameExeFile = userRunner.relGameExeFile
+    else:
+        runner.relGameExeFile = jsonRunner.relGameExeFile
+
+    runner.relevantGameDataFileTypes = jsonRunner.relevantGameDataFileTypes
+    runner.gameLanguageRegKey = jsonRunner.gameLanguageRegKey
+
+    if userRunner.gameExeArgs != None:
+        runner.gameExeArgs = list(userRunner.gameExeArgs)
+    else:
+        runner.gameExeArgs = ParamsToArgs(jsonRunner.gameExeArgs)
+
+    if userRunner.absGameInstallDir:
+        # A directory that the user named is the only one searched, so that it is never
+        # passed over in silence in favour of a registry key.
+        runner.absGameInstallDirCandidates = [userRunner.absGameInstallDir]
+    else:
+        runner.absGameInstallDirCandidates = jsonRunner.absGameInstallDirCandidates
+
     if runner.relGameExeFile:
-        for absGameInstallDir in reversed(absGameInstallDirs):
+        for absGameInstallDir in reversed(runner.absGameInstallDirCandidates):
             absGameExeFile: str = os.path.join(absGameInstallDir, runner.relGameExeFile)
             if os.path.isfile(absGameExeFile):
                 runner.absGameInstallDir = absGameInstallDir
@@ -138,8 +216,8 @@ def MakeRunnerFromJsons(jsonFiles: list[JsonFile]) -> Runner:
 
     # The game data files are listed relative to the installation directory. They are
     # joined before the phases run, so that Normalize sees the paths they end up being.
-    for i, file in enumerate(runner.absRegularGameDataFiles):
-        runner.absRegularGameDataFiles[i] = os.path.join(runner.absGameInstallDir, file)
+    runner.absRegularGameDataFiles = [
+        os.path.join(runner.absGameInstallDir, file) for file in jsonRunner.relRegularGameDataFiles]
 
     FinalizeParsedData(runner)
     return runner

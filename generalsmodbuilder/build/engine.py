@@ -9,7 +9,6 @@ from copy import deepcopy
 from dataclasses import dataclass
 from enum import Enum, auto
 from glob import glob
-from generalsmodbuilder.build.common import ParamsToArgs
 from generalsmodbuilder.build.copy import BuildCopy, BuildCopyOption, BuildFileType, GetFileType, SupportsMultiSource, VerifyGameTextMergePaths
 from generalsmodbuilder.build.filehashregistry import FileHash, FileHashRegistry
 from generalsmodbuilder.build.thing import BuildFile, BuildFileStatus, BuildThing, BuildFilesT, BuildThingsT, IsStatusRelevantForBuild
@@ -1147,7 +1146,7 @@ class BuildEngine:
         runner: Runner = self.setup.runner
         exec: str = runner.AbsGameExeFile()
         args: list[str] = [exec]
-        args.extend(ParamsToArgs(runner.gameExeArgs))
+        args.extend(runner.gameExeArgs)
 
         print("Run", " ".join(args))
 
