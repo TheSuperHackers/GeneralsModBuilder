@@ -9,6 +9,7 @@ from generalsmodbuilder import util
 
 
 LATEST_RUNNER_VERSION = 1
+LATEST_USER_RUNNER_VERSION = 1
 
 RUNNER_KEYS = {
     "version",
@@ -21,6 +22,13 @@ RUNNER_KEYS = {
     "gameInstallRegKey",
     "gameInstall2RegKey",
     "tuczhGameInstallRegKey",
+}
+
+USER_RUNNER_KEYS = {
+    "version",
+    "gameInstallPath",
+    "gameExeFile",
+    "gameExeArgs",
 }
 
 
@@ -194,6 +202,24 @@ def MakeJsonRunnerFromJsons(jsonFiles: list[JsonFile]) -> JsonRunner:
 
     FinalizeParsedData(jsonRunner)
     return jsonRunner
+
+
+def MakeUserRunnerFromJson(jsonFile: JsonFile) -> UserRunner:
+    userRunner = UserRunner()
+    root = util.JsonNode(jsonFile.path, jsonFile.data)
+
+    if node := root.SubOptional("userRunner"):
+        node.VerifyKnownKeys(USER_RUNNER_KEYS)
+        VerifyFormatVersion(node, LATEST_USER_RUNNER_VERSION)
+
+        userRunner.absGameInstallDir = node.GetOptional("gameInstallPath", str, "")
+        userRunner.relGameExeFile = node.GetOptional("gameExeFile", str, "")
+
+        gameExeArgs: str = node.GetOptional("gameExeArgs", str)
+        if gameExeArgs != None:
+            userRunner.gameExeArgs = SplitGameExeArgs(gameExeArgs)
+
+    return userRunner
 
 
 def MakeRunner(jsonRunner: JsonRunner, userRunner: UserRunner = None) -> Runner:
