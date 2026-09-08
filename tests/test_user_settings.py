@@ -2,8 +2,9 @@ import os
 
 import pytest
 
-from generalsmodbuilder.data.runner import MakeUserRunnerFromJson
-from generalsmodbuilder.usersettings import GetUserSettingsFile, LoadUserRunner, SaveUserRunner
+from generalsmodbuilder.data.runner import UserRunner, MakeUserRunnerFromJson
+from generalsmodbuilder.usersettings import (
+    GetUserSettingsFile, LoadUserRunner, MergeUserRunners, SaveUserRunner)
 
 
 @pytest.fixture
@@ -79,3 +80,41 @@ def test_the_settings_file_lives_under_the_user_config_dir():
     path = GetUserSettingsFile()
     assert os.path.basename(path) == "UserSettings.json"
     assert "GeneralsModBuilder" in path
+
+
+def test_a_command_line_setting_wins_over_a_saved_one():
+    fromArgs = UserRunner(absGameInstallDir=r"D:\FromArgs", relGameExeFile="fromargs.exe",
+                          gameExeArgs=["-fromargs"])
+    fromFile = UserRunner(absGameInstallDir=r"D:\FromFile", relGameExeFile="fromfile.exe",
+                          gameExeArgs=["-fromfile"])
+    merged = MergeUserRunners(fromArgs, fromFile)
+    assert merged.absGameInstallDir == r"D:\FromArgs"
+    assert merged.relGameExeFile == "fromargs.exe"
+    assert merged.gameExeArgs == ["-fromargs"]
+
+
+def test_a_saved_setting_is_used_where_the_command_line_gave_none():
+    fromFile = UserRunner(absGameInstallDir=r"D:\FromFile", relGameExeFile="fromfile.exe",
+                          gameExeArgs=["-fromfile"])
+    merged = MergeUserRunners(UserRunner(), fromFile)
+    assert merged.absGameInstallDir == r"D:\FromFile"
+    assert merged.relGameExeFile == "fromfile.exe"
+    assert merged.gameExeArgs == ["-fromfile"]
+
+
+def test_the_fields_are_merged_one_by_one():
+    merged = MergeUserRunners(UserRunner(absGameInstallDir=r"D:\FromArgs"),
+                              UserRunner(relGameExeFile="fromfile.exe"))
+    assert merged.absGameInstallDir == r"D:\FromArgs"
+    assert merged.relGameExeFile == "fromfile.exe"
+
+
+def test_an_empty_saved_setting_leaves_the_field_unset():
+    merged = MergeUserRunners(UserRunner(), UserRunner(absGameInstallDir="", gameExeArgs=None))
+    assert merged.absGameInstallDir == ""
+    assert merged.gameExeArgs == None
+
+
+def test_a_command_line_arg_list_of_no_tokens_still_wins():
+    merged = MergeUserRunners(UserRunner(gameExeArgs=[]), UserRunner(gameExeArgs=["-fromfile"]))
+    assert merged.gameExeArgs == []

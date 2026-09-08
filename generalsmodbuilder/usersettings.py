@@ -38,3 +38,14 @@ def SaveUserRunner(path: str, gameInstallPath: str, gameExeFile: str, gameExeArg
 
     with open(path, "w", encoding="utf-8") as file:
         json.dump({"userRunner": jUserRunner}, file, indent=4)
+
+
+def MergeUserRunners(fromArgs: UserRunner, fromFile: UserRunner) -> UserRunner:
+    """
+    Combines the settings given on the command line with the ones saved for this user.
+    A setting given on the command line wins over the saved one of the same field.
+    """
+    return UserRunner(
+        absGameInstallDir=fromArgs.absGameInstallDir or fromFile.absGameInstallDir,
+        relGameExeFile=fromArgs.relGameExeFile or fromFile.relGameExeFile,
+        gameExeArgs=fromArgs.gameExeArgs if fromArgs.gameExeArgs != None else fromFile.gameExeArgs)
