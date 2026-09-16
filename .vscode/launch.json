@@ -118,6 +118,18 @@
             ]
         },
         {
+            "name": "Tests - Run All",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "tests"
+            ]
+        },
+        {
             "name": "GamePatch - Generate ChangeLog",
             "type": "debugpy",
             "request": "launch",
