@@ -2,6 +2,7 @@ import os
 
 import pytest
 
+from generalsmodbuilder.data.common import FinalizeParsedData
 from generalsmodbuilder.data.runner import (
     UserRunner, MakeJsonRunnerFromJsons, MakeRunner)
 
@@ -10,6 +11,12 @@ def MakeRunnerJson(**overrides) -> dict:
     jRunner = {"version": 1, "gameExeFile": "generals.exe", "gameInstallPath": "Game"}
     jRunner.update(overrides)
     return {"runner": jRunner}
+
+
+def MakeUserRunner(**fields) -> UserRunner:
+    userRunner = UserRunner(**fields)
+    FinalizeParsedData(userRunner)
+    return userRunner
 
 
 def MakeRunnerFromJsons(jsonFiles, userRunner: UserRunner = None):
@@ -119,7 +126,7 @@ def test_the_configured_exe_args_become_the_argument_list(MakeJsonFile, GameDir)
 
 
 def test_a_user_runner_that_sets_nothing_changes_nothing(MakeJsonFile, GameDir, tmp_path):
-    runner = MakeRunnerFromJsons([MakeJsonFile(MakeRunnerJson(gameExeArgs={"-win": ""}))], UserRunner())
+    runner = MakeRunnerFromJsons([MakeJsonFile(MakeRunnerJson(gameExeArgs={"-win": ""}))], MakeUserRunner())
     assert runner.absGameInstallDir == os.path.join(str(tmp_path), "Game")
     assert runner.relGameExeFile == "generals.exe"
     assert runner.gameExeArgs == ["-win"]
@@ -128,7 +135,7 @@ def test_a_user_runner_that_sets_nothing_changes_nothing(MakeJsonFile, GameDir, 
 def test_a_user_exe_file_wins_over_the_configured_one(MakeJsonFile, GameDir, MakeFile, tmp_path):
     MakeFile("Game/generalszh.exe")
     runner = MakeRunnerFromJsons([MakeJsonFile(MakeRunnerJson())],
-                                 UserRunner(relGameExeFile="generalszh.exe"))
+                                 MakeUserRunner(relGameExeFile="generalszh.exe"))
     assert runner.relGameExeFile == "generalszh.exe"
     assert runner.AbsGameExeFile() == os.path.join(str(tmp_path), "Game", "generalszh.exe")
 
@@ -136,14 +143,14 @@ def test_a_user_exe_file_wins_over_the_configured_one(MakeJsonFile, GameDir, Mak
 def test_user_exe_args_replace_the_configured_ones(MakeJsonFile, GameDir):
     runner = MakeRunnerFromJsons(
         [MakeJsonFile(MakeRunnerJson(gameExeArgs={"-win": "", "-quickstart": ""}))],
-        UserRunner(gameExeArgs=["-xres", "1024"]))
+        MakeUserRunner(gameExeArgs=["-xres", "1024"]))
     assert runner.gameExeArgs == ["-xres", "1024"]
 
 
 def test_an_empty_user_exe_arg_list_launches_the_game_without_arguments(MakeJsonFile, GameDir):
     runner = MakeRunnerFromJsons(
         [MakeJsonFile(MakeRunnerJson(gameExeArgs={"-win": "", "-quickstart": ""}))],
-        UserRunner(gameExeArgs=[]))
+        MakeUserRunner(gameExeArgs=[]))
     assert runner.gameExeArgs == []
 
 
@@ -152,7 +159,7 @@ def test_a_user_install_dir_is_the_only_one_searched(MakeJsonFile, GameDir, Make
     MakeFile("Custom/generals.exe")
     custom = os.path.join(str(tmp_path), "Custom")
     runner = MakeRunnerFromJsons([MakeJsonFile(MakeRunnerJson())],
-                                 UserRunner(absGameInstallDir=custom))
+                                 MakeUserRunner(absGameInstallDir=custom))
     assert runner.absGameInstallDir == custom
 
 
@@ -160,7 +167,7 @@ def test_a_user_install_dir_without_the_executable_names_that_path(MakeJsonFile,
     custom = os.path.join(str(tmp_path), "Custom")
     os.makedirs(custom)
     with pytest.raises(AssertionError) as error:
-        MakeRunnerFromJsons([MakeJsonFile(MakeRunnerJson())], UserRunner(absGameInstallDir=custom))
+        MakeRunnerFromJsons([MakeJsonFile(MakeRunnerJson())], MakeUserRunner(absGameInstallDir=custom))
     message = str(error.value)
     assert custom in message
     assert os.path.join(str(tmp_path), "Game") not in message
@@ -170,18 +177,18 @@ def test_game_data_files_join_onto_the_user_install_dir(MakeJsonFile, GameDir, M
     MakeFile("Custom/generals.exe")
     custom = os.path.join(str(tmp_path), "Custom")
     runner = MakeRunnerFromJsons([MakeJsonFile(MakeRunnerJson(regularGameDataFiles=["INIZH.big"]))],
-                                 UserRunner(absGameInstallDir=custom))
+                                 MakeUserRunner(absGameInstallDir=custom))
     assert runner.absRegularGameDataFiles == [os.path.join(custom, "INIZH.big")]
 
 
 def test_a_user_install_dir_is_normalized(MakeJsonFile, GameDir, MakeFile, tmp_path):
     MakeFile("Custom/generals.exe")
-    userRunner = UserRunner(absGameInstallDir=os.path.join(str(tmp_path), "Data", "..", "Custom"))
+    userRunner = MakeUserRunner(absGameInstallDir=os.path.join(str(tmp_path), "Data", "..", "Custom"))
     runner = MakeRunnerFromJsons([MakeJsonFile(MakeRunnerJson())], userRunner)
     assert runner.absGameInstallDir == os.path.join(str(tmp_path), "Custom")
 
 
 def test_a_bad_user_exe_arg_is_reported(MakeJsonFile, GameDir):
     with pytest.raises(AssertionError) as error:
-        MakeRunnerFromJsons([MakeJsonFile(MakeRunnerJson())], UserRunner(gameExeArgs=["-xres", 1024]))
+        MakeRunnerFromJsons([MakeJsonFile(MakeRunnerJson())], MakeUserRunner(gameExeArgs=["-xres", 1024]))
     assert str(error.value).endswith("\"userRunner.gameExeArgs[1]\" is type:int but should be type:str")

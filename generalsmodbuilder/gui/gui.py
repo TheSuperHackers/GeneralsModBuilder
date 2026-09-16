@@ -12,6 +12,7 @@ from generalsmodbuilder.__version__ import VERSIONSTR
 from generalsmodbuilder.build.engine import BuildEngine
 from generalsmodbuilder.buildfunctions import CreateJsonFileList, RunWithConfig
 from generalsmodbuilder.data.bundles import BundlePack, Bundles, AddBundlePacksFromJsons
+from generalsmodbuilder.data.common import FinalizeParsedData
 from generalsmodbuilder.data.runner import UserRunner, JoinGameExeArgs, SplitGameExeArgs
 from generalsmodbuilder.usersettings import (
     GetUserSettingsFile, LoadUserRunner, MergeUserRunners, SaveUserRunner)
@@ -314,6 +315,7 @@ class Gui:
             relGameExeFile=gameExeFile,
             gameExeArgs=gameExeArgs)
 
+        FinalizeParsedData(userRunner)
         return userRunner
 
 
