@@ -3,8 +3,8 @@ import platformdirs
 import traceback
 from argparse import ArgumentParser
 from generalsmodbuilder.__version__ import VERSIONSTR
-from generalsmodbuilder.build.engine import BuildEngine
 from generalsmodbuilder.buildfunctions import RunWithConfig, BuildFileHashRegistry
+from generalsmodbuilder.data.common import FinalizeParsedData
 from generalsmodbuilder.data.runner import UserRunner, SplitGameExeArgs
 from generalsmodbuilder.gui.gui import Gui
 from generalsmodbuilder import util
@@ -24,6 +24,7 @@ def MakeUserRunnerFromArgs(args) -> UserRunner:
     if args.game_exe_args != None:
         userRunner.gameExeArgs = SplitGameExeArgs(args.game_exe_args)
 
+    FinalizeParsedData(userRunner)
     return userRunner
 
 

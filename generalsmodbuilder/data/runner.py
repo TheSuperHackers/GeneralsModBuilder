@@ -226,14 +226,14 @@ def MakeUserRunnerFromJson(jsonFile: JsonFile) -> UserRunner:
         if gameExeArgs != None:
             userRunner.gameExeArgs = SplitGameExeArgs(gameExeArgs)
 
+        FinalizeParsedData(userRunner)
+
     return userRunner
 
 
 def MakeRunner(jsonRunner: JsonRunner, userRunner: UserRunner = None) -> Runner:
     if userRunner == None:
         userRunner = UserRunner()
-
-    FinalizeParsedData(userRunner)
 
     runner = Runner()
 
