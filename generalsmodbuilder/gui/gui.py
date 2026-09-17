@@ -252,14 +252,18 @@ class Gui:
 
         Gui._AddGameSettingRow(
             body, 0, "Install path", self.gameInstallPath,
-            "The game folder that Install, Uninstall and Run Game work on.",
-            self._BrowseGameInstallPath, "Picks the game install folder.")
+            "The game folder that Install, Uninstall and Run Game work on.")
         Gui._AddGameSettingRow(
             body, 1, "Executable", self.gameExeFile,
             "The game executable, relative to the install path.")
         Gui._AddGameSettingRow(
             body, 2, "Arguments", self.gameExeArgs,
             "Arguments for the game, for example -win -quickstart.")
+
+        button = Button(body, text="Browse...", command=self._BrowseGameInstallPath,
+                        bootstyle=QUIET_STYLE, padding=SMALL_BUTTON_PADDING)
+        button.grid(row=0, column=2, padx=(6, 0))
+        Tooltip(button, "Picks the game install folder.")
 
 
     def _CreateColumns(self, parent: Frame) -> None:
@@ -336,18 +340,11 @@ class Gui:
 
 
     @staticmethod
-    def _AddGameSettingRow(frame: Frame, row: int, text: str, var: StringVar, hint: str,
-                           browse: Callable = None, browseHint: str = None) -> None:
+    def _AddGameSettingRow(frame: Frame, row: int, text: str, var: StringVar, hint: str) -> None:
         Label(frame, text=text, width=11).grid(row=row, column=0, sticky=W, pady=1)
         entry = Entry(frame, textvariable=var, font=FONT)
         entry.grid(row=row, column=1, sticky=EW, pady=1, padx=(4, 0))
         Tooltip(entry, hint)
-        if browse != None:
-            button = Button(frame, text="Browse...", command=browse, bootstyle=QUIET_STYLE,
-                            padding=SMALL_BUTTON_PADDING)
-            button.grid(row=row, column=2, padx=(6, 0))
-            Tooltip(button, browseHint)
-
 
 
     def _BrowseGameInstallPath(self) -> None:
