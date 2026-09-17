@@ -1,5 +1,6 @@
 import ctypes
 from typing import Callable
+from tkinter import Toplevel
 from tkinter.ttk import Frame, Label
 
 from ttkbootstrap import Button
@@ -55,6 +56,50 @@ def Surface(parent, pad: int = INNER_PADDING) -> tuple[Frame, Frame]:
     inner = Frame(outer, padding=pad)
     inner.pack(fill="both", expand=True, padx=1, pady=1)
     return outer, inner
+
+
+class Tooltip:
+    """
+    A one line hint while the pointer rests on a widget. A disabled widget still reports
+    the pointer, which is what lets a greyed button explain why it is greyed.
+    """
+
+    def __init__(self, widget, text: str, delayMs: int = 600):
+        self.widget = widget
+        self.text = text
+        self.delayMs = delayMs
+        self.window = None
+        self.timer = None
+        widget.bind("<Enter>", self._Schedule, add="+")
+        widget.bind("<Leave>", self._Hide, add="+")
+        widget.bind("<ButtonPress>", self._Hide, add="+")
+
+    def _Schedule(self, event=None) -> None:
+        self._Cancel()
+        self.timer = self.widget.after(self.delayMs, self._Show)
+
+    def _Cancel(self) -> None:
+        if self.timer != None:
+            self.widget.after_cancel(self.timer)
+            self.timer = None
+
+    def _Show(self) -> None:
+        if self.window != None:
+            return
+        x: int = self.widget.winfo_rootx() + 12
+        y: int = self.widget.winfo_rooty() - 26
+        self.window = Toplevel(self.widget)
+        self.window.wm_overrideredirect(True)
+        self.window.wm_geometry(f"+{x}+{y}")
+        frame = Frame(self.window, style="Edge.TFrame")
+        frame.pack()
+        Label(frame, text=self.text, style="Dim.TLabel", padding=(6, 3)).pack(padx=1, pady=1)
+
+    def _Hide(self, event=None) -> None:
+        self._Cancel()
+        if self.window != None:
+            self.window.destroy()
+            self.window = None
 
 
 def Section(parent, title: str, pad: int = INNER_PADDING,
