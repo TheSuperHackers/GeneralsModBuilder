@@ -14,6 +14,7 @@ from generalsmodbuilder.buildfunctions import CreateJsonFileList, RunWithConfig
 from generalsmodbuilder.data.bundles import BundlePack, Bundles, AddBundlePacksFromJsons
 from generalsmodbuilder.data.common import FinalizeParsedData
 from generalsmodbuilder.data.runner import UserRunner, JoinGameExeArgs, SplitGameExeArgs
+from generalsmodbuilder.gui.operations import OPERATIONS, Operation
 from generalsmodbuilder.usersettings import (
     GetUserSettingsFile, LoadUserRunner, MergeUserRunners, SaveUserRunner)
 from generalsmodbuilder.util import JsonFile
@@ -31,13 +32,7 @@ class Gui:
     debug: bool
     toolsRootDir: str
 
-    makeChangeLog: BooleanVar
-    clean: BooleanVar
-    build: BooleanVar
-    release: BooleanVar
-    install: BooleanVar
-    uninstall: BooleanVar
-    run: BooleanVar
+    sequenceVars: dict[str, BooleanVar]
 
     gameInstallPath: StringVar
     gameExeFile: StringVar
@@ -50,13 +45,7 @@ class Gui:
 
     bundlePackList: Listbox
     executeButton: Button
-    makeChangeLogButton: Button
-    cleanButton: Button
-    buildButton: Button
-    releaseButton: Button
-    installButton: Button
-    runButton: Button
-    uninstallButton: Button
+    actionButtons: list[Button]
     abortButton: Button
     bundlePackRefreshButton: Button
 
@@ -100,13 +89,19 @@ class Gui:
 
         mainWindow: Tk = Gui._CreateMainWindow()
 
-        self.makeChangeLog = BooleanVar(mainWindow, value=makeChangeLog)
-        self.clean = BooleanVar(mainWindow, value=clean)
-        self.build = BooleanVar(mainWindow, value=build)
-        self.release = BooleanVar(mainWindow, value=release)
-        self.install = BooleanVar(mainWindow, value=install)
-        self.uninstall = BooleanVar(mainWindow, value=uninstall)
-        self.run = BooleanVar(mainWindow, value=run)
+        initialSequence: dict[str, bool] = {
+            "makeChangeLog": makeChangeLog,
+            "clean": clean,
+            "build": build,
+            "release": release,
+            "install": install,
+            "uninstall": uninstall,
+            "run": run,
+        }
+        self.sequenceVars = {
+            op.runKwarg: BooleanVar(mainWindow, value=initialSequence[op.runKwarg])
+            for op in OPERATIONS}
+
         self.printConfig = BooleanVar(mainWindow, value=printConfig)
         self.clearConsole = BooleanVar(mainWindow, value=True)
         self.verboseLogging = BooleanVar(mainWindow, value=verboseLogging)
@@ -196,26 +191,13 @@ class Gui:
 
         # Execute Frame
 
-        makeChangeLogCheck = Checkbutton(executeFrame, width = checkboxWidth, text='Make Change Log', var=self.makeChangeLog)
-        makeChangeLogCheck.pack(anchor=W)
-
-        cleanCheck = Checkbutton(executeFrame, width = checkboxWidth, text='Clean', var=self.clean)
-        cleanCheck.pack(anchor=W)
-
-        buildCheck = Checkbutton(executeFrame, width = checkboxWidth, text='Build', var=self.build)
-        buildCheck.pack(anchor=W)
-
-        releaseCheck = Checkbutton(executeFrame, width = checkboxWidth, text='Build Release', var=self.release)
-        releaseCheck.pack(anchor=W)
-
-        installCheck = Checkbutton(executeFrame, width = checkboxWidth, text='Install', var=self.install)
-        installCheck.pack(anchor=W)
-
-        runCheck = Checkbutton(executeFrame, width = checkboxWidth, text='Run Game', var=self.run)
-        runCheck.pack(anchor=W)
-
-        uninstallCheck = Checkbutton(executeFrame, width = checkboxWidth, text='Uninstall', var=self.uninstall)
-        uninstallCheck.pack(anchor=W)
+        for operation in OPERATIONS:
+            check = Checkbutton(
+                executeFrame,
+                width=checkboxWidth,
+                text=operation.label,
+                var=self.sequenceVars[operation.runKwarg])
+            check.pack(anchor=W)
 
         self.executeButton = Button(executeFrame, width=buttonWidth, text="Execute", command=lambda:self._StartWorkThread(self._Execute))
         self.executeButton.pack(anchor=W)
@@ -236,26 +218,15 @@ class Gui:
 
         # Actions Frame
 
-        self.makeChangeLogButton = Button(actionsFrame, width=buttonWidth, text="Make Change Log", command=lambda:self._StartWorkThread(self._MakeChangeLog))
-        self.makeChangeLogButton.pack(anchor=W)
-
-        self.cleanButton = Button(actionsFrame, width=buttonWidth, text="Clean", command=lambda:self._StartWorkThread(self._Clean))
-        self.cleanButton.pack(anchor=W)
-
-        self.buildButton = Button(actionsFrame, width=buttonWidth, text="Build", command=lambda:self._StartWorkThread(self._Build))
-        self.buildButton.pack(anchor=W)
-
-        self.releaseButton = Button(actionsFrame, width=buttonWidth, text="Build Release", command=lambda:self._StartWorkThread(self._Release))
-        self.releaseButton.pack(anchor=W)
-
-        self.installButton = Button(actionsFrame, width=buttonWidth, text="Install", command=lambda:self._StartWorkThread(self._Install))
-        self.installButton.pack(anchor=W)
-
-        self.runButton = Button(actionsFrame, width=buttonWidth, text="Run Game", command=lambda:self._StartWorkThread(self._RunGame))
-        self.runButton.pack(anchor=W)
-
-        self.uninstallButton = Button(actionsFrame, width=buttonWidth, text="Uninstall", command=lambda:self._StartWorkThread(self._Uninstall))
-        self.uninstallButton.pack(anchor=W)
+        self.actionButtons = list()
+        for operation in OPERATIONS:
+            button = Button(
+                actionsFrame,
+                width=buttonWidth,
+                text=operation.label,
+                command=lambda op=operation: self._StartWorkThread(lambda: self._RunOperation(op)))
+            button.pack(anchor=W)
+            self.actionButtons.append(button)
 
         self.abortButton = Button(actionsFrame, width=buttonWidth, text="Abort", command=lambda:self._Abort())
         self.abortButton.pack(anchor=W)
@@ -333,13 +304,7 @@ class Gui:
 
 
     def _ClearMainWindowElements(self) -> None:
-        self.makeChangeLog = None
-        self.clean = None
-        self.build = None
-        self.release = None
-        self.install = None
-        self.uninstall = None
-        self.run = None
+        self.sequenceVars = None
         self.gameInstallPath = None
         self.gameExeFile = None
         self.gameExeArgs = None
@@ -349,13 +314,7 @@ class Gui:
         self.multiProcessing = None
         self.bundlePackList = None
         self.executeButton = None
-        self.makeChangeLogButton = None
-        self.cleanButton = None
-        self.buildButton = None
-        self.releaseButton = None
-        self.installButton = None
-        self.runButton = None
-        self.uninstallButton = None
+        self.actionButtons = None
         self.abortButton = None
         self.bundlePackRefreshButton = None
 
@@ -407,133 +366,46 @@ class Gui:
             os.system('cls||clear')
 
 
-    def _Execute(self) -> None:
-        function = lambda:RunWithConfig(
+    def _MakeRunArguments(self, usesBuildContext: bool) -> dict:
+        """
+        The arguments of one build job. They are read when the job starts, not when the
+        button is pressed, because the bundle pack selection and the engine are made by
+        _OnWorkBegin.
+        """
+        arguments = dict(
             configPaths=self.configPaths,
-            installList=self.buildAndInstallList,
-            buildList=self.buildAndInstallList,
-            makeChangeLog=self.makeChangeLog.get(),
-            clean=self.clean.get(),
-            build=self.build.get(),
-            release=self.release.get(),
-            install=self.install.get(),
-            uninstall=self.uninstall.get(),
-            run=self.run.get(),
-            printConfig=self.printConfig.get(),
-            verboseLogging=self.verboseLogging.get(),
-            multiProcessing=self.multiProcessing.get(),
-            toolsRootDir=self.toolsRootDir,
-            userRunner=self._MakeUserRunner(),
-            engine=self.buildEngine)
-
-        self._DoWork(function)
-
-
-    def _MakeChangeLog(self) -> None:
-        function = lambda:RunWithConfig(
-            configPaths=self.configPaths,
-            makeChangeLog=True,
             printConfig=self.printConfig.get(),
             verboseLogging=self.verboseLogging.get(),
             multiProcessing=self.multiProcessing.get())
 
-        self._DoWork(function)
+        if usesBuildContext:
+            arguments.update(
+                installList=self.buildAndInstallList,
+                buildList=self.buildAndInstallList,
+                toolsRootDir=self.toolsRootDir,
+                userRunner=self._MakeUserRunner(),
+                engine=self.buildEngine)
+
+        return arguments
 
 
-    def _Clean(self) -> None:
-        function = lambda:RunWithConfig(
-            configPaths=self.configPaths,
-            installList=self.buildAndInstallList,
-            buildList=self.buildAndInstallList,
-            clean=True,
-            printConfig=self.printConfig.get(),
-            verboseLogging=self.verboseLogging.get(),
-            multiProcessing=self.multiProcessing.get(),
-            toolsRootDir=self.toolsRootDir,
-            userRunner=self._MakeUserRunner(),
-            engine=self.buildEngine)
+    def _Execute(self) -> None:
+        def Run() -> None:
+            arguments: dict = self._MakeRunArguments(usesBuildContext=True)
+            for operation in OPERATIONS:
+                arguments[operation.runKwarg] = self.sequenceVars[operation.runKwarg].get()
+            RunWithConfig(**arguments)
 
-        self._DoWork(function)
+        self._DoWork(Run)
 
 
-    def _Build(self) -> None:
-        function = lambda:RunWithConfig(
-            configPaths=self.configPaths,
-            installList=self.buildAndInstallList,
-            buildList=self.buildAndInstallList,
-            build=True,
-            printConfig=self.printConfig.get(),
-            verboseLogging=self.verboseLogging.get(),
-            multiProcessing=self.multiProcessing.get(),
-            toolsRootDir=self.toolsRootDir,
-            userRunner=self._MakeUserRunner(),
-            engine=self.buildEngine)
+    def _RunOperation(self, operation: Operation) -> None:
+        def Run() -> None:
+            arguments: dict = self._MakeRunArguments(operation.usesBuildContext)
+            arguments[operation.runKwarg] = True
+            RunWithConfig(**arguments)
 
-        self._DoWork(function)
-
-
-    def _Release(self) -> None:
-        function = lambda:RunWithConfig(
-            configPaths=self.configPaths,
-            installList=self.buildAndInstallList,
-            buildList=self.buildAndInstallList,
-            release=True,
-            printConfig=self.printConfig.get(),
-            verboseLogging=self.verboseLogging.get(),
-            multiProcessing=self.multiProcessing.get(),
-            toolsRootDir=self.toolsRootDir,
-            userRunner=self._MakeUserRunner(),
-            engine=self.buildEngine)
-
-        self._DoWork(function)
-
-
-    def _Install(self) -> None:
-        function = lambda:RunWithConfig(
-            configPaths=self.configPaths,
-            installList=self.buildAndInstallList,
-            buildList=self.buildAndInstallList,
-            install=True,
-            printConfig=self.printConfig.get(),
-            verboseLogging=self.verboseLogging.get(),
-            multiProcessing=self.multiProcessing.get(),
-            toolsRootDir=self.toolsRootDir,
-            userRunner=self._MakeUserRunner(),
-            engine=self.buildEngine)
-
-        self._DoWork(function)
-
-
-    def _Uninstall(self) -> None:
-        function = lambda:RunWithConfig(
-            configPaths=self.configPaths,
-            installList=self.buildAndInstallList,
-            buildList=self.buildAndInstallList,
-            uninstall=True,
-            printConfig=self.printConfig.get(),
-            verboseLogging=self.verboseLogging.get(),
-            multiProcessing=self.multiProcessing.get(),
-            toolsRootDir=self.toolsRootDir,
-            userRunner=self._MakeUserRunner(),
-            engine=self.buildEngine)
-
-        self._DoWork(function)
-
-
-    def _RunGame(self) -> None:
-        function = lambda:RunWithConfig(
-            configPaths=self.configPaths,
-            installList=self.buildAndInstallList,
-            buildList=self.buildAndInstallList,
-            run=True,
-            printConfig=self.printConfig.get(),
-            verboseLogging=self.verboseLogging.get(),
-            multiProcessing=self.multiProcessing.get(),
-            toolsRootDir=self.toolsRootDir,
-            userRunner=self._MakeUserRunner(),
-            engine=self.buildEngine)
-
-        self._DoWork(function)
+        self._DoWork(Run)
 
 
     def _DoWork(self, function: Callable) -> None:
@@ -582,14 +454,10 @@ class Gui:
     def _SetJobElementsState(self, state: str) -> None:
         if self.executeButton != None:
             self.executeButton["state"] = state
-            self.makeChangeLogButton["state"] = state
-            self.cleanButton["state"] = state
-            self.buildButton["state"] = state
-            self.releaseButton["state"] = state
-            self.installButton["state"] = state
-            self.runButton["state"] = state
-            self.uninstallButton["state"] = state
             self.bundlePackRefreshButton["state"] = state
+            button: Button
+            for button in self.actionButtons:
+                button["state"] = state
 
 
     def _SetAbortElementsState(self, state: str) -> None:
