@@ -27,7 +27,8 @@ def EnableDpiAwareness() -> None:
 def Caption(parent, title: str, trailing: list = None) -> tuple[Frame, list[Button]]:
     """
     The caption above a framed box. Its height is fixed so that a caption carrying buttons
-    lines up with the plain captions of the boxes beside it.
+    lines up with the plain captions of the boxes beside it. A trailing entry is the label
+    of a button, its command and its hint.
     """
     caption = Frame(parent, height=CAPTION_HEIGHT)
     caption.pack(fill="x", pady=(0, 3))
@@ -37,10 +38,12 @@ def Caption(parent, title: str, trailing: list = None) -> tuple[Frame, list[Butt
     buttons = list[Button]()
     text: str
     command: Callable
-    for text, command in reversed(trailing or []):
+    hint: str
+    for text, command, hint in reversed(trailing or []):
         button = Button(caption, text=text, command=command,
                         bootstyle=QUIET_STYLE, padding=SMALL_BUTTON_PADDING)
         button.pack(side="right", padx=(4, 0))
+        Tooltip(button, hint)
         buttons.append(button)
 
     return caption, buttons
