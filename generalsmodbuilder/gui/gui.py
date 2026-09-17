@@ -250,10 +250,16 @@ class Gui:
         holder.pack(fill=X)
         body.columnconfigure(1, weight=1)
 
-        Gui._AddGameSettingRow(body, 0, "Install path", self.gameInstallPath,
-                               self._BrowseGameInstallPath, "Picks the game install folder.")
-        Gui._AddGameSettingRow(body, 1, "Executable", self.gameExeFile)
-        Gui._AddGameSettingRow(body, 2, "Arguments", self.gameExeArgs)
+        Gui._AddGameSettingRow(
+            body, 0, "Install path", self.gameInstallPath,
+            "The game folder that Install, Uninstall and Run Game work on.",
+            self._BrowseGameInstallPath, "Picks the game install folder.")
+        Gui._AddGameSettingRow(
+            body, 1, "Executable", self.gameExeFile,
+            "The game executable, relative to the install path.")
+        Gui._AddGameSettingRow(
+            body, 2, "Arguments", self.gameExeArgs,
+            "Arguments for the game, for example -win -quickstart.")
 
 
     def _CreateColumns(self, parent: Frame) -> None:
@@ -293,6 +299,8 @@ class Gui:
         holder.grid(row=0, column=1, sticky=NSEW, padx=(0, GAP))
         self.bundlePackRefreshButton = buttons[0]
         self.bundlePackList = PackList(body)
+        Tooltip(self.bundlePackList.tree,
+                "Tick the packs to build and install. With none ticked, every pack is processed.")
 
 
     def _CreateSequence(self, parent: Frame) -> None:
@@ -328,10 +336,12 @@ class Gui:
 
 
     @staticmethod
-    def _AddGameSettingRow(frame: Frame, row: int, text: str, var: StringVar,
+    def _AddGameSettingRow(frame: Frame, row: int, text: str, var: StringVar, hint: str,
                            browse: Callable = None, browseHint: str = None) -> None:
         Label(frame, text=text, width=11).grid(row=row, column=0, sticky=W, pady=1)
-        Entry(frame, textvariable=var, font=FONT).grid(row=row, column=1, sticky=EW, pady=1, padx=(4, 0))
+        entry = Entry(frame, textvariable=var, font=FONT)
+        entry.grid(row=row, column=1, sticky=EW, pady=1, padx=(4, 0))
+        Tooltip(entry, hint)
         if browse != None:
             button = Button(frame, text="Browse...", command=browse, bootstyle=QUIET_STYLE,
                             padding=SMALL_BUTTON_PADDING)
