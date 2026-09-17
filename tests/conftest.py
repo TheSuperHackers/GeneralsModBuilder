@@ -32,3 +32,61 @@ def MakeFile(tmp_path):
         path.write_text(text, encoding="utf-8")
         return str(path)
     return Make
+
+
+def HasHint(widget) -> bool:
+    """Whether a Tooltip is attached, seen through the binding that shows it."""
+    return bool(widget.bind("<Enter>"))
+
+
+def WidgetsOfClass(parent, className: str) -> list:
+    """Every widget of the given Tk class below the parent, the parent itself included."""
+    found = list()
+    if parent.winfo_class() == className:
+        found.append(parent)
+    for child in parent.winfo_children():
+        found.extend(WidgetsOfClass(child, className))
+    return found
+
+
+@pytest.fixture(scope="session")
+def Root():
+    """
+    One hidden window for the whole session. ttkbootstrap binds its Style to the first root,
+    so a second one in the same session would talk to an interpreter that is already gone.
+    Skips where there is no display, as on a headless runner.
+    """
+    tk = pytest.importorskip("tkinter")
+
+    try:
+        root = tk.Tk()
+    except tk.TclError as error:
+        pytest.skip(f"no display: {error}")
+
+    from generalsmodbuilder.gui.theme import ApplyTheme
+
+    root.withdraw()
+    ApplyTheme(root)
+    yield root
+    root.destroy()
+
+
+@pytest.fixture
+def MakeButton(Root):
+    from ttkbootstrap import Button
+
+    made = list()
+
+    def Make(state: str = "normal"):
+        button = Button(Root, text="Abort")
+        button["state"] = state
+        button.pack()
+        Root.update()
+        made.append(button)
+        return button
+
+    yield Make
+
+    for button in made:
+        button.destroy()
+    Root.update()

@@ -1,47 +1,4 @@
-import pytest
-
-tk = pytest.importorskip("tkinter")
-
-
-@pytest.fixture(scope="module")
-def Root():
-    """
-    One hidden window for the whole module. ttkbootstrap binds its Style to the first root,
-    so a second one in the same session would talk to an interpreter that is already gone.
-    Skips where there is no display, as on a headless runner.
-    """
-    try:
-        root = tk.Tk()
-    except tk.TclError as error:
-        pytest.skip(f"no display: {error}")
-
-    from generalsmodbuilder.gui.theme import ApplyTheme
-
-    root.withdraw()
-    ApplyTheme(root)
-    yield root
-    root.destroy()
-
-
-@pytest.fixture
-def MakeButton(Root):
-    from ttkbootstrap import Button
-
-    made = list()
-
-    def Make(state: str = "normal"):
-        button = Button(Root, text="Abort")
-        button["state"] = state
-        button.pack()
-        Root.update()
-        made.append(button)
-        return button
-
-    yield Make
-
-    for button in made:
-        button.destroy()
-    Root.update()
+from conftest import HasHint
 
 
 def test_a_hint_appears_over_a_disabled_button(Root, MakeButton):
@@ -76,3 +33,14 @@ def test_leaving_before_the_delay_shows_nothing(Root, MakeButton):
 
     assert tip.window is None
     assert tip.timer is None
+
+
+def test_a_hint_is_visible_to_the_tests_that_look_for_one(MakeButton):
+    from generalsmodbuilder.gui.layout import Tooltip
+
+    bare = MakeButton()
+    assert not HasHint(bare)
+
+    hinted = MakeButton()
+    Tooltip(hinted, "Stops the running game.")
+    assert HasHint(hinted)
