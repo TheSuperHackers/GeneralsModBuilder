@@ -90,3 +90,14 @@ def MakeButton(Root):
     for button in made:
         button.destroy()
     Root.update()
+
+
+@pytest.fixture
+def MappedRoot(Root):
+    """The shared root, on screen for the length of one test. Tk delivers a key event only
+    to a window that is mapped."""
+    Root.deiconify()
+    Root.update()
+    yield Root
+    Root.withdraw()
+    Root.update()

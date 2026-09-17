@@ -73,6 +73,7 @@ class Tooltip:
         widget.bind("<Enter>", self._Schedule, add="+")
         widget.bind("<Leave>", self._Hide, add="+")
         widget.bind("<ButtonPress>", self._Hide, add="+")
+        widget.bind("<KeyPress>", self._Hide, add="+")
 
     def _Schedule(self, event=None) -> None:
         self._Cancel()

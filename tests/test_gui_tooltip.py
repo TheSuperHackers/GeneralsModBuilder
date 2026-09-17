@@ -44,3 +44,22 @@ def test_a_hint_is_visible_to_the_tests_that_look_for_one(MakeButton):
     hinted = MakeButton()
     Tooltip(hinted, "Stops the running game.")
     assert HasHint(hinted)
+
+
+def test_typing_takes_the_hint_away(MappedRoot, MakeButton):
+    # A hint over an entry would otherwise sit on top of the text being typed into it.
+    from generalsmodbuilder.gui.layout import Tooltip
+
+    button = MakeButton()
+    button.focus_force()
+    tip = Tooltip(button, "Stops the running game.", delayMs=1)
+
+    button.event_generate("<Enter>", x=2, y=2)
+    MappedRoot.update()
+    MappedRoot.after(20)
+    MappedRoot.update()
+    assert tip.window is not None
+
+    button.event_generate("<KeyPress>", keysym="a")
+    MappedRoot.update()
+    assert tip.window is None
