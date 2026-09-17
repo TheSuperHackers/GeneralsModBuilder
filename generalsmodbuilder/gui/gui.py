@@ -225,8 +225,8 @@ class Gui:
     def _CreateOutput(self, parent: Frame) -> None:
         holder, body, _ = Section(
             parent, "Output", pad=0,
-            trailing=[("Clear", lambda: self.logPane.Clear()),
-                      ("Copy", lambda: self.logPane.Copy())])
+            trailing=[("Clear", lambda: self.logPane.Clear(), "Empties the output pane."),
+                      ("Copy", lambda: self.logPane.Copy(), "Copies the output to the clipboard.")])
         holder.pack(fill=BOTH, expand=True)
         self.logPane = LogPane(body, self.logQueue)
 
@@ -288,7 +288,8 @@ class Gui:
     def _CreateBundlePacks(self, parent: Frame) -> None:
         holder, body, buttons = Section(
             parent, "Bundle packs", pad=0,
-            trailing=[("Refresh", lambda: self._StartWorkThread(self._PopulateBundlePackList))])
+            trailing=[("Refresh", lambda: self._StartWorkThread(self._PopulateBundlePackList),
+                        "Reads the bundle packs from the configuration again.")])
         holder.grid(row=0, column=1, sticky=NSEW, padx=(0, GAP))
         self.bundlePackRefreshButton = buttons[0]
         self.bundlePackList = PackList(body)
