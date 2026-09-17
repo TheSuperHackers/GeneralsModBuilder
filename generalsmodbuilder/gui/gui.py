@@ -1,6 +1,6 @@
 import os
+import queue
 import sys
-import time
 import threading
 import traceback
 from tkinter import *
@@ -18,24 +18,30 @@ from generalsmodbuilder.data.common import FinalizeParsedData
 from generalsmodbuilder.data.runner import UserRunner, JoinGameExeArgs, SplitGameExeArgs
 from generalsmodbuilder.gui.layout import (
     EnableDpiAwareness, GAP, MARGIN, Section)
+from generalsmodbuilder.gui.logpane import LogPane, StreamTee
 from generalsmodbuilder.gui.operations import OPERATIONS, Operation
 from generalsmodbuilder.gui.packlist import PackList
 from generalsmodbuilder.gui.status import (
     ABORTING, IDLE, RUNNING, FormatStatusText, StatusStyle)
 from generalsmodbuilder.gui.theme import (
-    ACTION_STYLE, ApplyTheme, FIELD, FONT, FOREGROUND, QUIET_STYLE,
-    SMALL_BUTTON_PADDING, TEAL)
+    ACTION_STYLE, ApplyTheme, FONT, QUIET_STYLE, SMALL_BUTTON_PADDING)
 from generalsmodbuilder.usersettings import (
     GetUserSettingsFile, LoadUserRunner, MergeUserRunners, SaveUserRunner)
 from generalsmodbuilder.util import JsonFile
 
 
+PUMP_INTERVAL_MS = 50
+
+
 class Gui:
     workThread: threading.Thread
-    abortThread: threading.Thread
     buildEngine: BuildEngine
     buildEngineLock: threading.RLock
-    mainWindowLock: threading.RLock
+    mainWindow: Tk
+    uiQueue: queue.Queue
+    logQueue: queue.Queue
+    logPane: LogPane
+    checkedPackNames: list[str]
 
     configPaths: list[str]
     buildAndInstallList: list[str]
@@ -66,10 +72,12 @@ class Gui:
 
     def __init__(self):
         self.workThread = None
-        self.abortThread = None
         self.buildEngine = None
         self.buildEngineLock = threading.RLock()
-        self.mainWindowLock = threading.RLock()
+        self.mainWindow = None
+        self.uiQueue = queue.Queue()
+        self.logQueue = queue.Queue()
+        self.checkedPackNames = list()
         self.configPaths = None
         self.buildAndInstallList = None
         self.debug = False
@@ -103,6 +111,7 @@ class Gui:
         self.toolsRootDir = toolsRootDir
 
         mainWindow: Tk = Gui._CreateMainWindow()
+        self.mainWindow = mainWindow
 
         initialSequence: dict[str, bool] = {
             "makeChangeLog": makeChangeLog,
@@ -133,12 +142,19 @@ class Gui:
         self._SetAbortElementsState("disabled")
         self._StartWorkThread(self._PopulateBundlePackList)
 
-        mainWindow.mainloop()
+        # The console keeps receiving everything, the pane gets a copy.
+        originalOut, originalErr = sys.stdout, sys.stderr
+        sys.stdout = StreamTee(originalOut, self.logQueue)
+        sys.stderr = StreamTee(originalErr, self.logQueue)
+        try:
+            mainWindow.after(PUMP_INTERVAL_MS, self._PumpUi)
+            mainWindow.mainloop()
+        finally:
+            sys.stdout, sys.stderr = originalOut, originalErr
 
         self._SaveUserSettings()
-
-        with self.mainWindowLock:
-            self._ClearMainWindowElements()
+        self._ClearMainWindowElements()
+        self.mainWindow = None
 
         self.workThread.join()
 
@@ -161,8 +177,8 @@ class Gui:
         EnableDpiAwareness()
         window = Tk()
         window.title(f"Generals Mod Builder v{VERSIONSTR} by The Super Hackers")
-        window.geometry('880x520')
-        window.minsize(760, 460)
+        window.geometry('880x730')
+        window.minsize(760, 560)
         ApplyTheme(window)
         iconFile: str =  Gui._MakeIconFilePath("icon.png")
         Gui._AddIconToWindow(window, iconFile)
@@ -178,11 +194,26 @@ class Gui:
 
         self._CreateStatusBar(window)
 
-        content = Frame(window, padding=(MARGIN, 4, MARGIN, 0))
-        content.pack(fill=BOTH, expand=True)
+        paned = PanedWindow(window, orient=VERTICAL)
+        paned.pack(fill=BOTH, expand=True, padx=MARGIN, pady=(4, 0))
 
+        content = Frame(paned)
+        paned.add(content, weight=0)
         self._CreateGameSettings(content)
         self._CreateColumns(content)
+
+        output = Frame(paned, padding=(0, GAP, 1, 0))
+        paned.add(output, weight=1)
+        self._CreateOutput(output)
+
+
+    def _CreateOutput(self, parent: Frame) -> None:
+        holder, body, _ = Section(
+            parent, "Output", pad=0,
+            trailing=[("Clear", lambda: self.logPane.Clear()),
+                      ("Copy", lambda: self.logPane.Copy())])
+        holder.pack(fill=BOTH, expand=True)
+        self.logPane = LogPane(body, self.logQueue)
 
 
     def _CreateStatusBar(self, window: Tk) -> None:
@@ -343,6 +374,7 @@ class Gui:
         self.statusDot = None
         self.statusLabel = None
         self.progressBar = None
+        self.logPane = None
 
 
     @staticmethod
@@ -358,15 +390,17 @@ class Gui:
 
 
     def _PopulateBundlePackList(self) -> None:
-        with self.mainWindowLock:
-            self._SetJobElementsState("disabled")
+        self._Post(lambda: self._SetJobElementsState("disabled"))
 
-        bundlePackNames: list[str] = Gui._GetBundlePackNamesFromConfig(self.configPaths)
-        self.bundlePackList.SetNames(bundlePackNames, self.buildAndInstallList)
+        names: list[str] = Gui._GetBundlePackNamesFromConfig(self.configPaths)
+        wanted: list[str] = list(self.buildAndInstallList)
 
-        with self.mainWindowLock:
+        def Apply() -> None:
+            self.bundlePackList.SetNames(names, wanted)
             self._SetJobElementsState("normal")
             self._SetStatus(IDLE)
+
+        self._Post(Apply)
 
 
     @staticmethod
@@ -452,18 +486,14 @@ class Gui:
     def _OnWorkBegin(self) -> None:
         with self.buildEngineLock:
             self.buildEngine = BuildEngine()
-            self.buildAndInstallList = self.bundlePackList.CheckedNames()
-
-        self._SaveUserSettings()
+            self.buildAndInstallList = self.checkedPackNames
 
         if self.clearConsole.get():
             Gui._ClearConsole()
+            self._Post(self.logPane.Clear)
 
-        with self.mainWindowLock:
-            self._SetJobElementsState("disabled")
-            self._SetStatus(RUNNING, self.activity)
-
-        self._StartAbortThread()
+        self._Post(lambda: self._SetJobElementsState("disabled"))
+        self._Post(lambda: self._SetStatus(RUNNING, self.activity))
 
 
     def _OnWorkEnd(self) -> None:
@@ -471,12 +501,8 @@ class Gui:
             self.buildEngine.Shutdown()
             self.buildEngine = None
 
-        self.abortThread.join()
-        self.abortThread = None
-
-        with self.mainWindowLock:
-            self._SetJobElementsState("normal")
-            self._SetStatus(IDLE)
+        self._Post(lambda: self._SetJobElementsState("normal"))
+        self._Post(lambda: self._SetStatus(IDLE))
 
 
     def _SetJobElementsState(self, state: str) -> None:
@@ -498,37 +524,38 @@ class Gui:
         self.workThread.start()
 
 
-    def _StartAbortThread(self) -> None:
-        self.abortThread = threading.Thread(target=self._AbortUpdateLoop)
-        self.abortThread.start()
+    def _Post(self, action: Callable) -> None:
+        """Hands widget work to the main thread. Tk must not be touched from a worker."""
+        self.uiQueue.put(action)
 
 
-    def _AbortUpdateLoop(self) -> None:
-        canAbort: bool = False
-        wasAbort: bool = canAbort
+    def _PumpUi(self) -> None:
+        """The one place that touches widgets on behalf of the build threads."""
         while True:
-            with self.buildEngineLock:
-                if self.buildEngine == None:
-                    with self.mainWindowLock:
-                        self._SetAbortElementsState("disabled")
-                    break
-                canAbort = self.buildEngine.CanAbort()
-                if canAbort != wasAbort:
-                    if canAbort:
-                        with self.mainWindowLock:
-                            self._SetAbortElementsState("enabled")
-                    else:
-                        with self.mainWindowLock:
-                            self._SetAbortElementsState("disabled")
-                wasAbort = canAbort
+            try:
+                action: Callable = self.uiQueue.get_nowait()
+            except queue.Empty:
+                break
+            action()
 
-            time.sleep(0.1)
+        self.logPane.Drain()
+        self._UpdateAbortState()
+        self._RememberCheckedPacks()
+        self.mainWindow.after(PUMP_INTERVAL_MS, self._PumpUi)
 
-        return
+
+    def _UpdateAbortState(self) -> None:
+        with self.buildEngineLock:
+            canAbort: bool = self.buildEngine != None and self.buildEngine.CanAbort()
+        self._SetAbortElementsState("normal" if canAbort else "disabled")
+
+
+    def _RememberCheckedPacks(self) -> None:
+        """The work thread cannot read the tree, so the pump keeps the selection for it."""
+        self.checkedPackNames = self.bundlePackList.CheckedNames()
 
 
     def _Abort(self) -> None:
-        with self.mainWindowLock:
-            self._SetStatus(ABORTING, self.activity)
+        self._SetStatus(ABORTING, self.activity)
         with self.buildEngineLock:
             self.buildEngine.Abort()
