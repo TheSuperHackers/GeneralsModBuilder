@@ -6,6 +6,8 @@ import traceback
 from tkinter import *
 from tkinter import filedialog
 from tkinter.ttk import *
+# These carry the bootstyle option that the palette is applied through.
+from ttkbootstrap import Button, Checkbutton, Progressbar, Scrollbar
 from typing import Callable
 from generalsmodbuilder import util
 from generalsmodbuilder.__version__ import VERSIONSTR
@@ -14,8 +16,14 @@ from generalsmodbuilder.buildfunctions import CreateJsonFileList, RunWithConfig
 from generalsmodbuilder.data.bundles import BundlePack, Bundles, AddBundlePacksFromJsons
 from generalsmodbuilder.data.common import FinalizeParsedData
 from generalsmodbuilder.data.runner import UserRunner, JoinGameExeArgs, SplitGameExeArgs
+from generalsmodbuilder.gui.layout import (
+    EnableDpiAwareness, GAP, MARGIN, Section)
 from generalsmodbuilder.gui.operations import OPERATIONS, Operation
-from generalsmodbuilder.gui.theme import ApplyTheme, FIELD, FOREGROUND, TEAL
+from generalsmodbuilder.gui.status import (
+    ABORTING, IDLE, RUNNING, FormatStatusText, StatusStyle)
+from generalsmodbuilder.gui.theme import (
+    ACTION_STYLE, ApplyTheme, FIELD, FONT, FOREGROUND, QUIET_STYLE,
+    SMALL_BUTTON_PADDING, TEAL)
 from generalsmodbuilder.usersettings import (
     GetUserSettingsFile, LoadUserRunner, MergeUserRunners, SaveUserRunner)
 from generalsmodbuilder.util import JsonFile
@@ -32,6 +40,7 @@ class Gui:
     buildAndInstallList: list[str]
     debug: bool
     toolsRootDir: str
+    activity: str
 
     sequenceVars: dict[str, BooleanVar]
 
@@ -49,6 +58,9 @@ class Gui:
     actionButtons: list[Button]
     abortButton: Button
     bundlePackRefreshButton: Button
+    statusDot: Label
+    statusLabel: Label
+    progressBar: Progressbar
 
 
     def __init__(self):
@@ -61,6 +73,7 @@ class Gui:
         self.buildAndInstallList = None
         self.debug = False
         self.toolsRootDir = None
+        self.activity = ""
         self._ClearMainWindowElements()
 
 
@@ -144,10 +157,11 @@ class Gui:
 
     @staticmethod
     def _CreateMainWindow() -> Tk:
+        EnableDpiAwareness()
         window = Tk()
         window.title(f"Generals Mod Builder v{VERSIONSTR} by The Super Hackers")
-        window.geometry('830x470')
-        window.resizable(0, 0)
+        window.geometry('880x520')
+        window.minsize(760, 460)
         ApplyTheme(window)
         iconFile: str =  Gui._MakeIconFilePath("icon.png")
         Gui._AddIconToWindow(window, iconFile)
@@ -155,117 +169,130 @@ class Gui:
 
 
     def _CreateMainWindowElements(self, window: Tk) -> None:
-        buttonWidth = 20
-        checkboxWidth = 18
-        listboxWidth = 21
+        header = Frame(window, padding=(MARGIN, MARGIN, MARGIN, 2))
+        header.pack(fill=X)
+        Label(header, text="GENERALS MOD BUILDER", style="Title.TLabel").pack(side=LEFT)
+        Label(header, text=f"v{VERSIONSTR}   The Super Hackers", style="Dim.TLabel").pack(
+            side=LEFT, padx=(8, 0), pady=(4, 0))
 
-        mainFrame = Frame(window, padding=10)
-        mainFrame.pack()
+        self._CreateStatusBar(window)
 
-        frame1000 = Frame(mainFrame)
-        frame1000.grid(row=0, column=0, sticky='n')
-        frame0100 = Frame(mainFrame)
-        frame0100.grid(row=0, column=1, sticky='n')
-        frame0010 = Frame(mainFrame)
-        frame0010.grid(row=0, column=2, sticky='n')
-        frame0001 = Frame(mainFrame)
-        frame0001.grid(row=0, column=3, sticky='n')
+        content = Frame(window, padding=(MARGIN, 4, MARGIN, 0))
+        content.pack(fill=BOTH, expand=True)
 
-        executeLabel = Label(frame0100, text = "Sequence execution")
-        executeLabel.pack(anchor=CENTER)
-        executeFrame = Frame(frame0100, padding=10, relief='solid')
-        executeFrame.pack(padx=5, pady=5)
+        self._CreateGameSettings(content)
+        self._CreateColumns(content)
 
-        optionsLabel = Label(frame0001, text = "Options")
-        optionsLabel.pack(anchor=CENTER)
-        optionsFrame = Frame(frame0001, padding=10, relief='solid')
-        optionsFrame.pack(padx=5, pady=5)
 
-        actionsLabel = Label(frame0010, text = "Single actions")
-        actionsLabel.pack(anchor=CENTER)
-        actionsFrame = Frame(frame0010, padding=10, relief='solid')
-        actionsFrame.pack(padx=5, pady=5)
+    def _CreateStatusBar(self, window: Tk) -> None:
+        bar = Frame(window, padding=(MARGIN, 4, MARGIN, MARGIN))
+        bar.pack(fill=X, side=BOTTOM)
 
-        bundlePackLabel = Label(frame1000, text = "Bundle Pack list")
-        bundlePackLabel.pack(anchor=CENTER)
-        bundlePackFrame = Frame(frame1000, padding=10, relief='solid')
-        bundlePackFrame.pack(padx=5, pady=5)
+        self.statusDot = Label(bar, text="●", style="Ok.TLabel")
+        self.statusDot.pack(side=LEFT)
+        self.statusLabel = Label(bar, text="", style="Dim.TLabel")
+        self.statusLabel.pack(side=LEFT)
+        self.progressBar = Progressbar(bar, mode="indeterminate", length=150, bootstyle="warning")
 
-        # Execute Frame
+        self.abortButton = Button(
+            bar, text="Abort", command=lambda: self._Abort(),
+            bootstyle=ACTION_STYLE, padding=(14, 2))
+        self.abortButton.pack(side=RIGHT)
+
+
+    def _CreateGameSettings(self, parent: Frame) -> None:
+        holder, body, _ = Section(parent, "Game launch settings")
+        holder.pack(fill=X)
+        body.columnconfigure(1, weight=1)
+
+        Gui._AddGameSettingRow(body, 0, "Install path", self.gameInstallPath, self._BrowseGameInstallPath)
+        Gui._AddGameSettingRow(body, 1, "Executable", self.gameExeFile)
+        Gui._AddGameSettingRow(body, 2, "Arguments", self.gameExeArgs)
+
+
+    def _CreateColumns(self, parent: Frame) -> None:
+        columns = Frame(parent)
+        columns.pack(fill=BOTH, expand=True, pady=(GAP, 0))
+        for index in range(4):
+            columns.columnconfigure(index, weight=1, uniform="column")
+        columns.rowconfigure(0, weight=1)
+
+        self._CreateOptions(columns)
+        self._CreateBundlePacks(columns)
+        self._CreateSequence(columns)
+        self._CreateActions(columns)
+
+
+    def _CreateOptions(self, parent: Frame) -> None:
+        holder, body, _ = Section(parent, "Options")
+        holder.grid(row=0, column=0, sticky=NSEW, padx=(0, GAP))
+
+        options = (
+            ("Auto Clear Console", self.clearConsole),
+            ("Print Config", self.printConfig),
+            ("Verbose Logging", self.verboseLogging),
+            ("Multi Processing", self.multiProcessing),
+        )
+        for text, variable in options:
+            Checkbutton(body, text=text, variable=variable, bootstyle="warning").pack(anchor=W, pady=1)
+
+
+    def _CreateBundlePacks(self, parent: Frame) -> None:
+        holder, body, buttons = Section(
+            parent, "Bundle packs", pad=0,
+            trailing=[("Refresh", lambda: self._StartWorkThread(self._PopulateBundlePackList))])
+        holder.grid(row=0, column=1, sticky=NSEW, padx=(0, GAP))
+        self.bundlePackRefreshButton = buttons[0]
+
+        # The list box is a classic tk widget that the theme does not reach.
+        self.bundlePackList = Listbox(
+            body, selectmode='multiple', activestyle='none', relief='flat', borderwidth=0,
+            font=FONT, bg=FIELD, fg=FOREGROUND, selectbackground=TEAL,
+            selectforeground="#FFFFFF", highlightthickness=0)
+        self.bundlePackList.pack(side=LEFT, fill=BOTH, expand=True)
+
+        scrollbar = Scrollbar(body, orient=VERTICAL, command=self.bundlePackList.yview,
+                              bootstyle="secondary-round")
+        scrollbar.pack(side=RIGHT, fill=Y)
+        self.bundlePackList.configure(yscrollcommand=scrollbar.set)
+
+
+    def _CreateSequence(self, parent: Frame) -> None:
+        holder, body, _ = Section(parent, "Sequence execution")
+        holder.grid(row=0, column=2, sticky=NSEW, padx=(0, GAP))
 
         for operation in OPERATIONS:
-            check = Checkbutton(
-                executeFrame,
-                width=checkboxWidth,
-                text=operation.label,
-                var=self.sequenceVars[operation.runKwarg])
-            check.pack(anchor=W)
+            Checkbutton(
+                body, text=operation.label, variable=self.sequenceVars[operation.runKwarg],
+                bootstyle="warning").pack(anchor=W, pady=1)
 
-        self.executeButton = Button(executeFrame, width=buttonWidth, text="Execute", command=lambda:self._StartWorkThread(self._Execute))
-        self.executeButton.pack(anchor=W)
+        self.executeButton = Button(
+            body, text="Execute sequence", bootstyle=ACTION_STYLE,
+            command=lambda: self._StartWorkThread(self._Execute))
+        self.executeButton.pack(fill=X, pady=(6, 0))
 
-        # Options Frame
 
-        clearLogCheck = Checkbutton(optionsFrame, width = checkboxWidth, text='Auto Clear Console', var=self.clearConsole)
-        clearLogCheck.pack(anchor=W)
-
-        printConfig = Checkbutton(optionsFrame, width = checkboxWidth, text='Print Config', var=self.printConfig)
-        printConfig.pack(anchor=W)
-
-        verboseLogging = Checkbutton(optionsFrame, width = checkboxWidth, text='Verbose Logging', var=self.verboseLogging)
-        verboseLogging.pack(anchor=W)
-
-        multiProcessing = Checkbutton(optionsFrame, width = checkboxWidth, text='Multi Processing', var=self.multiProcessing)
-        multiProcessing.pack(anchor=W)
-
-        # Actions Frame
+    def _CreateActions(self, parent: Frame) -> None:
+        holder, body, _ = Section(parent, "Single actions")
+        holder.grid(row=0, column=3, sticky=NSEW)
 
         self.actionButtons = list()
         for operation in OPERATIONS:
             button = Button(
-                actionsFrame,
-                width=buttonWidth,
-                text=operation.label,
+                body, text=operation.label, bootstyle=ACTION_STYLE,
                 command=lambda op=operation: self._StartWorkThread(lambda: self._RunOperation(op)))
-            button.pack(anchor=W)
+            button.pack(fill=X, pady=1)
             self.actionButtons.append(button)
-
-        self.abortButton = Button(actionsFrame, width=buttonWidth, text="Abort", command=lambda:self._Abort())
-        self.abortButton.pack(anchor=W)
-
-        # Bundle Pack Frame
-
-        # The list box is a classic tk widget that the theme does not reach.
-        self.bundlePackList = Listbox(
-            bundlePackFrame, width=listboxWidth, relief='flat', selectmode='multiple',
-            bg=FIELD, fg=FOREGROUND, selectbackground=TEAL, selectforeground="#FFFFFF",
-            highlightthickness=0)
-        self.bundlePackList.pack(anchor=W)
-
-        self.bundlePackRefreshButton = Button(bundlePackFrame, width=buttonWidth, text="Refresh", command=lambda:self._StartWorkThread(self._PopulateBundlePackList))
-        self.bundlePackRefreshButton.pack(anchor=W)
-
-        # Game Launch Settings Frame
-
-        frame1111 = Frame(mainFrame)
-        frame1111.grid(row=1, column=0, columnspan=4)
-
-        gameLabel = Label(frame1111, text = "Game launch settings")
-        gameLabel.pack(anchor=CENTER)
-        gameFrame = Frame(frame1111, padding=10, relief='solid')
-        gameFrame.pack(padx=5, pady=5)
-
-        Gui._AddGameSettingRow(gameFrame, 0, "Game install path", self.gameInstallPath, self._BrowseGameInstallPath)
-        Gui._AddGameSettingRow(gameFrame, 1, "Game exe file", self.gameExeFile)
-        Gui._AddGameSettingRow(gameFrame, 2, "Game exe args", self.gameExeArgs)
 
 
     @staticmethod
     def _AddGameSettingRow(frame: Frame, row: int, text: str, var: StringVar, browse: Callable = None) -> None:
-        Label(frame, text=text, width=17).grid(row=row, column=0, sticky=W, pady=2)
-        Entry(frame, textvariable=var, width=70).grid(row=row, column=1, sticky=W, pady=2)
+        Label(frame, text=text, width=11).grid(row=row, column=0, sticky=W, pady=1)
+        Entry(frame, textvariable=var, font=FONT).grid(row=row, column=1, sticky=EW, pady=1, padx=(4, 0))
         if browse != None:
-            Button(frame, text="Browse...", width=10, command=browse).grid(row=row, column=2, padx=5)
+            Button(frame, text="Browse...", command=browse, bootstyle=QUIET_STYLE,
+                   padding=SMALL_BUTTON_PADDING).grid(row=row, column=2, padx=(6, 0))
+
 
 
     def _BrowseGameInstallPath(self) -> None:
@@ -323,6 +350,9 @@ class Gui:
         self.actionButtons = None
         self.abortButton = None
         self.bundlePackRefreshButton = None
+        self.statusDot = None
+        self.statusLabel = None
+        self.progressBar = None
 
 
     @staticmethod
@@ -364,6 +394,7 @@ class Gui:
 
         with self.mainWindowLock:
             self._SetJobElementsState("normal")
+            self._SetStatus(IDLE)
 
 
     @staticmethod
@@ -402,7 +433,7 @@ class Gui:
                 arguments[operation.runKwarg] = self.sequenceVars[operation.runKwarg].get()
             RunWithConfig(**arguments)
 
-        self._DoWork(Run)
+        self._DoWork(Run, "Execute sequence")
 
 
     def _RunOperation(self, operation: Operation) -> None:
@@ -411,10 +442,11 @@ class Gui:
             arguments[operation.runKwarg] = True
             RunWithConfig(**arguments)
 
-        self._DoWork(Run)
+        self._DoWork(Run, operation.label)
 
 
-    def _DoWork(self, function: Callable) -> None:
+    def _DoWork(self, function: Callable, activity: str) -> None:
+        self.activity = activity
         self._OnWorkBegin()
 
         if self.debug:
@@ -429,6 +461,22 @@ class Gui:
         self._OnWorkEnd()
 
 
+    def _SetStatus(self, state: str, activity: str = "") -> None:
+        if self.statusLabel == None:
+            return
+
+        self.statusDot["style"] = StatusStyle(state)
+        self.statusLabel["text"] = "  " + FormatStatusText(
+            state, self.bundlePackList.size(), len(self.bundlePackList.curselection()), activity)
+
+        if state == RUNNING:
+            self.progressBar.pack(side=LEFT, padx=(10, 0))
+            self.progressBar.start(12)
+        elif state == IDLE:
+            self.progressBar.stop()
+            self.progressBar.pack_forget()
+
+
     def _OnWorkBegin(self) -> None:
         with self.buildEngineLock:
             self.buildEngine = BuildEngine()
@@ -441,6 +489,7 @@ class Gui:
 
         with self.mainWindowLock:
             self._SetJobElementsState("disabled")
+            self._SetStatus(RUNNING, self.activity)
 
         self._StartAbortThread()
 
@@ -455,6 +504,7 @@ class Gui:
 
         with self.mainWindowLock:
             self._SetJobElementsState("normal")
+            self._SetStatus(IDLE)
 
 
     def _SetJobElementsState(self, state: str) -> None:
@@ -506,5 +556,7 @@ class Gui:
 
 
     def _Abort(self) -> None:
+        with self.mainWindowLock:
+            self._SetStatus(ABORTING, self.activity)
         with self.buildEngineLock:
             self.buildEngine.Abort()
