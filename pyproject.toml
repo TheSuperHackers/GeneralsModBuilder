@@ -13,6 +13,7 @@ dependencies = [
     "platformdirs>=4.2.0",
     "psd-tools>=1.10.0",
     "PyYAML>=6.0",
+    "ttkbootstrap>=2.2.3",
 ]
 
 [project.urls]

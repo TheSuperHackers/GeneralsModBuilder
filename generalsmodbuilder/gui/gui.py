@@ -15,6 +15,7 @@ from generalsmodbuilder.data.bundles import BundlePack, Bundles, AddBundlePacksF
 from generalsmodbuilder.data.common import FinalizeParsedData
 from generalsmodbuilder.data.runner import UserRunner, JoinGameExeArgs, SplitGameExeArgs
 from generalsmodbuilder.gui.operations import OPERATIONS, Operation
+from generalsmodbuilder.gui.theme import ApplyTheme, FIELD, FOREGROUND, TEAL
 from generalsmodbuilder.usersettings import (
     GetUserSettingsFile, LoadUserRunner, MergeUserRunners, SaveUserRunner)
 from generalsmodbuilder.util import JsonFile
@@ -145,8 +146,9 @@ class Gui:
     def _CreateMainWindow() -> Tk:
         window = Tk()
         window.title(f"Generals Mod Builder v{VERSIONSTR} by The Super Hackers")
-        window.geometry('700x430')
+        window.geometry('830x470')
         window.resizable(0, 0)
+        ApplyTheme(window)
         iconFile: str =  Gui._MakeIconFilePath("icon.png")
         Gui._AddIconToWindow(window, iconFile)
         return window
@@ -233,7 +235,11 @@ class Gui:
 
         # Bundle Pack Frame
 
-        self.bundlePackList = Listbox(bundlePackFrame, width=listboxWidth, relief='flat', selectmode='multiple')
+        # The list box is a classic tk widget that the theme does not reach.
+        self.bundlePackList = Listbox(
+            bundlePackFrame, width=listboxWidth, relief='flat', selectmode='multiple',
+            bg=FIELD, fg=FOREGROUND, selectbackground=TEAL, selectforeground="#FFFFFF",
+            highlightthickness=0)
         self.bundlePackList.pack(anchor=W)
 
         self.bundlePackRefreshButton = Button(bundlePackFrame, width=buttonWidth, text="Refresh", command=lambda:self._StartWorkThread(self._PopulateBundlePackList))
