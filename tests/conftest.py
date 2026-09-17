@@ -101,3 +101,44 @@ def MappedRoot(Root):
     yield Root
     Root.withdraw()
     Root.update()
+
+
+@pytest.fixture
+def MakeGuiWindow(Root):
+    """
+    Builds the whole gui into a frame of the shared root, without the main loop, the work
+    thread or the redirected streams that Gui.RunWithConfig puts around it.
+    """
+    from tkinter.ttk import Frame
+
+    from generalsmodbuilder.data.runner import UserRunner
+    from generalsmodbuilder.gui.gui import Gui
+    from generalsmodbuilder.gui.operations import OPERATIONS
+
+    made = list()
+
+    def Make(initialSequence: dict = None, settings: UserRunner = None):
+        holder = Frame(Root)
+        holder.pack(fill="both", expand=True)
+
+        gui = Gui()
+        gui.configPaths = list()
+        gui.buildAndInstallList = list()
+        gui._CreateMainWindowVariables(
+            holder,
+            initialSequence if initialSequence != None else {op.runKwarg: False for op in OPERATIONS},
+            printConfig=False,
+            verboseLogging=False,
+            multiProcessing=False,
+            settings=settings if settings != None else UserRunner())
+        gui._CreateMainWindowElements(holder)
+        Root.update()
+
+        made.append(holder)
+        return gui, holder
+
+    yield Make
+
+    for holder in made:
+        holder.destroy()
+    Root.update()
