@@ -19,6 +19,7 @@ from generalsmodbuilder.data.runner import UserRunner, JoinGameExeArgs, SplitGam
 from generalsmodbuilder.gui.layout import (
     EnableDpiAwareness, GAP, MARGIN, Section)
 from generalsmodbuilder.gui.operations import OPERATIONS, Operation
+from generalsmodbuilder.gui.packlist import PackList
 from generalsmodbuilder.gui.status import (
     ABORTING, IDLE, RUNNING, FormatStatusText, StatusStyle)
 from generalsmodbuilder.gui.theme import (
@@ -53,7 +54,7 @@ class Gui:
     verboseLogging: BooleanVar
     multiProcessing: BooleanVar
 
-    bundlePackList: Listbox
+    bundlePackList: PackList
     executeButton: Button
     actionButtons: list[Button]
     abortButton: Button
@@ -243,18 +244,7 @@ class Gui:
             trailing=[("Refresh", lambda: self._StartWorkThread(self._PopulateBundlePackList))])
         holder.grid(row=0, column=1, sticky=NSEW, padx=(0, GAP))
         self.bundlePackRefreshButton = buttons[0]
-
-        # The list box is a classic tk widget that the theme does not reach.
-        self.bundlePackList = Listbox(
-            body, selectmode='multiple', activestyle='none', relief='flat', borderwidth=0,
-            font=FONT, bg=FIELD, fg=FOREGROUND, selectbackground=TEAL,
-            selectforeground="#FFFFFF", highlightthickness=0)
-        self.bundlePackList.pack(side=LEFT, fill=BOTH, expand=True)
-
-        scrollbar = Scrollbar(body, orient=VERTICAL, command=self.bundlePackList.yview,
-                              bootstyle="secondary-round")
-        scrollbar.pack(side=RIGHT, fill=Y)
-        self.bundlePackList.configure(yscrollcommand=scrollbar.set)
+        self.bundlePackList = PackList(body)
 
 
     def _CreateSequence(self, parent: Frame) -> None:
@@ -356,17 +346,6 @@ class Gui:
 
 
     @staticmethod
-    def _GetBundlePackNamesFromList(bundlePackList: Listbox) -> list[str]:
-        bundlePackNames = list()
-        selections: tuple = bundlePackList.curselection()
-        selection: int
-        for selection in selections:
-            name: str = bundlePackList.get(selection)
-            bundlePackNames.append(name)
-        return bundlePackNames
-
-
-    @staticmethod
     def _GetBundlePackNamesFromConfig(configPaths: list[str]) -> list[str]:
         bundlePackNames = list()
         jsonFiles: list[JsonFile] = CreateJsonFileList(configPaths)
@@ -383,14 +362,7 @@ class Gui:
             self._SetJobElementsState("disabled")
 
         bundlePackNames: list[str] = Gui._GetBundlePackNamesFromConfig(self.configPaths)
-        self.bundlePackList.delete(0, self.bundlePackList.size())
-        self.bundlePackList.insert(0, *bundlePackNames)
-        name1: str
-        name2: str
-        for name1 in self.buildAndInstallList:
-            for index,name2 in enumerate(bundlePackNames):
-                if name1 == name2:
-                    self.bundlePackList.selection_set(index)
+        self.bundlePackList.SetNames(bundlePackNames, self.buildAndInstallList)
 
         with self.mainWindowLock:
             self._SetJobElementsState("normal")
@@ -467,7 +439,7 @@ class Gui:
 
         self.statusDot["style"] = StatusStyle(state)
         self.statusLabel["text"] = "  " + FormatStatusText(
-            state, self.bundlePackList.size(), len(self.bundlePackList.curselection()), activity)
+            state, self.bundlePackList.Count(), self.bundlePackList.CheckedCount(), activity)
 
         if state == RUNNING:
             self.progressBar.pack(side=LEFT, padx=(10, 0))
@@ -480,7 +452,7 @@ class Gui:
     def _OnWorkBegin(self) -> None:
         with self.buildEngineLock:
             self.buildEngine = BuildEngine()
-            self.buildAndInstallList = Gui._GetBundlePackNamesFromList(self.bundlePackList)
+            self.buildAndInstallList = self.bundlePackList.CheckedNames()
 
         self._SaveUserSettings()
 
