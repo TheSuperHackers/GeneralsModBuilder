@@ -32,9 +32,6 @@ from generalsmodbuilder.util import JsonFile
 
 PUMP_INTERVAL_MS = 50
 
-# Only a running game can be stopped, because a build tool is not held by the engine.
-ABORT_HINT = "Stops the running game. A build cannot be interrupted."
-
 
 class Gui:
     workThread: threading.Thread
@@ -245,7 +242,7 @@ class Gui:
             bar, text="Abort", command=lambda: self._Abort(),
             bootstyle=ACTION_STYLE, padding=(14, 2))
         self.abortButton.pack(side=RIGHT)
-        Tooltip(self.abortButton, ABORT_HINT)
+        Tooltip(self.abortButton, "Stops the running game. A build cannot be interrupted.")
 
 
     def _CreateGameSettings(self, parent: Frame) -> None:
@@ -253,7 +250,8 @@ class Gui:
         holder.pack(fill=X)
         body.columnconfigure(1, weight=1)
 
-        Gui._AddGameSettingRow(body, 0, "Install path", self.gameInstallPath, self._BrowseGameInstallPath)
+        Gui._AddGameSettingRow(body, 0, "Install path", self.gameInstallPath,
+                               self._BrowseGameInstallPath, "Picks the game install folder.")
         Gui._AddGameSettingRow(body, 1, "Executable", self.gameExeFile)
         Gui._AddGameSettingRow(body, 2, "Arguments", self.gameExeArgs)
 
@@ -308,6 +306,7 @@ class Gui:
             body, text="Execute sequence", bootstyle=ACTION_STYLE,
             command=lambda: self._StartWorkThread(self._Execute))
         self.executeButton.pack(fill=X, pady=(6, 0))
+        Tooltip(self.executeButton, "Runs the ticked operations, top to bottom.")
 
 
     def _CreateActions(self, parent: Frame) -> None:
@@ -320,16 +319,20 @@ class Gui:
                 body, text=operation.label, bootstyle=ACTION_STYLE,
                 command=lambda op=operation: self._StartWorkThread(lambda: self._RunOperation(op)))
             button.pack(fill=X, pady=1)
+            Tooltip(button, operation.hint)
             self.actionButtons.append(button)
 
 
     @staticmethod
-    def _AddGameSettingRow(frame: Frame, row: int, text: str, var: StringVar, browse: Callable = None) -> None:
+    def _AddGameSettingRow(frame: Frame, row: int, text: str, var: StringVar,
+                           browse: Callable = None, browseHint: str = None) -> None:
         Label(frame, text=text, width=11).grid(row=row, column=0, sticky=W, pady=1)
         Entry(frame, textvariable=var, font=FONT).grid(row=row, column=1, sticky=EW, pady=1, padx=(4, 0))
         if browse != None:
-            Button(frame, text="Browse...", command=browse, bootstyle=QUIET_STYLE,
-                   padding=SMALL_BUTTON_PADDING).grid(row=row, column=2, padx=(6, 0))
+            button = Button(frame, text="Browse...", command=browse, bootstyle=QUIET_STYLE,
+                            padding=SMALL_BUTTON_PADDING)
+            button.grid(row=row, column=2, padx=(6, 0))
+            Tooltip(button, browseHint)
 
 
 
