@@ -17,7 +17,7 @@ from generalsmodbuilder.data.bundles import BundlePack, Bundles, AddBundlePacksF
 from generalsmodbuilder.data.common import FinalizeParsedData
 from generalsmodbuilder.data.runner import UserRunner, JoinGameExeArgs, SplitGameExeArgs
 from generalsmodbuilder.gui.layout import (
-    EnableDpiAwareness, GAP, MARGIN, Section)
+    EnableDpiAwareness, GAP, MARGIN, Section, Tooltip)
 from generalsmodbuilder.gui.logpane import LogPane, StreamTee
 from generalsmodbuilder.gui.operations import OPERATIONS, Operation
 from generalsmodbuilder.gui.packlist import PackList
@@ -31,6 +31,9 @@ from generalsmodbuilder.util import JsonFile
 
 
 PUMP_INTERVAL_MS = 50
+
+# Only a running game can be stopped, because a build tool is not held by the engine.
+ABORT_HINT = "Stops the running game. A build cannot be interrupted."
 
 
 class Gui:
@@ -230,6 +233,7 @@ class Gui:
             bar, text="Abort", command=lambda: self._Abort(),
             bootstyle=ACTION_STYLE, padding=(14, 2))
         self.abortButton.pack(side=RIGHT)
+        Tooltip(self.abortButton, ABORT_HINT)
 
 
     def _CreateGameSettings(self, parent: Frame) -> None:
