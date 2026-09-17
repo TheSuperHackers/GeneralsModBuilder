@@ -48,6 +48,7 @@ dependencies = [
     { name = "platformdirs" },
     { name = "psd-tools" },
     { name = "pyyaml" },
+    { name = "ttkbootstrap" },
 ]
 
 [package.dev-dependencies]
@@ -63,6 +64,7 @@ requires-dist = [
     { name = "platformdirs", specifier = ">=4.2.0" },
     { name = "psd-tools", specifier = ">=1.10.0" },
     { name = "pyyaml", specifier = ">=6.0" },
+    { name = "ttkbootstrap", specifier = ">=2.2.3" },
 ]
 
 [package.metadata.requires-dev]
@@ -365,6 +367,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/da/92/1446574745d74df0c92e6aa4a7b0b3130706a4142b2d1a5869f2eaa423c6/pyyaml-6.0.3-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:16249ee61e95f858e83976573de0f5b2893b3677ba71c9dd36b9cf8be9ac6d65", size = 829923, upload-time = "2025-09-25T21:32:54.537Z" },
     { url = "https://files.pythonhosted.org/packages/f0/7a/1c7270340330e575b92f397352af856a8c06f230aa3e76f86b39d01b416a/pyyaml-6.0.3-cp314-cp314t-win_amd64.whl", hash = "sha256:4ad1906908f2f5ae4e5a8ddfce73c320c2a1429ec52eafd27138b7f1cbe341c9", size = 174062, upload-time = "2025-09-25T21:32:55.767Z" },
     { url = "https://files.pythonhosted.org/packages/f1/12/de94a39c2ef588c7e6455cfbe7343d3b2dc9d6b6b2f40c4c6565744c873d/pyyaml-6.0.3-cp314-cp314t-win_arm64.whl", hash = "sha256:ebc55a14a21cb14062aa4162f906cd962b28e2e9ea38f9b4391244cd8de4ae0b", size = 149341, upload-time = "2025-09-25T21:32:56.828Z" },
+]
+
+[[package]]
+name = "ttkbootstrap"
+version = "2.2.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pillow" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7b/36/c90cc09fc6d5b33f8b8a0cbe6d83e1e58b3df743189777245e1f18eb055a/ttkbootstrap-2.2.3.tar.gz", hash = "sha256:31b71ca273e2cd2fc354f9f736498bb334209703aea22a0abc076b6231dcfc0f", size = 604551, upload-time = "2026-09-12T20:01:25.975Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9e/cd/45eeaabad8d1a162fd300813da4be4669dd7b531ae14b24ee840e99bfbf3/ttkbootstrap-2.2.3-py3-none-any.whl", hash = "sha256:00db93ee9d064d2d7bcac2158ca2d852f2844277d0da0a526163077ca9623417", size = 553505, upload-time = "2026-09-12T20:01:21.517Z" },
 ]
 
 [[package]]
