@@ -44,3 +44,10 @@ def test_every_button_says_what_it_does(MakeGuiWindow):
 
     for button in WidgetsOfClass(holder, "TButton"):
         assert HasHint(button), button["text"]
+
+
+def test_every_check_button_says_what_it_does(MakeGuiWindow):
+    _, holder = MakeGuiWindow()
+
+    for check in WidgetsOfClass(holder, "TCheckbutton"):
+        assert HasHint(check), check["text"]

@@ -274,13 +274,15 @@ class Gui:
         holder.grid(row=0, column=0, sticky=NSEW, padx=(0, GAP))
 
         options = (
-            ("Auto Clear Console", self.clearConsole),
-            ("Print Config", self.printConfig),
-            ("Verbose Logging", self.verboseLogging),
-            ("Multi Processing", self.multiProcessing),
+            ("Auto Clear Console", self.clearConsole, "Clears the console and the output pane when a job starts."),
+            ("Print Config", self.printConfig, "Prints the parsed configuration before the build runs."),
+            ("Verbose Logging", self.verboseLogging, "Logs every copied file and every file hash."),
+            ("Multi Processing", self.multiProcessing, "Builds files in parallel processes."),
         )
-        for text, variable in options:
-            Checkbutton(body, text=text, variable=variable, bootstyle="warning").pack(anchor=W, pady=1)
+        for text, variable, hint in options:
+            check = Checkbutton(body, text=text, variable=variable, bootstyle="warning")
+            check.pack(anchor=W, pady=1)
+            Tooltip(check, hint)
 
 
     def _CreateBundlePacks(self, parent: Frame) -> None:
@@ -298,9 +300,11 @@ class Gui:
         holder.grid(row=0, column=2, sticky=NSEW, padx=(0, GAP))
 
         for operation in OPERATIONS:
-            Checkbutton(
+            check = Checkbutton(
                 body, text=operation.label, variable=self.sequenceVars[operation.runKwarg],
-                bootstyle="warning").pack(anchor=W, pady=1)
+                bootstyle="warning")
+            check.pack(anchor=W, pady=1)
+            Tooltip(check, operation.hint)
 
         self.executeButton = Button(
             body, text="Execute sequence", bootstyle=ACTION_STYLE,
