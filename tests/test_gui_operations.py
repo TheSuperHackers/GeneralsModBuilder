@@ -49,3 +49,17 @@ def test_an_operation_cannot_be_modified_after_definition():
     # The table is shared by both columns, so a widget must not be able to rewrite it.
     with pytest.raises(dataclasses.FrozenInstanceError):
         OPERATIONS[0].label = "Changed"
+
+
+def test_every_operation_says_what_it_does():
+    hints = [op.hint for op in OPERATIONS]
+    assert all(hint.strip() for hint in hints)
+    assert len(set(hints)) == len(hints)
+
+
+def test_a_hint_is_one_short_sentence():
+    # It is shown in a one line tooltip, which does not wrap.
+    for op in OPERATIONS:
+        assert "\n" not in op.hint, op.label
+        assert len(op.hint) <= 90, op.label
+        assert op.hint.endswith("."), op.label
