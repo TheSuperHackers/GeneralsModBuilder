@@ -125,22 +125,11 @@ class Gui:
             "uninstall": uninstall,
             "run": run,
         }
-        self.sequenceVars = {
-            op.runKwarg: BooleanVar(mainWindow, value=initialSequence[op.runKwarg])
-            for op in OPERATIONS}
-
-        self.printConfig = BooleanVar(mainWindow, value=printConfig)
-        self.clearConsole = BooleanVar(mainWindow, value=True)
-        self.verboseLogging = BooleanVar(mainWindow, value=verboseLogging)
-        self.multiProcessing = BooleanVar(mainWindow, value=multiProcessing)
-
         settings: UserRunner = MergeUserRunners(
             userRunner if userRunner != None else UserRunner(), LoadUserRunner(GetUserSettingsFile()))
-        self.gameInstallPath = StringVar(mainWindow, value=settings.absGameInstallDir)
-        self.gameExeFile = StringVar(mainWindow, value=settings.relGameExeFile)
-        self.gameExeArgs = StringVar(
-            mainWindow, value=JoinGameExeArgs(settings.gameExeArgs) if settings.gameExeArgs != None else "")
 
+        self._CreateMainWindowVariables(
+            mainWindow, initialSequence, printConfig, verboseLogging, multiProcessing, settings)
         self._CreateMainWindowElements(mainWindow)
         self._SetAbortElementsState("disabled")
         self._StartWorkThread(self._PopulateBundlePackList)
@@ -186,6 +175,29 @@ class Gui:
         iconFile: str =  Gui._MakeIconFilePath("icon.png")
         Gui._AddIconToWindow(window, iconFile)
         return window
+
+
+    def _CreateMainWindowVariables(self,
+            window: Tk,
+            initialSequence: dict[str, bool],
+            printConfig: bool,
+            verboseLogging: bool,
+            multiProcessing: bool,
+            settings: UserRunner) -> None:
+
+        self.sequenceVars = {
+            op.runKwarg: BooleanVar(window, value=initialSequence[op.runKwarg])
+            for op in OPERATIONS}
+
+        self.printConfig = BooleanVar(window, value=printConfig)
+        self.clearConsole = BooleanVar(window, value=True)
+        self.verboseLogging = BooleanVar(window, value=verboseLogging)
+        self.multiProcessing = BooleanVar(window, value=multiProcessing)
+
+        self.gameInstallPath = StringVar(window, value=settings.absGameInstallDir)
+        self.gameExeFile = StringVar(window, value=settings.relGameExeFile)
+        self.gameExeArgs = StringVar(
+            window, value=JoinGameExeArgs(settings.gameExeArgs) if settings.gameExeArgs != None else "")
 
 
     def _CreateMainWindowElements(self, window: Tk) -> None:
