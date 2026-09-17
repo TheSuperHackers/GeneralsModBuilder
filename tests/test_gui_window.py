@@ -1,3 +1,5 @@
+import pytest
+
 from conftest import HasHint, WidgetsOfClass
 
 from generalsmodbuilder.data.runner import UserRunner
@@ -39,15 +41,12 @@ def test_the_game_launch_settings_start_from_the_user_settings(MakeGuiWindow):
     assert gui.gameExeArgs.get() == "-win -quickstart"
 
 
-def test_every_button_says_what_it_does(MakeGuiWindow):
+# Everything in the window that answers a click. A widget added without a hint fails here.
+@pytest.mark.parametrize("className", ["TButton", "TCheckbutton", "TEntry", "Treeview"])
+def test_every_clickable_widget_says_what_it_does(MakeGuiWindow, className):
     _, holder = MakeGuiWindow()
 
-    for button in WidgetsOfClass(holder, "TButton"):
-        assert HasHint(button), button["text"]
-
-
-def test_every_check_button_says_what_it_does(MakeGuiWindow):
-    _, holder = MakeGuiWindow()
-
-    for check in WidgetsOfClass(holder, "TCheckbutton"):
-        assert HasHint(check), check["text"]
+    widgets = WidgetsOfClass(holder, className)
+    assert widgets, className
+    for widget in widgets:
+        assert HasHint(widget), f"{className} {widget}"
